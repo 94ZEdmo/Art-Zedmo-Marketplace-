@@ -1,9 +1,0 @@
-<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Enchères</title><script src="https://cdn.tailwindcss.com"></script></head>
-<body class="bg-[#F9F7F2]"><nav class="bg-white border-b p-3"><a href="index.html">← ART-ZEDMO</a></nav>
-<div class="max-w-7xl mx-auto p-4"><div class="bg-black text-white rounded-[24px] p-6"><h1 class="text-3xl">🔨 Salle des Enchères LIVE</h1></div>
-<div id="grid" class="grid md:grid-cols-3 gap-4 mt-6"></div></div>
-<script>
-const arts=[{id:1,t:"Beauté africaine",act:"150k FCFA",img:"https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?w=400"}];
-document.getElementById('grid').innerHTML=arts.map(a=>`<div class="bg-white border rounded-xl overflow-hidden"><img src="${a.img}" class="h-48 w-full object-cover"><div class="p-4"><div class="font-bold">${a.t}</div><div class="text-xs">Actuelle: ${a.act} • Fin 02:14:22</div><div class="flex gap-2 mt-3"><input id="inp${a.id}" placeholder="Montant FCFA" class="flex-1 border rounded-full px-3 py-1 text-sm"><button onclick="encherir(${a.id})" class="bg-black text-white px-4 rounded-full text-sm">Enchérir</button></div></div></div>`).join('');
-function encherir(id){ const m=document.getElementById('inp'+id).value; if(!m) return alert('Montant?'); alert('Enchère de '+m+' FCFA placée! (prolongation auto 2min si <2min)'); }
-</script></body></html>
