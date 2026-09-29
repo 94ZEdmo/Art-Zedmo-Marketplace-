@@ -1,0 +1,96 @@
+<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Admin ZEDMO</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-[#F9F7F2]"><nav class="bg-black text-white p-3 flex justify-between"><span class="font-bold">⚙️ ADMIN ZEDMO - Backend Live</span><a href="../index.html" class="underline text-sm">Voir site</a></nav>
+
+<div class="max-w-6xl mx-auto p-4 space-y-6">
+<!-- STATS -->
+<div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+<div class="bg-white border p-4 rounded-[16px]"><div class="text-xs opacity-60">En attente</div><div id="statAttente" class="font-bold text-2xl">0</div></div>
+<div class="bg-white border p-4 rounded-[16px]"><div class="text-xs opacity-60">Validées</div><div id="statValide" class="font-bold text-2xl">0</div></div>
+<div class="bg-white border p-4 rounded-[16px]"><div class="text-xs opacity-60">Total votes</div><div id="statVotes" class="font-bold text-2xl">0</div></div>
+<div class="bg-white border p-4 rounded-[16px]"><div class="text-xs opacity-60">Annonces actives</div><div id="statAnnonces" class="font-bold text-2xl">0</div></div>
+</div>
+
+<!-- ANNONCES -->
+<div class="bg-white border rounded-[20px] p-6">
+<h3 class="font-bold mb-3">📢 Panneau Annonces (MongoDB)</h3>
+<div class="flex gap-2"><input id="annonceInput" placeholder="Ex: Exposition Novembre ouverte..." class="flex-1 border rounded-full px-4 py-2.5 text-sm"><button onclick="publierAnnonce()" class="bg-black text-white px-6 rounded-full text-sm">Publier</button></div>
+<div id="listAnnonces" class="mt-4 space-y-2"></div>
+</div>
+
+<!-- OEUVRES À VALIDER -->
+<div class="bg-white border rounded-[20px] p-6">
+<h3 class="font-bold mb-3">🎨 Œuvres à valider (statut: en_attente)</h3>
+<div id="attenteList" class="space-y-3">Chargement...</div>
+</div>
+
+<!-- OEUVRES VALIDÉES -->
+<div class="bg-white border rounded-[20px] p-6">
+<h3 class="font-bold mb-3">✅ Œuvres validées</h3>
+<div id="valideList" class="grid md:grid-cols-3 gap-3"></div>
+</div>
+</div>
+
+<script>
+const API='/api';
+async function loadAdmin(){
+  // Annonces
+  const annonces=await fetch(API+'/annonces').then(r=>r.json());
+  document.getElementById('statAnnonces').innerText=annonces.length;
+  document.getElementById('listAnnonces').innerHTML=annonces.map(a=>`<div class="flex justify-between bg-gray-50 p-3 rounded-xl text-sm"><span>${a.message}</span><button onclick="desactiverAnnonce('${a._id}')" class="text-red-500 text-xs">Désactiver</button></div>`).join('');
+
+  // Artworks
+  const all=await fetch(API+'/artworks').then(r=>r.json());
+  // On récupère aussi les en_attente en appelant direct (ton API filtre validée, donc on va chercher via une route admin)
+  const allWithPending = await fetch(API+'/artworks?all=true').then(r=>r.json()).catch(()=>all);
+  // Pour SPCK simple on simule: on fetch /api/artworks et on garde tout
+  const attenteRes = await fetch(API+'/artworks').then(r=>r.json()); // Pour vrai admin il faut modifier artworks.js pour retourner en_attente si?admin=true
+  // Hack: on va chercher en base via endpoint perso si besoin
+
+  // Pour l'instant on affiche ce qu'on a
+  const pending = all.filter(a=>a.statut==='en_attente');
+  const valides = all.filter(a=>a.statut==='validee');
+
+  document.getElementById('statAttente').innerText=pending.length;
+  document.getElementById('statValide').innerText=valides.length;
+  document.getElementById('statVotes').innerText=valides.reduce((s,a)=>s+(a.votesCount||0),0);
+
+  document.getElementById('attenteList').innerHTML=pending.map(a=>`
+    <div class="flex gap-3 bg-yellow-50 border border-yellow-200 p-3 rounded-xl">
+      <img src="${a.image}" class="w-16 h-16 rounded-xl object-cover">
+      <div class="flex-1"><div class="font-bold text-sm">${a.titre} - ${a.categorie}</div><div class="text-xs opacity-60">${a.prix} FCFA • ${a.artiste?.nom||'Artiste'}</div></div>
+      <div class="flex flex-col gap-1"><button onclick="valider('${a._id}')" class="bg-black text-white px-4 py-1.5 rounded-full text-xs">Valider</button><button onclick="refuser('${a._id}')" class="border px-4 py-1.5 rounded-full text-xs">Refuser</button></div>
+    </div>
+  `).join('') || '<div class="text-sm opacity-60">Aucune en attente - modifie routes/artworks.js ligne filter pour voir en_attente</div>';
+
+  document.getElementById('valideList').innerHTML=valides.map(a=>`
+    <div class="border rounded-xl overflow-hidden"><img src="${a.image}" class="h-28 w-full object-cover"><div class="p-2"><div class="font-bold text-xs">${a.titre}</div><div class="text-[11px]">${a.votesCount||0} votes</div></div></div>
+  `).join('');
+}
+
+async function valider(id){
+  await fetch(`${API}/artworks/${id}/valider`,{method:'PUT'});
+  alert('✅ Validée!'); loadAdmin();
+}
+async function refuser(id){
+  if(!confirm('Refuser?')) return;
+  await fetch(`${API}/artworks/${id}`,{method:'DELETE'});
+  loadAdmin();
+}
+async function publierAnnonce(){
+  const message=document.getElementById('annonceInput').value;
+  if(!message) return;
+  await fetch(API+'/annonces',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message, type:'info'})});
+  document.getElementById('annonceInput').value=''; loadAdmin();
+}
+async function desactiverAnnonce(id){
+  await fetch(`${API}/annonces/${id}/desactiver`,{method:'PUT'}); loadAdmin();
+}
+loadAdmin();
+
+// IMPORTANT: Pour que admin voit les en_attente, modifie ton routes/artworks.js :
+// router.get('/', async(req,res)=>{
+// const filter={}; if(!req.query.admin) filter.statut='validee';
+//...
+// });
+</script></body></html>
