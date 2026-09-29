@@ -1,0 +1,82 @@
+<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Compte - ZEDMO</title><script src="https://cdn.tailwindcss.com"></script>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+</head><body class="bg-[#F9F7F2]"><nav class="bg-white border-b p-3 flex justify-between"><a href="index.html" class="font-bold">ART-ZEDMO</a><a href="admin/dashboard.html" class="text-xs bg-black text-white px-3 py-1 rounded-full">Admin</a></nav>
+
+<div class="max-w-5xl mx-auto p-4 grid md:grid-cols-3 gap-6 mt-4">
+<!-- PROFIL -->
+<div class="bg-white border rounded-[20px] p-6 text-center h-fit">
+<img src="https://i.pravatar.cc/150?u=zedmo" class="w-24 h-24 rounded-full mx-auto">
+<div class="font-bold mt-3">Artiste Démo</div><div class="text-xs opacity-60">ID: <span id="userIdDisplay" class="font-mono">demo123</span></div>
+<div class="mt-4 grid grid-cols-2 gap-2 text-xs"><div class="bg-gray-50 p-2 rounded-xl"><div class="font-bold text-lg" id="countOeuvres">0</div>Oeuvres</div><div class="bg-gray-50 p-2 rounded-xl"><div class="font-bold text-lg" id="countVotes">0</div>Votes reçus</div></div>
+<button onclick="document.getElementById('formPublish').classList.toggle('hidden')" class="w-full mt-5 bg-black text-white py-3 rounded-full text-sm font-bold">+ Publier une œuvre</button>
+</div>
+
+<!-- FORM + LISTE -->
+<div class="md:col-span-2 space-y-6">
+<!-- FORMULAIRE PUBLICATION -->
+<div id="formPublish" class="hidden bg-white border rounded-[20px] p-6">
+<h3 class="font-bold text-lg mb-4">Publier nouvelle œuvre</h3>
+<div class="grid gap-3">
+<input id="titre" placeholder="Titre * ex: Beauté Africaine" class="border rounded-full px-4 py-2.5 text-sm">
+<select id="categorie" class="border rounded-full px-4 py-2.5 text-sm">
+<option value="Peinture">Peinture</option><option value="Sculpture">Sculpture</option><option value="Photographie">Photographie</option><option value="Art numérique">Art numérique</option><option value="Dessin">Dessin</option>
+</select>
+<div class="grid grid-cols-2 gap-3">
+<input id="prix" type="number" placeholder="Prix FCFA * ex: 150000" class="border rounded-full px-4 py-2.5 text-sm">
+<input id="technique" placeholder="Technique ex: Acrylique" class="border rounded-full px-4 py-2.5 text-sm">
+</div>
+<input id="image" placeholder="Lien image (URL) * https://..." class="border rounded-full px-4 py-2.5 text-sm">
+<textarea id="description" placeholder="Description..." class="border rounded-[16px] px-4 py-2.5 text-sm h-20"></textarea>
+<select id="typeVente" class="border rounded-full px-4 py-2.5 text-sm"><option value="directe">Vente directe</option><option value="enchere">Mettre aux enchères</option></select>
+<button onclick="publierOeuvre()" class="bg-yellow-400 text-black py-3 rounded-full font-bold text-sm">Publier → En attente validation admin</button>
+<div id="msgPublish" class="text-xs text-center"></div>
+</div>
+</div>
+
+<!-- MES OEUVRES -->
+<div class="bg-white border rounded-[20px] p-6">
+<h3 class="font-bold mb-3">Mes œuvres (depuis MongoDB)</h3>
+<div id="mesOeuvres" class="grid grid-cols-2 md:grid-cols-3 gap-3">Chargement...</div>
+</div>
+</div>
+</div>
+
+<script>
+const API='/api';
+const DEMO_USER_ID='66f5a5a5a5a5a5a5a5a5a5a5'; // Remplace par vrai userId après login
+
+async function publierOeuvre(){
+  const body={
+    titre: document.getElementById('titre').value,
+    categorie: document.getElementById('categorie').value,
+    prix: Number(document.getElementById('prix').value),
+    technique: document.getElementById('technique').value,
+    image: document.getElementById('image').value || 'https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?w=500',
+    description: document.getElementById('description').value,
+    typeVente: document.getElementById('typeVente').value,
+    artiste: DEMO_USER_ID,
+    statut: 'en_attente'
+  };
+  if(!body.titre ||!body.prix) return alert('Titre et Prix obligatoires');
+  document.getElementById('msgPublish').innerText='Envoi...';
+  const res=await fetch(API+'/artworks',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  const data=await res.json();
+  document.getElementById('msgPublish').innerText='✅ Envoyé! En attente validation admin';
+  loadMesOeuvres();
+}
+
+async function loadMesOeuvres(){
+  const res=await fetch(API+'/artworks'); const all=await res.json();
+  const mine = all.filter(a=>a.statut==='validee' || a.statut==='en_attente');
+  document.getElementById('countOeuvres').innerText=mine.length;
+  document.getElementById('mesOeuvres').innerHTML=mine.map(a=>`
+    <div class="border rounded-xl overflow-hidden">
+      <img src="${a.image}" class="h-28 w-full object-cover">
+      <div class="p-2"><div class="font-bold text-xs">${a.titre}</div><div class="text-[11px] opacity-60">${a.statut} • ${a.votesCount||0} votes</div></div>
+    </div>
+  `).join('') || 'Aucune oeuvre';
+}
+loadMesOeuvres();
+document.getElementById('userIdDisplay').innerText=DEMO_USER_ID.slice(0,8);
+</script></body></html>
