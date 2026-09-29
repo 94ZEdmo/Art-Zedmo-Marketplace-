@@ -1,0 +1,9 @@
+<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Oeuvre</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-[#F9F7F2]"><nav class="bg-white border-b p-3"><a href="galerie.html">← Retour Galerie</a></nav>
+<div class="max-w-4xl mx-auto p-4 bg-white border rounded-[20px] mt-4"><img id="img" class="w-full h-96 object-cover rounded-xl"><h1 id="titre" class="text-3xl font-bold mt-4"></h1><p class="text-sm opacity-60">Amina K. • Peinture • 2026 • 150k FCFA</p><p class="text-sm mt-4">Oeuvre certifiée Art-Zedmo. Disponible en vente directe ou enchère.</p>
+<div class="flex gap-2 mt-6"><button class="flex-1 border py-3 rounded-full">Favori ❤️</button><button onclick="voter()" class="flex-1 bg-black text-white py-3 rounded-full">Voter 👍</button><a href="encheres.html" class="flex-1 bg-yellow-400 text-black py-3 rounded-full text-center font-bold">Enchérir 🔨</a></div></div>
+<script>
+const arts={1:{t:"Beauté africaine",img:"https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?w=800"},2:{t:"Renaissance",img:"https://images.unsplash.com/photo-1554907984-15263bfd63bd?w=800"}};
+const id=new URLSearchParams(location.search).get('id')||1; const a=arts[id]; document.getElementById('titre').innerText=a.t; document.getElementById('img').src=a.img;
+function voter(){ alert('Vote comptabilisé - 1 compte = 1 vote'); }
+</script></body></html>
