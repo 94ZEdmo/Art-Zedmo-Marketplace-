@@ -21,9 +21,10 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-console.log("Connexion MongoDB...");
+const MONGO_URL = process.env.MONGO_URI || process.env.MONGODB_URI;
 
-mongoose.connect(process.env.MONGO_URI)
+console.log("Connexion MongoDB...");
+mongoose.connect(MONGO_URL)
 .then(()=>console.log("✅ MongoDB ART-ZEDMO CONNECTÉ"))
 .catch(e=>console.log("❌ ERREUR MONGO:", e.message));
 
@@ -36,5 +37,5 @@ app.use('/api/annonces', annonceRoutes);
 
 app.get('*', (req,res)=> res.sendFile(path.join(__dirname, 'public', 'index.html')));
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, ()=>console.log(`🚀 ART-ZEDMO MONGODB LIVE sur ${PORT}`));
+const PORT = process.env.PORT || 10000;
+app.listen(PORT, ()=>console.log(`🚀 ART-ZEDMO LIVE sur ${PORT}`));
