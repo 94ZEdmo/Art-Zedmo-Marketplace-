@@ -1,96 +1,115 @@
 <!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Admin ZEDMO</title><script src="https://cdn.tailwindcss.com"></script></head>
-<body class="bg-[#F9F7F2]"><nav class="bg-black text-white p-3 flex justify-between"><span class="font-bold">⚙️ ADMIN ZEDMO - Backend Live</span><a href="../index.html" class="underline text-sm">Voir site</a></nav>
+<body class="bg-[#F9F7F2]"><nav class="bg-black text-white p-3 flex justify-between"><span class="font-bold">⚙️ ADMIN ZEDMO - Backend Live</span><div class="flex gap-3"><a href="/api/health" target="_blank" class="text-xs bg-white text-black px-3 py-1 rounded-full">Health</a><a href="/" class="underline text-sm">Voir site</a></div></nav>
 
 <div class="max-w-6xl mx-auto p-4 space-y-6">
-<!-- STATS -->
 <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
 <div class="bg-white border p-4 rounded-[16px]"><div class="text-xs opacity-60">En attente</div><div id="statAttente" class="font-bold text-2xl">0</div></div>
 <div class="bg-white border p-4 rounded-[16px]"><div class="text-xs opacity-60">Validées</div><div id="statValide" class="font-bold text-2xl">0</div></div>
 <div class="bg-white border p-4 rounded-[16px]"><div class="text-xs opacity-60">Total votes</div><div id="statVotes" class="font-bold text-2xl">0</div></div>
-<div class="bg-white border p-4 rounded-[16px]"><div class="text-xs opacity-60">Annonces actives</div><div id="statAnnonces" class="font-bold text-2xl">0</div></div>
+<div class="bg-white border p-4 rounded-[16px]"><div class="text-xs opacity-60">En enchère</div><div id="statEnchere" class="font-bold text-2xl">0</div></div>
 </div>
 
-<!-- ANNONCES -->
 <div class="bg-white border rounded-[20px] p-6">
-<h3 class="font-bold mb-3">📢 Panneau Annonces (MongoDB)</h3>
-<div class="flex gap-2"><input id="annonceInput" placeholder="Ex: Exposition Novembre ouverte..." class="flex-1 border rounded-full px-4 py-2.5 text-sm"><button onclick="publierAnnonce()" class="bg-black text-white px-6 rounded-full text-sm">Publier</button></div>
+<h3 class="font-bold mb-3">📢 Panneau Annonces LIVE (bannière du site)</h3>
+<div class="flex gap-2"><input id="annonceInput" placeholder="Ex: EXPO NOV 2026 - Thème: Femme Africaine - LIVE" class="flex-1 border rounded-full px-4 py-2.5 text-sm"><button onclick="publierAnnonce()" class="bg-black text-white px-6 rounded-full text-sm">Publier LIVE</button></div>
 <div id="listAnnonces" class="mt-4 space-y-2"></div>
 </div>
 
-<!-- OEUVRES À VALIDER -->
 <div class="bg-white border rounded-[20px] p-6">
-<h3 class="font-bold mb-3">🎨 Œuvres à valider (statut: en_attente)</h3>
+<h3 class="font-bold mb-3">🎨 Œuvres à valider - &lt;24h (statut: en_attente)</h3>
 <div id="attenteList" class="space-y-3">Chargement...</div>
 </div>
 
-<!-- OEUVRES VALIDÉES -->
 <div class="bg-white border rounded-[20px] p-6">
-<h3 class="font-bold mb-3">✅ Œuvres validées</h3>
+<h3 class="font-bold mb-3">✅ Galerie validée + Expo OCT 2026</h3>
+<div class="flex gap-2 mb-4"><button onclick="loadAdmin('populaire')" class="border px-3 py-1.5 rounded-full text-xs">Tri Populaire</button><button onclick="passerEnExpo()" class="bg-black text-white px-4 py-1.5 rounded-full text-xs">Envoyer sélection en Expo</button><button onclick="calculerTop()" class="bg-[#D4AF37] text-black px-4 py-1.5 rounded-full text-xs font-bold">Top10 → Enchère x2</button></div>
 <div id="valideList" class="grid md:grid-cols-3 gap-3"></div>
+</div>
+
+<div class="bg-white border rounded-[20px] p-6">
+<h3 class="font-bold mb-3">🔥 Enchères en cours</h3>
+<div id="enchereList" class="space-y-2"></div>
 </div>
 </div>
 
 <script>
 const API='/api';
-async function loadAdmin(){
+let EXPO_ACTIVE=null;
+
+async function loadAdmin(tri){
   // Annonces
   const annonces=await fetch(API+'/annonces').then(r=>r.json());
-  document.getElementById('statAnnonces').innerText=annonces.length;
-  document.getElementById('listAnnonces').innerHTML=annonces.map(a=>`<div class="flex justify-between bg-gray-50 p-3 rounded-xl text-sm"><span>${a.message}</span><button onclick="desactiverAnnonce('${a._id}')" class="text-red-500 text-xs">Désactiver</button></div>`).join('');
+  document.getElementById('listAnnonces').innerHTML=annonces.map(a=>`<div class="flex justify-between bg-gray-50 p-3 rounded-xl text-sm"><div><b class="text-[10px] bg-black text-white px-2 py-0.5 rounded-full mr-2">${a.type}</b>${a.titre||a.message}</div><button onclick="desactiverAnnonce('${a._id}')" class="text-red-500 text-xs">Désactiver</button></div>`).join('') || '<p class="text-xs opacity-50">Aucune annonce</p>';
 
-  // Artworks
-  const all=await fetch(API+'/artworks').then(r=>r.json());
-  // On récupère aussi les en_attente en appelant direct (ton API filtre validée, donc on va chercher via une route admin)
-  const allWithPending = await fetch(API+'/artworks?all=true').then(r=>r.json()).catch(()=>all);
-  // Pour SPCK simple on simule: on fetch /api/artworks et on garde tout
-  const attenteRes = await fetch(API+'/artworks').then(r=>r.json()); // Pour vrai admin il faut modifier artworks.js pour retourner en_attente si?admin=true
-  // Hack: on va chercher en base via endpoint perso si besoin
+  // Expo active
+  const expoRes = await fetch(API+'/expositions/active').then(r=>r.json()).catch(()=>null);
+  if(expoRes && expoRes._id) EXPO_ACTIVE = expoRes;
 
-  // Pour l'instant on affiche ce qu'on a
+  // Tous artworks avec all=true
+  const q = tri ? `?all=true&tri=${tri}` : '?all=true';
+  const all=await fetch(API+'/artworks'+q).then(r=>r.json());
+
   const pending = all.filter(a=>a.statut==='en_attente');
-  const valides = all.filter(a=>a.statut==='validee');
+  const valides = all.filter(a=>a.statut!=='en_attente');
 
   document.getElementById('statAttente').innerText=pending.length;
   document.getElementById('statValide').innerText=valides.length;
-  document.getElementById('statVotes').innerText=valides.reduce((s,a)=>s+(a.votesCount||0),0);
+  document.getElementById('statVotes').innerText=all.reduce((s,a)=>s+(a.votesCount||0),0);
 
   document.getElementById('attenteList').innerHTML=pending.map(a=>`
     <div class="flex gap-3 bg-yellow-50 border border-yellow-200 p-3 rounded-xl">
-      <img src="${a.image}" class="w-16 h-16 rounded-xl object-cover">
-      <div class="flex-1"><div class="font-bold text-sm">${a.titre} - ${a.categorie}</div><div class="text-xs opacity-60">${a.prix} FCFA • ${a.artiste?.nom||'Artiste'}</div></div>
-      <div class="flex flex-col gap-1"><button onclick="valider('${a._id}')" class="bg-black text-white px-4 py-1.5 rounded-full text-xs">Valider</button><button onclick="refuser('${a._id}')" class="border px-4 py-1.5 rounded-full text-xs">Refuser</button></div>
+      <img src="${a.image||a.images?.[0]||'https://picsum.photos/100'}" class="w-16 h-16 rounded-xl object-cover">
+      <div class="flex-1"><div class="font-bold text-sm">${a.titre} - ${a.categorie}</div><div class="text-xs opacity-60">${(a.prix||0).toLocaleString()} FCFA • ${a.artiste?.nom||'Artiste'} • ${a.artiste?.whatsapp||''}</div><div class="text-[10px] mt-1">${a.ville||''}</div></div>
+      <div class="flex flex-col gap-1"><button onclick="valider('${a._id}')" class="bg-black text-white px-4 py-1.5 rounded-full text-xs">Valider <24h</button><button onclick="refuser('${a._id}')" class="border px-4 py-1.5 rounded-full text-xs">Refuser</button></div>
     </div>
-  `).join('') || '<div class="text-sm opacity-60">Aucune en attente - modifie routes/artworks.js ligne filter pour voir en_attente</div>';
+  `).join('') || '<div class="text-sm opacity-60">✅ Aucune en attente - tu es à jour!</div>';
 
   document.getElementById('valideList').innerHTML=valides.map(a=>`
-    <div class="border rounded-xl overflow-hidden"><img src="${a.image}" class="h-28 w-full object-cover"><div class="p-2"><div class="font-bold text-xs">${a.titre}</div><div class="text-[11px]">${a.votesCount||0} votes</div></div></div>
+    <div class="border rounded-xl overflow-hidden bg-white"><img src="${a.image||a.images?.[0]||'https://picsum.photos/200'}" class="h-28 w-full object-cover"><div class="p-2"><div class="font-bold text-xs truncate">${a.titre}</div><div class="text-[11px]">${a.statut} • ${a.votesCount||0} votes</div><div class="text-[11px] opacity-60">${(a.prix||0).toLocaleString()} FCFA</div><button onclick="addToExpo('${a._id}')" class="mt-2 w-full border text-[11px] py-1 rounded-full">+ Expo</button></div></div>
   `).join('');
+
+  const enchs=await fetch(API+'/encheres').then(r=>r.json());
+  document.getElementById('statEnchere').innerText=enchs.length;
+  document.getElementById('enchereList').innerHTML=enchs.map(e=>`<div class="flex justify-between bg-black text-white p-3 rounded-xl text-xs"><span>${e.artwork?.titre} - ${e.enchereActuelle} FCFA</span><span class="opacity-60">fin: ${new Date(e.dateFin).toLocaleString()}</span></div>`).join('') || '<p class="text-xs opacity-50">Pas d\'enchère active</p>';
 }
 
 async function valider(id){
-  await fetch(`${API}/artworks/${id}/valider`,{method:'PUT'});
-  alert('✅ Validée!'); loadAdmin();
+  await fetch(`${API}/artworks/${id}/valider`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({statut:'validee'})});
+  loadAdmin();
 }
 async function refuser(id){
-  if(!confirm('Refuser?')) return;
+  if(!confirm('Supprimer cette oeuvre?')) return;
   await fetch(`${API}/artworks/${id}`,{method:'DELETE'});
   loadAdmin();
 }
 async function publierAnnonce(){
-  const message=document.getElementById('annonceInput').value;
-  if(!message) return;
-  await fetch(API+'/annonces',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message, type:'info'})});
+  const titre=document.getElementById('annonceInput').value;
+  if(!titre) return alert('Écris un message');
+  await fetch(API+'/annonces',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({titre, message:titre, type:'expo'})});
   document.getElementById('annonceInput').value=''; loadAdmin();
 }
 async function desactiverAnnonce(id){
-  await fetch(`${API}/annonces/${id}/desactiver`,{method:'PUT'}); loadAdmin();
+  await fetch(`${API}/annonces/${id}`,{method:'DELETE'}).catch(async()=>{
+    // si ta route est PUT /desactiver
+    await fetch(`${API}/annonces/${id}/desactiver`,{method:'PUT'});
+  });
+  loadAdmin();
 }
-loadAdmin();
+async function addToExpo(artId){
+  if(!EXPO_ACTIVE){ alert('Crée d\'abord une expo active: POST /api/expositions {titre:"Expo OCT 2026"}'); return; }
+  const res = await fetch(`${API}/expositions/${EXPO_ACTIVE._id}/add-artwork`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({artworkId:artId})}).then(r=>r.json());
+  alert('Ajoutée à Expo! Lien viral: '+res.lien_viral);
+}
+async function calculerTop(){
+  if(!EXPO_ACTIVE) return alert('Pas d\'expo active');
+  if(!confirm('Calculer Top10 le plus voté et les passer en enchère LIVE prix x2?')) return;
+  const res = await fetch(`${API}/expositions/${EXPO_ACTIVE._id}/calculer-top-et-encherir`,{method:'POST'}).then(r=>r.json());
+  alert('Top10 en enchère! '+res.top.length+' oeuvres');
+  loadAdmin();
+}
+async function passerEnExpo(){ alert('Clique sur + Expo sous chaque oeuvre validée pour l\'ajouter à l\'expo active'); }
 
-// IMPORTANT: Pour que admin voit les en_attente, modifie ton routes/artworks.js :
-// router.get('/', async(req,res)=>{
-// const filter={}; if(!req.query.admin) filter.statut='validee';
-//...
-// });
+loadAdmin();
+setInterval(loadAdmin, 10000);
 </script></body></html>
