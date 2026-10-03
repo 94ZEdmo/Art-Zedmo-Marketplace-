@@ -17,7 +17,6 @@
 <div id="listAnnonces" class="mt-4 space-y-2"></div>
 </div>
 
-<!-- NOUVEAU: VALIDATION PROFILS ARTISTE COMME TU VEUX -->
 <div class="bg-white border-2 border-orange-300 rounded-[20px] p-6">
 <h3 class="font-bold mb-3">👤 Artistes à valider - Nom complet / Nom d'artiste / WhatsApp / Email (avant publication galerie)</h3>
 <div id="artistesAttenteList" class="space-y-3">Chargement artistes...</div>
@@ -51,10 +50,10 @@ async function loadAdmin(tri){
   const expoRes = await fetch(API+'/expositions/active').then(r=>r.json()).catch(()=>null);
   if(expoRes && expoRes._id) EXPO_ACTIVE = expoRes;
 
-  // ARTISTES EN ATTENTE
+  // FIX: on tape directement sur /api/auth qui existe chez toi
   try{
-    const users = await fetch(API+'/users').then(r=>r.json()).catch(async()=>{return await fetch(API+'/auth/users').then(r=>r.json()).catch(()=>[]);});
-    const artistesPending = Array.isArray(users)? users.filter(u=>u.statut==='en_attente') : [];
+    const users = await fetch(API+'/auth').then(r=>r.json()).catch(()=>[]);
+    const artistesPending = Array.isArray(users)? users.filter(u=>u.statut==='en_attente' || u.statut==undefined) : [];
     document.getElementById('statArtisteAtt').innerText=artistesPending.length;
     document.getElementById('artistesAttenteList').innerHTML=artistesPending.map(u=>`
       <div class="flex gap-3 bg-orange-50 border border-orange-200 p-4 rounded-xl">
@@ -71,9 +70,8 @@ async function loadAdmin(tri){
         </div>
       </div>
     `).join('') || '<div class="text-sm opacity-60 text-center py-4">✅ Aucun artiste en attente</div>';
-  }catch(e){ document.getElementById('artistesAttenteList').innerHTML='<p class="text-red-500 text-xs">Erreur chargement artistes - vérifie route /api/users</p>';}
+  }catch(e){ document.getElementById('artistesAttenteList').innerHTML='<p class="text-red-500 text-xs">Erreur: '+e.message+'</p>';}
 
-  // OEUVRES
   const q = tri? `?all=true&tri=${tri}` : '?all=true';
   const all=await fetch(API+'/artworks'+q).then(r=>r.json()).catch(()=>[]);
   const pending = all.filter(a=>a.statut==='en_attente');
@@ -95,8 +93,8 @@ async function loadAdmin(tri){
   document.getElementById('statEnchere').innerText=enchs.length;
   document.getElementById('enchereList').innerHTML=enchs.map(e=>`<div class="flex justify-between bg-black text-white p-3 rounded-xl text-xs"><span>${e.artwork?.titre} - ${e.enchereActuelle} FCFA</span><span class="opacity-60">${new Date(e.dateFin).toLocaleString()}</span></div>`).join('') || '<p class="text-xs opacity-50">Pas d\'enchère</p>';
 }
-async function validerArtiste(id){ await fetch(`${API}/users/${id}/valider`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({statut:'valide'})}).catch(async()=>{await fetch(`${API}/auth/users/${id}/valider`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({statut:'valide'})});}); alert('✅ Artiste validé - peut publier'); loadAdmin(); }
-async function refuserArtiste(id){ if(!confirm('Refuser cet artiste?'))return; await fetch(`${API}/users/${id}`,{method:'DELETE'}).catch(async()=>{await fetch(`${API}/auth/users/${id}`,{method:'DELETE'});}); loadAdmin(); }
+async function validerArtiste(id){ await fetch(`${API}/auth/${id}/valider`,{method:'PUT'}); alert('✅ Artiste validé - peut publier'); loadAdmin(); }
+async function refuserArtiste(id){ if(!confirm('Refuser cet artiste?'))return; await fetch(`${API}/auth/${id}`,{method:'DELETE'}); loadAdmin(); }
 async function valider(id){ await fetch(`${API}/artworks/${id}/valider`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({statut:'validee'})}); loadAdmin(); }
 async function refuser(id){ if(!confirm('Supprimer?')) return; await fetch(`${API}/artworks/${id}`,{method:'DELETE'}); loadAdmin(); }
 async function publierAnnonce(){ const t=document.getElementById('annonceInput').value; if(!t)return alert('Message'); await fetch(API+'/annonces',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({titre:t, message:t, type:'expo'})}); document.getElementById('annonceInput').value=''; loadAdmin(); }
