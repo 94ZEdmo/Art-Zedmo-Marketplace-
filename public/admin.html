@@ -3,27 +3,34 @@
 <body class="bg-[#F9F7F2]"><nav class="bg-black text-white p-3 flex justify-between"><span class="font-bold">⚙️ ADMIN ZEDMO - Backend Live</span><div class="flex gap-3"><a href="/api/health" target="_blank" class="text-xs bg-white text-black px-3 py-1 rounded-full">Health</a><a href="/" class="underline text-sm">Voir site</a></div></nav>
 
 <div class="max-w-6xl mx-auto p-4 space-y-6">
-<div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-<div class="bg-white border p-4 rounded-[16px]"><div class="text-xs opacity-60">En attente</div><div id="statAttente" class="font-bold text-2xl">0</div></div>
+<div class="grid grid-cols-2 md:grid-cols-5 gap-3">
+<div class="bg-white border p-4 rounded-[16px]"><div class="text-xs opacity-60">Artistes en attente</div><div id="statArtisteAtt" class="font-bold text-2xl text-orange-600">0</div></div>
+<div class="bg-white border p-4 rounded-[16px]"><div class="text-xs opacity-60">Oeuvres en attente</div><div id="statAttente" class="font-bold text-2xl">0</div></div>
 <div class="bg-white border p-4 rounded-[16px]"><div class="text-xs opacity-60">Validées</div><div id="statValide" class="font-bold text-2xl">0</div></div>
 <div class="bg-white border p-4 rounded-[16px]"><div class="text-xs opacity-60">Total votes</div><div id="statVotes" class="font-bold text-2xl">0</div></div>
 <div class="bg-white border p-4 rounded-[16px]"><div class="text-xs opacity-60">En enchère</div><div id="statEnchere" class="font-bold text-2xl">0</div></div>
 </div>
 
 <div class="bg-white border rounded-[20px] p-6">
-<h3 class="font-bold mb-3">📢 Panneau Annonces LIVE (bannière du site)</h3>
-<div class="flex gap-2"><input id="annonceInput" placeholder="Ex: EXPO NOV 2026 - Thème: Femme Africaine - LIVE" class="flex-1 border rounded-full px-4 py-2.5 text-sm"><button onclick="publierAnnonce()" class="bg-black text-white px-6 rounded-full text-sm">Publier LIVE</button></div>
+<h3 class="font-bold mb-3">📢 Panneau Annonces LIVE</h3>
+<div class="flex gap-2"><input id="annonceInput" placeholder="Ex: EXPO NOV 2026 - Femme Africaine - LIVE" class="flex-1 border rounded-full px-4 py-2.5 text-sm"><button onclick="publierAnnonce()" class="bg-black text-white px-6 rounded-full text-sm">Publier LIVE</button></div>
 <div id="listAnnonces" class="mt-4 space-y-2"></div>
 </div>
 
+<!-- NOUVEAU: VALIDATION PROFILS ARTISTE COMME TU VEUX -->
+<div class="bg-white border-2 border-orange-300 rounded-[20px] p-6">
+<h3 class="font-bold mb-3">👤 Artistes à valider - Nom complet / Nom d'artiste / WhatsApp / Email (avant publication galerie)</h3>
+<div id="artistesAttenteList" class="space-y-3">Chargement artistes...</div>
+</div>
+
 <div class="bg-white border rounded-[20px] p-6">
-<h3 class="font-bold mb-3">🎨 Œuvres à valider - &lt;24h (statut: en_attente)</h3>
+<h3 class="font-bold mb-3">🎨 Œuvres à valider - &lt;24h</h3>
 <div id="attenteList" class="space-y-3">Chargement...</div>
 </div>
 
 <div class="bg-white border rounded-[20px] p-6">
 <h3 class="font-bold mb-3">✅ Galerie validée + Expo OCT 2026</h3>
-<div class="flex gap-2 mb-4"><button onclick="loadAdmin('populaire')" class="border px-3 py-1.5 rounded-full text-xs">Tri Populaire</button><button onclick="passerEnExpo()" class="bg-black text-white px-4 py-1.5 rounded-full text-xs">Envoyer sélection en Expo</button><button onclick="calculerTop()" class="bg-[#D4AF37] text-black px-4 py-1.5 rounded-full text-xs font-bold">Top10 → Enchère x2</button></div>
+<div class="flex gap-2 mb-4"><button onclick="loadAdmin('populaire')" class="border px-3 py-1.5 rounded-full text-xs">Tri Populaire</button><button onclick="passerEnExpo()" class="bg-black text-white px-4 py-1.5 rounded-full text-xs">+ Expo</button><button onclick="calculerTop()" class="bg-[#D4AF37] text-black px-4 py-1.5 rounded-full text-xs font-bold">Top10 → Enchère x2</button></div>
 <div id="valideList" class="grid md:grid-cols-3 gap-3"></div>
 </div>
 
@@ -38,78 +45,64 @@ const API='/api';
 let EXPO_ACTIVE=null;
 
 async function loadAdmin(tri){
-  // Annonces
-  const annonces=await fetch(API+'/annonces').then(r=>r.json());
+  const annonces=await fetch(API+'/annonces').then(r=>r.json()).catch(()=>[]);
   document.getElementById('listAnnonces').innerHTML=annonces.map(a=>`<div class="flex justify-between bg-gray-50 p-3 rounded-xl text-sm"><div><b class="text-[10px] bg-black text-white px-2 py-0.5 rounded-full mr-2">${a.type}</b>${a.titre||a.message}</div><button onclick="desactiverAnnonce('${a._id}')" class="text-red-500 text-xs">Désactiver</button></div>`).join('') || '<p class="text-xs opacity-50">Aucune annonce</p>';
 
-  // Expo active
   const expoRes = await fetch(API+'/expositions/active').then(r=>r.json()).catch(()=>null);
   if(expoRes && expoRes._id) EXPO_ACTIVE = expoRes;
 
-  // Tous artworks avec all=true
-  const q = tri ? `?all=true&tri=${tri}` : '?all=true';
-  const all=await fetch(API+'/artworks'+q).then(r=>r.json());
+  // ARTISTES EN ATTENTE
+  try{
+    const users = await fetch(API+'/users').then(r=>r.json()).catch(async()=>{return await fetch(API+'/auth/users').then(r=>r.json()).catch(()=>[]);});
+    const artistesPending = Array.isArray(users)? users.filter(u=>u.statut==='en_attente') : [];
+    document.getElementById('statArtisteAtt').innerText=artistesPending.length;
+    document.getElementById('artistesAttenteList').innerHTML=artistesPending.map(u=>`
+      <div class="flex gap-3 bg-orange-50 border border-orange-200 p-4 rounded-xl">
+        <div class="w-12 h-12 bg-black text-white rounded-full flex items-center justify-center font-bold">${(u.nom_artiste||u.nom||'?')[0].toUpperCase()}</div>
+        <div class="flex-1 text-sm">
+          <div class="font-bold">Nom complet: ${u.nom} | Artiste: <span class="text-orange-600">${u.nom_artiste||'N/A'}</span></div>
+          <div class="text-xs mt-1">📱 WhatsApp: ${u.whatsapp} | 📧 Email: ${u.email||'N/A'}</div>
+          <div class="text-[10px] opacity-60 mt-1">Ville: ${u.ville||''} • ${new Date(u.createdAt).toLocaleString()}</div>
+        </div>
+        <div class="flex flex-col gap-1">
+          <button onclick="validerArtiste('${u._id}')" class="bg-black text-white px-4 py-2 rounded-full text-xs font-bold">Valider profil</button>
+          <button onclick="refuserArtiste('${u._id}')" class="border border-red-300 text-red-600 px-4 py-1.5 rounded-full text-xs">Refuser</button>
+          <a href="https://wa.me/${u.whatsapp}?text=Bienvenue sur ART-ZEDMO" target="_blank" class="bg-green-600 text-white px-4 py-1.5 rounded-full text-xs text-center">WhatsApp</a>
+        </div>
+      </div>
+    `).join('') || '<div class="text-sm opacity-60 text-center py-4">✅ Aucun artiste en attente</div>';
+  }catch(e){ document.getElementById('artistesAttenteList').innerHTML='<p class="text-red-500 text-xs">Erreur chargement artistes - vérifie route /api/users</p>';}
 
+  // OEUVRES
+  const q = tri? `?all=true&tri=${tri}` : '?all=true';
+  const all=await fetch(API+'/artworks'+q).then(r=>r.json()).catch(()=>[]);
   const pending = all.filter(a=>a.statut==='en_attente');
   const valides = all.filter(a=>a.statut!=='en_attente');
-
   document.getElementById('statAttente').innerText=pending.length;
   document.getElementById('statValide').innerText=valides.length;
   document.getElementById('statVotes').innerText=all.reduce((s,a)=>s+(a.votesCount||0),0);
-
   document.getElementById('attenteList').innerHTML=pending.map(a=>`
     <div class="flex gap-3 bg-yellow-50 border border-yellow-200 p-3 rounded-xl">
       <img src="${a.image||a.images?.[0]||'https://picsum.photos/100'}" class="w-16 h-16 rounded-xl object-cover">
-      <div class="flex-1"><div class="font-bold text-sm">${a.titre} - ${a.categorie}</div><div class="text-xs opacity-60">${(a.prix||0).toLocaleString()} FCFA • ${a.artiste?.nom||'Artiste'} • ${a.artiste?.whatsapp||''}</div><div class="text-[10px] mt-1">${a.ville||''}</div></div>
-      <div class="flex flex-col gap-1"><button onclick="valider('${a._id}')" class="bg-black text-white px-4 py-1.5 rounded-full text-xs">Valider <24h</button><button onclick="refuser('${a._id}')" class="border px-4 py-1.5 rounded-full text-xs">Refuser</button></div>
+      <div class="flex-1"><div class="font-bold text-sm">${a.titre} - ${a.categorie}</div><div class="text-xs opacity-60">${(a.prix||0).toLocaleString()} FCFA • ${a.artiste?.nom_artiste||a.artiste?.nom||''}</div></div>
+      <div class="flex flex-col gap-1"><button onclick="valider('${a._id}')" class="bg-black text-white px-4 py-1.5 rounded-full text-xs">Valider</button><button onclick="refuser('${a._id}')" class="border px-4 py-1.5 rounded-full text-xs">Refuser</button></div>
     </div>
-  `).join('') || '<div class="text-sm opacity-60">✅ Aucune en attente - tu es à jour!</div>';
-
+  `).join('') || '<div class="text-sm opacity-60">✅ Aucune oeuvre en attente</div>';
   document.getElementById('valideList').innerHTML=valides.map(a=>`
-    <div class="border rounded-xl overflow-hidden bg-white"><img src="${a.image||a.images?.[0]||'https://picsum.photos/200'}" class="h-28 w-full object-cover"><div class="p-2"><div class="font-bold text-xs truncate">${a.titre}</div><div class="text-[11px]">${a.statut} • ${a.votesCount||0} votes</div><div class="text-[11px] opacity-60">${(a.prix||0).toLocaleString()} FCFA</div><button onclick="addToExpo('${a._id}')" class="mt-2 w-full border text-[11px] py-1 rounded-full">+ Expo</button></div></div>
+    <div class="border rounded-xl overflow-hidden bg-white"><img src="${a.image||a.images?.[0]||'https://picsum.photos/200'}" class="h-28 w-full object-cover"><div class="p-2"><div class="font-bold text-xs truncate">${a.titre}</div><div class="text-[11px]">${a.statut} • ${a.votesCount||0} votes</div><button onclick="addToExpo('${a._id}')" class="mt-2 w-full border text-[11px] py-1 rounded-full">+ Expo</button></div></div>
   `).join('');
-
-  const enchs=await fetch(API+'/encheres').then(r=>r.json());
+  const enchs=await fetch(API+'/encheres').then(r=>r.json()).catch(()=>[]);
   document.getElementById('statEnchere').innerText=enchs.length;
-  document.getElementById('enchereList').innerHTML=enchs.map(e=>`<div class="flex justify-between bg-black text-white p-3 rounded-xl text-xs"><span>${e.artwork?.titre} - ${e.enchereActuelle} FCFA</span><span class="opacity-60">fin: ${new Date(e.dateFin).toLocaleString()}</span></div>`).join('') || '<p class="text-xs opacity-50">Pas d\'enchère active</p>';
+  document.getElementById('enchereList').innerHTML=enchs.map(e=>`<div class="flex justify-between bg-black text-white p-3 rounded-xl text-xs"><span>${e.artwork?.titre} - ${e.enchereActuelle} FCFA</span><span class="opacity-60">${new Date(e.dateFin).toLocaleString()}</span></div>`).join('') || '<p class="text-xs opacity-50">Pas d\'enchère</p>';
 }
-
-async function valider(id){
-  await fetch(`${API}/artworks/${id}/valider`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({statut:'validee'})});
-  loadAdmin();
-}
-async function refuser(id){
-  if(!confirm('Supprimer cette oeuvre?')) return;
-  await fetch(`${API}/artworks/${id}`,{method:'DELETE'});
-  loadAdmin();
-}
-async function publierAnnonce(){
-  const titre=document.getElementById('annonceInput').value;
-  if(!titre) return alert('Écris un message');
-  await fetch(API+'/annonces',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({titre, message:titre, type:'expo'})});
-  document.getElementById('annonceInput').value=''; loadAdmin();
-}
-async function desactiverAnnonce(id){
-  await fetch(`${API}/annonces/${id}`,{method:'DELETE'}).catch(async()=>{
-    // si ta route est PUT /desactiver
-    await fetch(`${API}/annonces/${id}/desactiver`,{method:'PUT'});
-  });
-  loadAdmin();
-}
-async function addToExpo(artId){
-  if(!EXPO_ACTIVE){ alert('Crée d\'abord une expo active: POST /api/expositions {titre:"Expo OCT 2026"}'); return; }
-  const res = await fetch(`${API}/expositions/${EXPO_ACTIVE._id}/add-artwork`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({artworkId:artId})}).then(r=>r.json());
-  alert('Ajoutée à Expo! Lien viral: '+res.lien_viral);
-}
-async function calculerTop(){
-  if(!EXPO_ACTIVE) return alert('Pas d\'expo active');
-  if(!confirm('Calculer Top10 le plus voté et les passer en enchère LIVE prix x2?')) return;
-  const res = await fetch(`${API}/expositions/${EXPO_ACTIVE._id}/calculer-top-et-encherir`,{method:'POST'}).then(r=>r.json());
-  alert('Top10 en enchère! '+res.top.length+' oeuvres');
-  loadAdmin();
-}
-async function passerEnExpo(){ alert('Clique sur + Expo sous chaque oeuvre validée pour l\'ajouter à l\'expo active'); }
-
-loadAdmin();
-setInterval(loadAdmin, 10000);
+async function validerArtiste(id){ await fetch(`${API}/users/${id}/valider`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({statut:'valide'})}).catch(async()=>{await fetch(`${API}/auth/users/${id}/valider`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({statut:'valide'})});}); alert('✅ Artiste validé - peut publier'); loadAdmin(); }
+async function refuserArtiste(id){ if(!confirm('Refuser cet artiste?'))return; await fetch(`${API}/users/${id}`,{method:'DELETE'}).catch(async()=>{await fetch(`${API}/auth/users/${id}`,{method:'DELETE'});}); loadAdmin(); }
+async function valider(id){ await fetch(`${API}/artworks/${id}/valider`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({statut:'validee'})}); loadAdmin(); }
+async function refuser(id){ if(!confirm('Supprimer?')) return; await fetch(`${API}/artworks/${id}`,{method:'DELETE'}); loadAdmin(); }
+async function publierAnnonce(){ const t=document.getElementById('annonceInput').value; if(!t)return alert('Message'); await fetch(API+'/annonces',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({titre:t, message:t, type:'expo'})}); document.getElementById('annonceInput').value=''; loadAdmin(); }
+async function desactiverAnnonce(id){ await fetch(`${API}/annonces/${id}`,{method:'DELETE'}).catch(async()=>{await fetch(`${API}/annonces/${id}/desactiver`,{method:'PUT'});}); loadAdmin(); }
+async function addToExpo(artId){ if(!EXPO_ACTIVE){ alert('Crée expo active: POST /api/expositions'); return; } const res=await fetch(`${API}/expositions/${EXPO_ACTIVE._id}/add-artwork`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({artworkId:artId})}).then(r=>r.json()); alert('Ajoutée Expo! '+res.lien_viral); }
+async function calculerTop(){ if(!EXPO_ACTIVE) return alert('Pas d\'expo active'); if(!confirm('Top10 → enchère x2?'))return; const res=await fetch(`${API}/expositions/${EXPO_ACTIVE._id}/calculer-top-et-encherir`,{method:'POST'}).then(r=>r.json()); alert(res.top.length+' en enchère'); loadAdmin(); }
+function passerEnExpo(){ alert('Clique + Expo sous chaque oeuvre'); }
+loadAdmin(); setInterval(loadAdmin,15000);
 </script></body></html>
