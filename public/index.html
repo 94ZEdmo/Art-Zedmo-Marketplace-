@@ -1,157 +1,243 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ART-ZEDMO | Galerie Béninoise & Expos LIVE</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ART-ZEDMO - L'art sans frontière</title>
 <script src="https://cdn.tailwindcss.com"></script>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <style>
- body{font-family:'Inter',sans-serif; background:#0a0a0a; color:#f5f5f5}
-.serif{font-family:'Playfair Display',serif}
-.or{color:#d4af37}.bg-or{background:#d4af37}.border-or{border-color:#d4af37}
-.card{transition:0.3s}.card:hover{transform:translateY(-5px); border-color:#d4af37}
+:root{--or:#D4AF37;--noir:#0A0A0A;}
+body{background:var(--noir);color:white;font-family:'Inter',sans-serif;}
+.or{color:var(--or)}.bg-or{background:var(--or)}
+.border-or{border-color:var(--or)}
+.tab-active{color:var(--or)!important;border-top:2px solid var(--or)}
+.eco-loop{border:1px solid #222;background:linear-gradient(180deg,#111,#0A0A0A)}
 </style>
 </head>
-<body class="min-h-screen">
+<body class="pb-24">
 
-<!-- HEADER -->
-<header class="sticky top-0 z-50 bg-black/90 backdrop-blur border-b border-zinc-800">
- <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
-  <h1 class="serif text-2xl font-bold">ART-<span class="or">ZEDMO</span></h1>
-  <div class="flex items-center gap-3">
-   <span id="annonce-live" class="text-[10px] bg-zinc-900 border border-or px-3 py-1 rounded-full or animate-pulse">EXPO OCT 2026 - LIVE</span>
-   <button onclick="document.getElementById('publish-modal').classList.remove('hidden')" class="bg-or text-black px-4 py-2 rounded-full text-sm font-bold">Publier</button>
+<header class="p-4 flex justify-between items-center border-b border-zinc-800 sticky top-0 bg-black/90 backdrop-blur z-50">
+  <div class="flex items-center gap-2">
+    <div class="w-9 h-9 bg-or text-black font-black flex items-center justify-center rounded">AZ</div>
+    <span class="font-bold tracking-widest">ART-ZEDMO</span>
   </div>
- </div>
+  <span id="annonce-badge" class="text-[10px] bg-zinc-900 border border-or px-2 py-1 rounded-full or">EXPO OCT 2026 - LIVE</span>
 </header>
 
-<!-- HERO DOUBLE BOUCLE -->
-<section class="max-w-7xl mx-auto px-4 py-12 grid md:grid-cols-2 gap-8">
- <div>
-  <h2 class="serif text-5xl leading-tight">Galerie Permanente<br><span class="or">85% pour l'artiste</span></h2>
-  <p class="text-zinc-400 mt-4">Stock permanent. Validation en &lt;24h. Vendez tous les jours.</p>
-  <div class="mt-6 flex gap-2">
-   <input id="search" placeholder="Rechercher Roi, masque..." class="bg-zinc-900 border border-zinc-800 rounded-full px-4 py-2 w-full">
-   <select id="tri" class="bg-zinc-900 border border-zinc-800 rounded-full px-4 py-2"><option value="recent">Récent</option><option value="populaire">Populaire</option></select>
+<!-- 1. ACCUEIL -->
+<section id="accueil" class="tab-content">
+  <div class="p-6 text-center mt-2">
+    <h1 class="text-[32px] font-black leading-[1.1]">L'art africain<br><span class="or">sans frontière.</span></h1>
+    <p class="text-zinc-300 text-[13px] mt-4 leading-relaxed px-2">Bienvenue sur ART-ZEDMO, la première plateforme dédiée à l'art africain. 100% digital, 100% solidaire. Découvrez, votez et collectionnez.</p>
+    <div class="flex gap-3 justify-center mt-6">
+      <button onclick="switchTab('galerie')" class="bg-or text-black px-6 py-3 rounded-full font-bold text-sm">Explorer la Galerie</button>
+      <button onclick="switchTab('expos')" class="border border-white px-6 py-3 rounded-full font-bold text-sm">Expo OCT 2026</button>
+    </div>
   </div>
- </div>
- <div class="bg-zinc-900 border border-or rounded-2xl p-6">
-  <h3 class="serif text-2xl">Expo du Mois: <span class="or">Royauté Africaine</span></h3>
-  <p class="text-zinc-400 text-sm mt-2">Soumets ton oeuvre, partage ton lien WhatsApp, récolte des votes.</p>
-  <div id="expo-stats" class="mt-4 grid grid-cols-3 gap-3 text-center">
-   <div class="bg-black rounded-xl p-3"><div id="total-oeuvres" class="text-xl font-bold">0</div><div class="text-[10px] text-zinc-500">OEUVRES</div></div>
-   <div class="bg-black rounded-xl p-3"><div id="total-votes" class="text-xl font-bold or">0</div><div class="text-[10px] text-zinc-500">VOTES</div></div>
-   <div class="bg-black rounded-xl p-3"><div class="text-xl font-bold">3j</div><div class="text-[10px] text-zinc-500">ENCHÈRE</div></div>
+  <div class="m-4 p-4 eco-loop rounded-2xl">
+    <h2 class="text-center font-bold text-[11px] tracking-widest or mb-4">ÉCOSYSTÈME DOUBLE BOUCLE</h2>
+    <div class="grid grid-cols-2 gap-3 text-[11px]">
+      <div class="border border-or/30 rounded-xl p-3 bg-or/5">
+        <p class="or font-bold"><i class="fa-solid fa-palette"></i> ARTISTE</p>
+        <p class="mt-2 text-zinc-300 font-mono text-[10px]">Publie → Partage lien WhatsApp → Votes = Trafic</p>
+        <p id="total-artistes-home" class="mt-2 text-[10px] text-zinc-500">0 artistes actifs</p>
+      </div>
+      <div class="border border-white/20 rounded-xl p-3">
+        <p class="font-bold"><i class="fa-solid fa-cart-shopping"></i> ACHETEUR</p>
+        <p class="mt-2 text-zinc-300 font-mono text-[10px]">Vote → Enchéris → Achète → 85% artiste</p>
+        <p id="total-votes-home" class="mt-2 text-[10px] or">0 votes</p>
+      </div>
+    </div>
   </div>
-  <button onclick="loadExpo()" class="mt-4 w-full border border-or text-or rounded-full py-2 text-sm">Voir classement LIVE →</button>
- </div>
 </section>
 
-<!-- GALERIE -->
-<section class="max-w-7xl mx-auto px-4 pb-20">
- <div class="flex justify-between items-center mb-6"><h3 class="serif text-3xl">Galerie en vedette</h3><span class="text-xs text-zinc-500">TRI POPULAIRE = votesCount</span></div>
- <div id="galerie-grid" class="grid grid-cols-2 md:grid-cols-4 gap-4"></div>
+<!-- 2. GALERIE CONNECTÉE -->
+<section id="galerie" class="tab-content hidden p-4">
+  <h2 class="font-black text-xl">Galerie <span id="count-galerie" class="or text-sm">(0)</span></h2>
+  <p class="or font-bold text-sm">Le marché de l'art vivant.</p>
+  <div class="flex gap-2 mt-4 overflow-x-auto pb-2 text-[11px]" id="filter-bar">
+    <button onclick="loadGalerie('Tous')" class="filter-btn bg-or text-black px-3 py-1.5 rounded-full font-bold">Tous</button>
+    <button onclick="loadGalerie('Peinture')" class="filter-btn border border-zinc-700 px-3 py-1.5 rounded-full">Peinture</button>
+    <button onclick="loadGalerie('Sculpture')" class="filter-btn border border-zinc-700 px-3 py-1.5 rounded-full">Sculpture</button>
+    <button onclick="loadGalerie('Photographie')" class="filter-btn border border-zinc-700 px-3 py-1.5 rounded-full">Photo</button>
+    <button onclick="setTri('populaire')" class="border border-or px-3 py-1.5 rounded-full or">🔥 Populaire</button>
+  </div>
+  <div id="galerie-grid" class="grid grid-cols-2 gap-3 mt-4"></div>
+  <button onclick="switchTab('compte')" class="w-full mt-6 border border-dashed border-or/50 py-3.5 rounded-xl text-sm or font-bold"><i class="fa-solid fa-plus"></i> Publier une œuvre</button>
 </section>
 
-<!-- MODAL PUBLIER -->
-<div id="publish-modal" class="hidden fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
- <div class="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 w-full max-w-md">
-  <h3 class="serif text-2xl mb-4">Publier une oeuvre</h3>
-  <input id="p-nom" placeholder="Ton nom" class="w-full bg-black border border-zinc-800 rounded-xl px-4 py-3 mb-2">
-  <input id="p-whatsapp" placeholder="WhatsApp +229..." class="w-full bg-black border border-zinc-800 rounded-xl px-4 py-3 mb-2">
-  <input id="p-titre" placeholder="Titre oeuvre" class="w-full bg-black border border-zinc-800 rounded-xl px-4 py-3 mb-2">
-  <input id="p-prix" type="number" placeholder="Prix FCFA" class="w-full bg-black border border-zinc-800 rounded-xl px-4 py-3 mb-2">
-  <select id="p-categorie" class="w-full bg-black border border-zinc-800 rounded-xl px-4 py-3 mb-2"><option>Peinture</option><option>Sculpture</option><option>Photographie</option><option>Textile</option></select>
-  <input id="p-image" placeholder="Lien image https://..." class="w-full bg-black border border-zinc-800 rounded-xl px-4 py-3 mb-3">
-  <button onclick="publier()" class="w-full bg-or text-black font-bold rounded-xl py-3">Publier → Validation &lt;24h</button>
-  <button onclick="document.getElementById('publish-modal').classList.add('hidden')" class="w-full text-zinc-500 text-sm mt-3">Fermer</button>
-  <p id="publish-msg" class="text-sm mt-3 text-center"></p>
- </div>
-</div>
+<!-- 3. EXPOS CONNECTÉE -->
+<section id="expos" class="tab-content hidden p-4">
+  <h2 class="font-black text-xl or">Expositions</h2>
+  <p class="font-bold text-sm">Faites briller votre art.</p>
+  <div class="bg-zinc-900 rounded-2xl p-4 mt-5 border border-or/30">
+    <h3 id="expo-titre" class="font-bold">Expo OCT 2026 - Royauté Africaine <span class="text-[10px] bg-or text-black px-2 py-0.5 rounded-full ml-2">LIVE</span></h3>
+    <div class="mt-3 flex gap-2">
+      <div class="flex-1 bg-black rounded-lg p-3 text-center"><p id="expo-votes" class="text-2xl font-black or">0</p><p class="text-[10px] text-zinc-400">Votes</p></div>
+      <div class="flex-1 bg-black rounded-lg p-3 text-center"><p id="expo-oeuvres" class="text-2xl font-black">0</p><p class="text-[10px] text-zinc-400">Œuvres</p></div>
+      <div class="flex-1 bg-black rounded-lg p-3 text-center"><p id="expo-artistes" class="text-2xl font-black">0</p><p class="text-[10px] text-zinc-400">Artistes</p></div>
+    </div>
+    <div id="expo-list" class="mt-4 space-y-2"></div>
+    <button onclick="partagerExpo()" class="w-full bg-or text-black mt-4 py-3 rounded-full font-black text-sm"><i class="fa-solid fa-share"></i> Partager mon lien de vote WhatsApp</button>
+    <p id="lien-viral" class="text-[10px] text-zinc-500 mt-2 text-center break-all">Lien viral:...</p>
+  </div>
+</section>
+
+<!-- 4. ENCHERES CONNECTÉE -->
+<section id="encheres" class="tab-content hidden p-4">
+  <h2 class="font-black text-xl">Enchères <span class="text-[10px] bg-red-600 px-2 py-1 rounded-full">LIVE</span></h2>
+  <p class="font-bold text-sm or">Les 10 plus votées - prix x2</p>
+  <div id="enchere-list" class="mt-4 space-y-4"></div>
+</section>
+
+<!-- 5. COMPTE CONNECTÉ -->
+<section id="compte" class="tab-content hidden p-4">
+  <h2 class="font-black text-xl">Mon Compte AZ</h2>
+  <div class="mt-4 space-y-3">
+    <input id="c-nom" placeholder="Nom complet" class="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 text-sm">
+    <input id="c-whatsapp" placeholder="WhatsApp +229..." class="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 text-sm">
+    <input id="c-titre" placeholder="Titre de l'oeuvre" class="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 text-sm">
+    <input id="c-prix" type="number" placeholder="Prix FCFA" class="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 text-sm">
+    <input id="c-image" placeholder="Lien image https://..." class="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 text-sm">
+    <select id="c-categorie" class="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 text-sm"><option>Peinture</option><option>Sculpture</option><option>Photographie</option><option>Textile</option></select>
+    <button onclick="publierOeuvre()" class="w-full bg-or text-black py-3.5 rounded-full font-black text-sm">Publier → 85% pour moi</button>
+    <p id="c-msg" class="text-center text-xs mt-2"></p>
+  </div>
+  <div class="mt-6 bg-zinc-900 p-4 rounded-xl flex justify-between text-sm"><span>Mes Œuvres</span><span id="my-oeuvres" class="or font-bold">0 en ligne</span></div>
+</section>
+
+<nav class="fixed bottom-0 left-0 right-0 bg-black border-t border-zinc-800 flex justify-around py-2.5 z-50">
+  <button onclick="switchTab('accueil')" id="nav-accueil" class="tab-btn tab-active flex flex-col items-center text-[10px] text-zinc-500 gap-1"><i class="fa-solid fa-house text-[16px]"></i>Accueil</button>
+  <button onclick="switchTab('galerie')" id="nav-galerie" class="tab-btn flex flex-col items-center text-[10px] text-zinc-500 gap-1"><i class="fa-solid fa-images text-[16px]"></i>Galerie</button>
+  <button onclick="switchTab('expos')" id="nav-expos" class="tab-btn flex flex-col items-center text-[10px] text-zinc-500 gap-1"><i class="fa-solid fa-landmark text-[16px]"></i>Expos</button>
+  <button onclick="switchTab('encheres')" id="nav-encheres" class="tab-btn flex flex-col items-center text-[10px] text-zinc-500 gap-1"><i class="fa-solid fa-gavel text-[16px]"></i>Enchères</button>
+  <button onclick="switchTab('compte')" id="nav-compte" class="tab-btn flex flex-col items-center text-[10px] text-zinc-500 gap-1"><i class="fa-solid fa-user text-[16px]"></i>Compte</button>
+</nav>
 
 <script>
-const API = '';
-// Annonces
+let triActuel='recent', catActuelle='Tous', EXPO_ID=null, CURRENT_USER=null;
+
+function switchTab(id){
+  document.querySelectorAll('.tab-content').forEach(s=>s.classList.add('hidden'));
+  document.getElementById(id).classList.remove('hidden');
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('tab-active'));
+  document.getElementById('nav-'+id).classList.add('tab-active');
+  if(id==='galerie') loadGalerie();
+  if(id==='expos') loadExpo();
+  if(id==='encheres') loadEncheres();
+  window.scrollTo(0,0);
+}
+
+// --- ANNONCE ---
 fetch('/api/annonces').then(r=>r.json()).then(a=>{
-  if(a.length>0) document.getElementById('annonce-live').innerText = a[0].titre;
+  if(a[0]) document.getElementById('annonce-badge').innerText = a[0].titre;
 });
-// Expo active stats
+
+// --- GALERIE ---
+async function loadGalerie(cat){
+  if(cat) catActuelle=cat;
+  const search = catActuelle==='Tous'?'':'&categorie='+catActuelle;
+  const res = await fetch(`/api/artworks?tri=${triActuel}${search}`);
+  const arts = await res.json();
+  document.getElementById('count-galerie').innerText = `(${arts.length})`;
+  document.getElementById('galerie-grid').innerHTML = arts.map(art=>`
+    <div class="bg-zinc-900 rounded-xl overflow-hidden border border-zinc-800">
+      <img src="${art.image||art.images?.[0]||'https://picsum.photos/400'}" class="h-32 w-full object-cover">
+      <div class="p-2">
+        <p class="text-sm font-bold truncate">${art.titre}</p>
+        <p class="text-[10px] text-zinc-500">${art.artiste?.nom||'Artiste'} • ${art.votesCount||0} votes</p>
+        <p class="or text-xs font-bold mt-1">${(art.prix||0).toLocaleString()} FCFA</p>
+        <div class="flex gap-1 mt-2">
+          <button onclick="voter('${art._id}','${art.exposition||''}')" class="flex-1 bg-zinc-800 text-[11px] py-2 rounded-full">Voter</button>
+          <button onclick="acheter('${art._id}')" class="flex-1 bg-or text-black text-[11px] py-2 rounded-full font-bold">Acheter 85%</button>
+        </div>
+      </div>
+    </div>`).join('') || '<p class="col-span-2 text-center text-zinc-500 text-sm py-10">Aucune oeuvre. Publie la première!</p>';
+}
+function setTri(t){ triActuel=t; loadGalerie(); }
+
+// --- EXPO ---
 async function loadExpo(){
   const res = await fetch('/api/expositions/active');
   const expo = await res.json();
-  if(expo.oeuvres){
-    document.getElementById('total-oeuvres').innerText = expo.oeuvres.length;
-    document.getElementById('total-votes').innerText = expo.totalVotes|| expo.oeuvres.reduce((s,o)=>s+o.votesCount,0);
-  }
-  // Affiche expo comme galerie
-  renderGalerie(expo.oeuvres||[]);
+  if(!expo.oeuvres){ document.getElementById('expo-list').innerHTML='<p class="text-sm text-zinc-500">Pas d\'expo active. Crée-en une dans /api/expositions</p>'; return; }
+  EXPO_ID = expo._id;
+  document.getElementById('expo-titre').innerHTML = `${expo.titre} <span class="text-[10px] bg-or text-black px-2 py-0.5 rounded-full ml-2">LIVE</span>`;
+  document.getElementById('expo-votes').innerText = expo.totalVotes||expo.oeuvres.reduce((s,o)=>s+o.votesCount,0);
+  document.getElementById('expo-oeuvres').innerText = expo.oeuvres.length;
+  document.getElementById('expo-artistes').innerText = new Set(expo.oeuvres.map(o=>o.artiste?._id)).size;
+  document.getElementById('total-votes-home').innerText = document.getElementById('expo-votes').innerText+' votes';
+  document.getElementById('expo-list').innerHTML = expo.oeuvres.slice(0,10).map((art,i)=>`
+    <div class="bg-black rounded-xl p-3 flex gap-3 items-center">
+      <span class="font-black or">#${i+1}</span>
+      <img src="${art.image||art.images?.[0]||'https://picsum.photos/200'}" class="w-12 h-12 rounded-lg object-cover">
+      <div class="flex-1"><p class="text-sm font-bold">${art.titre}</p><p class="text-[11px] text-zinc-400">${art.votesCount||0} votes • ${art.artiste?.nom||''}</p></div>
+      <button onclick="voter('${art._id}','${EXPO_ID}')" class="bg-white text-black px-3 py-1.5 rounded-full text-[11px] font-bold">Voter</button>
+    </div>`).join('');
+  if(expo.oeuvres[0]) document.getElementById('lien-viral').innerText = 'Lien viral: '+ (expo.oeuvres[0].lien_vote_unique||window.location.origin+'/expo/vote/'+expo.oeuvres[0]._id);
 }
-loadExpo();
+function partagerExpo(){
+  const text = `Vote pour moi sur ART-ZEDMO: ${document.getElementById('lien-viral').innerText}`;
+  window.open(`https://wa.me/?text=${encodeURIComponent(text)}`,'_blank');
+}
 
-// Galerie
-async function loadGalerie(){
-  const tri = document.getElementById('tri').value;
-  const search = document.getElementById('search').value;
-  const res = await fetch(`/api/artworks?tri=${tri}&search=${search}`);
-  const arts = await res.json();
-  renderGalerie(arts);
+// --- ENCHERES ---
+async function loadEncheres(){
+  const res = await fetch('/api/encheres');
+  const enchs = await res.json();
+  document.getElementById('enchere-list').innerHTML = enchs.map(e=>`
+    <div class="bg-zinc-900 rounded-2xl p-4 border border-white/10">
+      <div class="flex justify-between"><span class="text-[10px] bg-red-600 px-2 py-1 rounded-full animate-pulse">LIVE</span><span class="text-xs text-zinc-400">${new Date(e.dateFin).toLocaleDateString()} fin</span></div>
+      <img src="${e.artwork?.image||e.artwork?.images?.[0]||'https://picsum.photos/400'}" class="h-48 w-full object-cover rounded-xl mt-3">
+      <p class="mt-3 font-bold">${e.artwork?.titre}</p>
+      <div class="flex justify-between items-end mt-2"><div><p class="text-[10px] text-zinc-400">Prix actuel</p><p class="or font-black text-xl">${(e.enchereActuelle||0).toLocaleString()} FCFA</p></div><p class="text-[11px] text-zinc-400">Départ: ${e.prixDepart} FCFA</p></div>
+      <div class="flex gap-2 mt-4"><input id="input-${e._id}" type="number" placeholder="+5000 min" class="flex-1 bg-black border border-zinc-700 rounded-full px-4 py-3 text-sm"><button onclick="encherir('${e._id}')" class="bg-white text-black px-6 py-3 rounded-full font-black text-sm">Enchérir</button></div>
+    </div>`).join('') || '<p class="text-center text-zinc-500 text-sm">Pas d\'enchère. Le Top10 de l\'Expo passera ici automatiquement.</p>';
 }
-function renderGalerie(arts){
-  const grid = document.getElementById('galerie-grid');
-  grid.innerHTML = arts.map(art=>`
-    <div class="card bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
-      <img src="${art.image||art.images?.[0]||'https://picsum.photos/400'}" class="h-48 w-full object-cover">
-      <div class="p-3">
-        <div class="flex justify-between items-start"><h4 class="font-bold text-sm">${art.titre}</h4><span class="text-[10px] bg-or text-black px-2 rounded-full">${art.votesCount||0} votes</span></div>
-        <p class="text-[11px] text-zinc-500">${art.artiste?.nom||'Artiste'} • ${art.ville||art.artiste?.ville||'Abomey'}</p>
-        <div class="mt-2 flex justify-between items-center"><span class="or font-bold">${(art.prix||0).toLocaleString()} FCFA</span>
-        <button onclick="voter('${art._id}')" class="text-[11px] border border-zinc-700 rounded-full px-3 py-1">Voter</button></div>
-        <button onclick="partager('${art._id}','${art.titre}')" class="mt-2 w-full bg-zinc-800 rounded-full py-1 text-[11px]">Partager WhatsApp → lien viral</button>
-      </div>
-    </div>
-  `).join('');
+async function encherir(id){
+  const montant = document.getElementById('input-'+id).value;
+  if(!montant) return alert('Montant requis');
+  const user = prompt('Ton WhatsApp pour enchérir:');
+  const res = await fetch(`/api/encheres/${id}/encherir`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({montant, userId:CURRENT_USER})}).then(r=>r.json());
+  alert(res.success?`Enchère à ${res.nouvelle_enchere} FCFA acceptée! +2min` : res.error);
+  loadEncheres();
 }
-loadGalerie();
-document.getElementById('tri').onchange=loadGalerie;
-document.getElementById('search').oninput=loadGalerie;
 
-// Publier
-async function publier(){
+// --- VOTE & PUBLICATION ---
+async function voter(artId, expoId){
+  const wp = prompt('Ton WhatsApp pour voter (1 vote = 1 compte):');
+  if(!wp) return;
+  const res = await fetch('/api/votes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({artworkId:artId, expositionId:expoId||EXPO_ID, votant_whatsapp:wp})}).then(r=>r.json());
+  alert(res.success?`Vote compté! Total: ${res.total_votes_oeuvre}`:res.error);
+  loadGalerie(); loadExpo();
+}
+async function publierOeuvre(){
   const body={
-    artiste_nom: document.getElementById('p-nom').value,
-    whatsapp: document.getElementById('p-whatsapp').value,
-    titre: document.getElementById('p-titre').value,
-    prix: document.getElementById('p-prix').value,
-    categorie: document.getElementById('p-categorie').value,
-    images: [document.getElementById('p-image').value],
-    description: "Oeuvre ART-ZEDMO"
+    artiste_nom: document.getElementById('c-nom').value,
+    whatsapp: document.getElementById('c-whatsapp').value,
+    titre: document.getElementById('c-titre').value,
+    prix: Number(document.getElementById('c-prix').value),
+    images: [document.getElementById('c-image').value],
+    categorie: document.getElementById('c-categorie').value
   };
-  // 1. crée user si besoin + 2. crée artwork
+  if(!body.titre||!body.prix||!body.whatsapp) return document.getElementById('c-msg').innerText='Remplis Nom, WhatsApp, Titre, Prix, Image';
   try{
-    // register rapide
-    let userId = null;
-    try{
-      const u = await fetch('/api/auth/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({nom:body.artiste_nom,whatsapp:body.whatsapp,password:'123456',ville:'Abomey-Calavi'})}).then(r=>r.json());
-      userId = u.user?._id||u._id;
-    }catch{}
-    const res = await fetch('/api/artworks',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...body, artiste:userId, statut:'validee', prix:Number(body.prix)})}).then(r=>r.json());
-    document.getElementById('publish-msg').innerHTML = `<span class='text-green-400'>✅ Publiée! ID: ${res.artwork?._id||res._id}. Validation auto.</span>`;
-    setTimeout(()=>{document.getElementById('publish-modal').classList.add('hidden'); loadGalerie();},1200);
-  }catch(e){ document.getElementById('publish-msg').innerText = 'Erreur: '+e.message; }
+    let u = await fetch('/api/auth/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({nom:body.artiste_nom, whatsapp:body.whatsapp, password:'123456', ville:'Abomey-Calavi'})}).then(r=>r.json());
+    if(!u.user &&!u._id){ // déjà existe, login
+      const login = await fetch('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({whatsapp:body.whatsapp, password:'123456'})}).then(r=>r.json());
+      u = {user:login.user}; CURRENT_USER=login.user?._id:null;
+    } else { CURRENT_USER = u.user?._id||u._id; }
+    const artisteId = u.user?._id||u._id||CURRENT_USER;
+    const res = await fetch('/api/artworks',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...body, artiste:artisteId, ville:'Abomey-Calavi', statut:'validee'})}).then(r=>r.json());
+    document.getElementById('c-msg').innerHTML = `<span class="text-green-400">✅ Publiée! Lien viral: ${res.lien_viral}</span>`;
+    loadGalerie();
+  }catch(e){ document.getElementById('c-msg').innerText = 'Erreur: '+e.message; }
 }
+function acheter(id){ alert('Achat 85% artiste - connecte ton MoMo / Stripe ici. ID: '+id); }
 
-async function voter(id){
-  const whatsapp = prompt("Ton WhatsApp pour voter (1 vote = 1 compte):");
-  if(!whatsapp) return;
-  const res = await fetch('/api/votes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({artworkId:id, votant_whatsapp:whatsapp})}).then(r=>r.json());
-  alert(res.success? `Vote compté! Total: ${res.total_votes_oeuvre}` : res.error);
-  loadGalerie();
-}
-function partager(id,titre){
-  const lien = `${window.location.origin}/expo/vote/${id}`;
-  const url = `https://wa.me/?text=Vote pour "${titre}" sur ART-ZEDMO: ${lien}`;
-  window.open(url,'_blank');
-}
+// INIT
+loadGalerie(); loadExpo();
 </script>
 </body>
-</html>
+ </html>
