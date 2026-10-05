@@ -47,46 +47,29 @@ body{background:var(--noir);color:white;font-family:'Inter',sans-serif;}
 </section>
 
 <section id="expos" class="tab hidden-tab p-4">
-  <h2 class="font-black text-xl or">Expositions <span id="expoTitre" class="text-white text-sm"></span></h2>
-  <div class="flex gap-2 mt-3">
-    <button id="btnAmener" onclick="openMesOeuvresExpo()" class="hidden bg-white text-black px-4 py-2 rounded-full text-xs font-bold"><i class="fa-solid fa-plus"></i> Amener mon œuvre</button>
-    <button onclick="loadExpo()" class="border border-zinc-700 px-4 py-2 rounded-full text-xs">Actualiser</button>
-  </div>
-  <div id="listExpoOeuvres" class="mt-4 space-y-3"></div>
-  <button onclick="partager()" class="w-full bg-or text-black mt-6 py-3 rounded-full font-black text-sm"><i class="fa-solid fa-share"></i> Partager mon lien de vote WhatsApp</button>
+  <h2 class="font-black text-xl or">Expositions</h2>
+  <div id="listExpoOeuvres" class="mt-4 space-y-2"></div>
+  <button onclick="partager()" class="w-full bg-or text-black mt-4 py-3 rounded-full font-black text-sm"><i class="fa-solid fa-share"></i> Partager mon lien de vote WhatsApp</button>
   <p id="lienViral" class="text-[10px] text-zinc-500 mt-2 text-center break-all"></p>
-  <div id="mesOeuvresExpo" class="hidden mt-4 bg-zinc-900 p-3 rounded-xl"></div>
 </section>
 
 <section id="encheres" class="tab hidden-tab p-4"><h2 class="font-black text-xl">Enchères</h2><div id="listEncheres" class="mt-4 space-y-4"></div></section>
 
 <section id="compte" class="tab hidden-tab p-4 pb-32">
   <h2 class="font-black text-xl">Mon Compte AZ</h2>
-  <p id="descCompte" class="or text-sm font-bold">Votre espace créateur & collectionneur.</p>
+  <p class="or text-sm font-bold">Votre espace créateur & collectionneur.</p>
   <div class="flex bg-zinc-900 rounded-full p-1 mt-4 text-xs font-bold">
     <button id="btnArt" onclick="setRole('artiste')" class="flex-1 bg-or text-black py-2.5 rounded-full">Je suis Artiste</button>
     <button id="btnCol" onclick="setRole('acheteur')" class="flex-1 text-zinc-400 py-2.5">Je suis Collectionneur</button>
   </div>
-
-  <!-- VUE ARTISTE -->
-  <div id="vueArtiste">
-    <div class="bg-zinc-900/50 p-4 rounded-xl mt-4 text-[12px] leading-relaxed text-zinc-300"><p><b class="text-white">Artiste:</b> Gérez votre profil, vos œuvres, vos ventes, vos soumissions aux expos et votre solde.</p></div>
-    <div class="mt-4 space-y-3">
-      <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-4 flex justify-between items-center"><span class="text-sm">Mes Œuvres</span><span id="myOeuvres" class="or font-bold text-sm">0 en ligne</span></div>
-      <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-4 flex justify-between items-center"><span class="text-sm">Mes Ventes</span><span class="or font-bold text-sm">0 FCFA</span></div>
-      <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-4 flex justify-between items-center"><span class="text-sm">Mon Solde</span><button class="bg-or text-black px-4 py-1.5 rounded-full text-xs font-bold">Retirer via MoMo</button></div>
-    </div>
+  <div class="bg-zinc-900/50 p-4 rounded-xl mt-4 text-[12px] leading-relaxed text-zinc-300">
+    <p><b class="text-white">Artiste:</b> Gérez votre profil, vos œuvres, vos ventes, vos soumissions aux expos et votre solde.</p>
   </div>
-
-  <!-- VUE COLLECTIONNEUR - PROBLEME 3 FIX -->
-  <div id="vueCollectionneur" class="hidden">
-    <div class="bg-zinc-900/50 p-4 rounded-xl mt-4 text-[12px] leading-relaxed text-zinc-300"><p><b class="text-white">Collectionneur:</b> Votez pour vos œuvres préférées, enchérissez et achetez direct via WhatsApp. 85% reversé à l'artiste.</p></div>
-    <div class="mt-4 space-y-3">
-      <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-4"><span class="text-sm">🎨 Vous aimez l'art africain? Explorez la galerie et soutenez les artistes.</span><button onclick="go('galerie')" class="w-full mt-3 bg-or text-black py-2.5 rounded-full text-xs font-bold">Voir Galerie</button></div>
-      <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-4"><span class="text-sm">🏛️ Expos en cours - Votez</span><button onclick="go('expos')" class="w-full mt-3 border border-white py-2.5 rounded-full text-xs font-bold">Voir Expos</button></div>
-    </div>
+  <div class="mt-4 space-y-3">
+    <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-4 flex justify-between items-center"><span class="text-sm">Mes Œuvres</span><span id="myOeuvres" class="or font-bold text-sm">0 en ligne</span></div>
+    <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-4 flex justify-between items-center"><span class="text-sm">Mes Ventes</span><span class="or font-bold text-sm">0 FCFA</span></div>
+    <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-4 flex justify-between items-center"><span class="text-sm">Mon Solde</span><button class="bg-or text-black px-4 py-1.5 rounded-full text-xs font-bold">Retirer via MoMo</button></div>
   </div>
-
   <div id="formArtiste" class="hidden mt-5 space-y-3">
     <div class="bg-green-900/30 border border-green-600 p-3 rounded-xl text-xs text-green-400">✅ Profil validé par admin - tu peux publier</div>
     <input id="a-titre" placeholder="Titre oeuvre" class="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 text-sm">
@@ -101,14 +84,12 @@ body{background:var(--noir);color:white;font-family:'Inter',sans-serif;}
     <p id="msgPub" class="text-center text-xs"></p>
     <button onclick="logout()" class="w-full text-zinc-500 text-xs mt-2">Se déconnecter</button>
   </div>
-
   <div id="boxCreate" class="bg-white text-black rounded-t-[24px] mt-6 p-6 text-center shadow-2xl">
     <h3 class="font-black text-[16px]">Expose ton art au monde</h3>
     <p class="text-[11px] text-zinc-600 mt-1">85% Galerie / 80% Enchère pour toi. 2 min d'inscription.</p>
     <button onclick="openProfil()" class="w-full bg-black text-white py-3.5 rounded-full font-black text-sm mt-4">Créer mon profil Artiste Gratuitement</button>
     <p class="text-[10px] text-zinc-400 mt-2">Tu as déjà un compte? <span onclick="openLogin()" class="underline font-bold cursor-pointer">Se connecter</span></p>
   </div>
-
   <div id="boxPending" class="hidden bg-orange-100 text-black rounded-xl mt-6 p-6 text-center">
     <h3 class="font-black">⏳ En attente validation</h3>
     <p class="text-xs mt-1">Ton profil <span id="pendingName"></span> est en attente admin 24h. Tu recevras un email.</p>
@@ -116,52 +97,9 @@ body{background:var(--noir);color:white;font-family:'Inter',sans-serif;}
   </div>
 </section>
 
-<div id="modalProfil" class="fixed inset-0 bg-black/90 z-[100] hidden flex items-end justify-center">
-  <div class="bg-white text-black w-full rounded-t-[24px] p-6 max-h-[90vh] overflow-y-auto">
-    <div class="flex justify-between items-center"><h3 class="font-black">Créer profil Artiste</h3><button onclick="closeProfil()" class="w-8 h-8 bg-zinc-100 rounded-full">✕</button></div>
-    <p class="text-[11px] text-zinc-500 mt-1">Admin valide en 24h avant publication galerie</p>
-    <div class="mt-4 space-y-3">
-      <input id="p-nom" placeholder="Nom complet *" class="w-full bg-zinc-100 rounded-xl px-4 py-3 text-sm border">
-      <input id="p-artiste" placeholder="Nom d'artiste *" class="w-full bg-zinc-100 rounded-xl px-4 py-3 text-sm border">
-      <input id="p-wa" placeholder="Numéro WhatsApp +229 *" class="w-full bg-zinc-100 rounded-xl px-4 py-3 text-sm border">
-      <input id="p-email" type="email" placeholder="Email *" class="w-full bg-zinc-100 rounded-xl px-4 py-3 text-sm border">
-      <input id="p-password" type="password" placeholder="Mot de passe (6+ caractères) *" class="w-full bg-zinc-100 rounded-xl px-4 py-3 text-sm border">
-      <button onclick="creerProfil()" id="btnCreer" class="w-full bg-black text-white py-3.5 rounded-full font-bold text-sm mt-2">Envoyer pour validation admin</button>
-      <p id="msgProfil" class="text-center text-xs"></p>
-    </div>
-  </div>
-</div>
-
-<div id="modalLogin" class="fixed inset-0 bg-black/90 z-[100] hidden flex items-end justify-center">
-  <div class="bg-white text-black w-full rounded-t-[24px] p-6 max-h-[90vh] overflow-y-auto">
-    <div class="flex justify-between items-center"><h3 class="font-black">Connexion Artiste</h3><button onclick="closeLogin()" class="w-8 h-8 bg-zinc-100 rounded-full">✕</button></div>
-    <div class="mt-4 space-y-3">
-      <input id="l-identifiant" placeholder="Email ou WhatsApp *" class="w-full bg-zinc-100 rounded-xl px-4 py-3 text-sm border">
-      <input id="l-password" type="password" placeholder="Mot de passe *" class="w-full bg-zinc-100 rounded-xl px-4 py-3 text-sm border">
-      <button onclick="login()" id="btnLogin" class="w-full bg-black text-white py-3.5 rounded-full font-bold text-sm mt-2">Se connecter</button>
-      <p id="msgLogin" class="text-center text-xs"></p>
-    </div>
-  </div>
-</div>
-
-<div id="modalPublier" class="fixed inset-0 bg-black/90 z-[100] hidden flex items-end justify-center">
-  <div class="bg-white text-black w-full rounded-t-[24px] p-6 max-h-[90vh] overflow-y-auto">
-    <div class="flex justify-between items-center"><h3 class="font-black">Publier une œuvre</h3><button onclick="closePublier()" class="w-8 h-8 bg-zinc-100 rounded-full">✕</button></div>
-    <div class="mt-4 space-y-3">
-      <input id="o-titre" placeholder="Titre *" class="w-full bg-zinc-100 border rounded-xl px-4 py-3 text-sm">
-      <select id="o-technique" class="w-full bg-zinc-100 border rounded-xl px-4 py-3 text-sm"><option value="">Technique *</option><option>Peinture acrylique</option><option>Peinture à huile</option><option>Sculpture bois</option><option>Photographie</option><option>Textile / Batik</option><option>Digital Art</option></select>
-      <textarea id="o-desc" placeholder="Description *" rows="3" class="w-full bg-zinc-100 border rounded-xl px-4 py-3 text-sm"></textarea>
-      <input id="o-prix" type="number" placeholder="Prix FCFA *" class="w-full bg-zinc-100 border rounded-xl px-4 py-3 text-sm">
-      <div class="bg-zinc-100 border-2 border-dashed border-[#D4AF37]/50 rounded-xl p-4 text-center">
-        <input type="file" id="o-file" accept="image/*" class="hidden" onchange="previewOeuvre()">
-        <div id="previewOeuvreBox" class="hidden"><img id="previewOeuvreImg" class="w-full h-40 object-cover rounded-xl mb-2"></div>
-        <button onclick="document.getElementById('o-file').click()" class="bg-black text-white px-4 py-2 rounded-full text-xs font-bold">Upload image</button>
-      </div>
-      <button onclick="publierOeuvreGalerie()" id="btnPublierO" class="w-full bg-black text-white py-3.5 rounded-full font-black text-sm">Publier</button>
-      <p id="msgOeuvre" class="text-center text-xs"></p>
-    </div>
-  </div>
-</div>
+<div id="modalProfil" class="fixed inset-0 bg-black/90 z-[100] hidden flex items-end justify-center"><div class="bg-white text-black w-full rounded-t-[24px] p-6 max-h-[90vh] overflow-y-auto"><div class="flex justify-between items-center"><h3 class="font-black">Créer profil Artiste</h3><button onclick="closeProfil()" class="w-8 h-8 bg-zinc-100 rounded-full">✕</button></div><div class="mt-4 space-y-3"><input id="p-nom" placeholder="Nom complet *" class="w-full bg-zinc-100 rounded-xl px-4 py-3 text-sm border"><input id="p-artiste" placeholder="Nom d'artiste *" class="w-full bg-zinc-100 rounded-xl px-4 py-3 text-sm border"><input id="p-wa" placeholder="Numéro WhatsApp +229 *" class="w-full bg-zinc-100 rounded-xl px-4 py-3 text-sm border"><input id="p-email" type="email" placeholder="Email *" class="w-full bg-zinc-100 rounded-xl px-4 py-3 text-sm border"><input id="p-password" type="password" placeholder="Mot de passe (6+ caractères) *" class="w-full bg-zinc-100 rounded-xl px-4 py-3 text-sm border"><button onclick="creerProfil()" id="btnCreer" class="w-full bg-black text-white py-3.5 rounded-full font-bold text-sm mt-2">Envoyer pour validation admin</button><p id="msgProfil" class="text-center text-xs"></p></div></div></div>
+<div id="modalLogin" class="fixed inset-0 bg-black/90 z-[100] hidden flex items-end justify-center"><div class="bg-white text-black w-full rounded-t-[24px] p-6"><div class="flex justify-between items-center"><h3 class="font-black">Connexion Artiste</h3><button onclick="closeLogin()" class="w-8 h-8 bg-zinc-100 rounded-full">✕</button></div><div class="mt-4 space-y-3"><input id="l-identifiant" placeholder="Email ou WhatsApp *" class="w-full bg-zinc-100 rounded-xl px-4 py-3 text-sm border"><input id="l-password" type="password" placeholder="Mot de passe *" class="w-full bg-zinc-100 rounded-xl px-4 py-3 text-sm border"><button onclick="login()" id="btnLogin" class="w-full bg-black text-white py-3.5 rounded-full font-bold text-sm mt-2">Se connecter</button><p id="msgLogin" class="text-center text-xs"></p></div></div></div>
+<div id="modalPublier" class="fixed inset-0 bg-black/90 z-[100] hidden flex items-end justify-center"><div class="bg-white text-black w-full rounded-t-[24px] p-6"><div class="flex justify-between items-center"><h3 class="font-black">Publier une œuvre</h3><button onclick="closePublier()" class="w-8 h-8 bg-zinc-100 rounded-full">✕</button></div><div class="mt-4 space-y-3"><input id="o-titre" placeholder="Titre" class="w-full bg-zinc-100 border rounded-xl px-4 py-3 text-sm"><input id="o-prix" type="number" placeholder="Prix FCFA" class="w-full bg-zinc-100 border rounded-xl px-4 py-3 text-sm"><input type="file" id="o-file" accept="image/*" class="hidden" onchange="previewOeuvreGalerie()"><div id="previewOeuvreGalerieBox" class="hidden"><img id="previewOeuvreGalerieImg" class="w-full h-32 object-cover rounded-xl mb-2"></div><button onclick="document.getElementById('o-file').click()" class="bg-black text-white px-4 py-2 rounded-full text-xs">Upload</button><button onclick="publierOeuvreGalerie()" id="btnPublierGalerie" class="w-full bg-black text-white py-3.5 rounded-full font-black">Publier</button><p id="msgOeuvreGalerie" class="text-center text-xs"></p></div></div></div>
 
 <nav class="fixed bottom-0 left-0 right-0 bg-black border-t border-zinc-800 flex justify-around py-2.5 z-50">
   <button onclick="go('accueil')" id="nav-accueil" class="tab-btn tab-active flex flex-col items-center text-[10px] gap-1"><i class="fa-solid fa-house text-[16px]"></i>Accueil</button>
@@ -172,207 +110,105 @@ body{background:var(--noir);color:white;font-family:'Inter',sans-serif;}
 </nav>
 
 <script>
-let role='artiste', EXPO_ACTIVE=null, currentUser=JSON.parse(localStorage.getItem('AZ_USER')||'null');
+let role='artiste', cat='Tous', EXPO_ID=null, currentUser=JSON.parse(localStorage.getItem('AZ_USER')||'null');
 
 async function loadAnnonceLive(){
   try{
-    const annonces=await fetch('/api/annonces').then(r=>r.json());
+    const annonces = await fetch('/api/annonces').then(r=>r.json());
     if(annonces && annonces.length>0){
-      const t=annonces[0].titre||annonces[0].message;
-      document.getElementById('badgeAnnonce').innerText=t;
-      const b=document.getElementById('btnExpoLive'); if(b) b.innerText=t;
+      const live = annonces[0];
+      const titre = live.titre || live.message || "EXPO OCT 2026 - LIVE";
+      const badge = document.getElementById('badgeAnnonce');
+      const btn = document.getElementById('btnExpoLive');
+      if(badge) badge.innerText = titre;
+      if(btn) btn.innerText = titre;
     }
   }catch(e){}
 }
 loadAnnonceLive(); setInterval(loadAnnonceLive,10000);
 
-function go(id){
-  document.querySelectorAll('.tab').forEach(s=>s.classList.add('hidden-tab'));
-  document.getElementById(id).classList.remove('hidden-tab');
-  document.querySelectorAll('.tab-btn').forEach(b=>{b.classList.remove('tab-active');b.classList.add('text-zinc-500')});
-  document.getElementById('nav-'+id).classList.add('tab-active');
-  document.getElementById('nav-'+id).classList.remove('text-zinc-500');
-  if(id==='galerie')loadGalerie();
-  if(id==='expos')loadExpo();
-  if(id==='encheres')loadEncheres();
-  checkUserStatus();window.scrollTo(0,0);
-}
-
-function setRole(r){
-  role=r;
-  document.getElementById('btnArt').className=r==='artiste'?'flex-1 bg-or text-black py-2.5 rounded-full':'flex-1 text-zinc-400 py-2.5';
-  document.getElementById('btnCol').className=r==='acheteur'?'flex-1 bg-or text-black py-2.5 rounded-full':'flex-1 text-zinc-400 py-2.5';
-  document.getElementById('vueArtiste').classList.toggle('hidden', r!=='artiste');
-  document.getElementById('vueCollectionneur').classList.toggle('hidden', r!=='acheteur');
-  document.getElementById('descCompte').innerText=r==='artiste'?'Votre espace créateur.':'Votre espace collectionneur.';
-  if(r==='acheteur'){
-    document.getElementById('formArtiste').classList.add('hidden');
-    document.getElementById('boxCreate').classList.add('hidden');
-    document.getElementById('boxPending').classList.add('hidden');
-  } else {
-    checkUserStatus();
-  }
-}
-
-function openProfil(){document.getElementById('modalProfil').classList.remove('hidden')}
-function closeProfil(){document.getElementById('modalProfil').classList.add('hidden')}
-function openLogin(){document.getElementById('modalLogin').classList.remove('hidden')}
-function closeLogin(){document.getElementById('modalLogin').classList.add('hidden')}
-function openPublier(){ if(!currentUser||currentUser.statut!=='valide'){ alert('Crée profil artiste et attends validation'); return go('compte'); } document.getElementById('modalPublier').classList.remove('hidden'); }
-function closePublier(){document.getElementById('modalPublier').classList.add('hidden')}
+function go(id){document.querySelectorAll('.tab').forEach(s=>s.classList.add('hidden-tab'));document.getElementById(id).classList.remove('hidden-tab');document.querySelectorAll('.tab-btn').forEach(b=>{b.classList.remove('tab-active');b.classList.add('text-zinc-500')});document.getElementById('nav-'+id).classList.add('tab-active');document.getElementById('nav-'+id).classList.remove('text-zinc-500');if(id==='galerie')loadGalerie();if(id==='expos')loadExpo();if(id==='encheres')loadEncheres();checkUserStatus();window.scrollTo(0,0);}
+function setRole(r){role=r;document.getElementById('btnArt').className=r==='artiste'?'flex-1 bg-or text-black py-2.5 rounded-full':'flex-1 text-zinc-400 py-2.5';document.getElementById('btnCol').className=r==='acheteur'?'flex-1 bg-or text-black py-2.5 rounded-full':'flex-1 text-zinc-400 py-2.5';}
+function openProfil(){document.getElementById('modalProfil').classList.remove('hidden')}function closeProfil(){document.getElementById('modalProfil').classList.add('hidden')}
+function openLogin(){document.getElementById('modalLogin').classList.remove('hidden')}function closeLogin(){document.getElementById('modalLogin').classList.add('hidden')}
+function openPublier(){document.getElementById('modalPublier').classList.remove('hidden')}function closePublier(){document.getElementById('modalPublier').classList.add('hidden')}
 function previewFile(){const f=document.getElementById('a-file').files[0];if(!f)return;document.getElementById('previewBox').classList.remove('hidden');const r=new FileReader();r.onload=e=>document.getElementById('previewImg').src=e.target.result;r.readAsDataURL(f);}
-function previewOeuvre(){const f=document.getElementById('o-file').files[0];if(!f)return;document.getElementById('previewOeuvreBox').classList.remove('hidden');const r=new FileReader();r.onload=e=>document.getElementById('previewOeuvreImg').src=e.target.result;r.readAsDataURL(f);}
+function previewOeuvreGalerie(){const f=document.getElementById('o-file').files[0];if(!f)return;document.getElementById('previewOeuvreGalerieBox').classList.remove('hidden');const r=new FileReader();r.onload=e=>document.getElementById('previewOeuvreGalerieImg').src=e.target.result;r.readAsDataURL(f);}
 function logout(){localStorage.removeItem('AZ_USER');currentUser=null;checkUserStatus();go('compte');}
+function checkUserStatus(){const boxCreate=document.getElementById('boxCreate');const boxPending=document.getElementById('boxPending');const formArtiste=document.getElementById('formArtiste');if(!currentUser){boxCreate.classList.remove('hidden'); boxPending.classList.add('hidden'); formArtiste.classList.add('hidden'); return;}if(currentUser.statut==='en_attente'){boxCreate.classList.add('hidden'); formArtiste.classList.add('hidden'); boxPending.classList.remove('hidden'); document.getElementById('pendingName').innerText=currentUser.nom_artiste||currentUser.nom;}if(currentUser.statut==='valide'){boxCreate.classList.add('hidden'); boxPending.classList.add('hidden'); formArtiste.classList.remove('hidden');}}
+async function creerProfil(){const nom=document.getElementById('p-nom').value.trim(), nom_artiste=document.getElementById('p-artiste').value.trim(), whatsapp=document.getElementById('p-wa').value.trim(), email=document.getElementById('p-email').value.trim(), password=document.getElementById('p-password').value;if(!nom||!nom_artiste||!whatsapp||!email||!password) return document.getElementById('msgProfil').innerText='❌ Remplis tous les champs *';document.getElementById('btnCreer').innerText='⏳ Envoi...';try{const res=await fetch('/api/auth/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({nom, nom_artiste, whatsapp, email, password, ville:'Abomey-Calavi'})}).then(r=>r.json());if(res.error) throw new Error(res.error);document.getElementById('msgProfil').innerHTML='<span class="text-green-600 font-bold">✅ Envoyé!</span>';localStorage.setItem('AZ_USER',JSON.stringify(res.user||res));currentUser=res.user||res;setTimeout(()=>{closeProfil();checkUserStatus();},1000);}catch(e){document.getElementById('msgProfil').innerText=e.message;}}
+async function login(){const identifiant=document.getElementById('l-identifiant').value.trim();const password=document.getElementById('l-password').value;try{const res=await fetch('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({identifiant, password})}).then(r=>r.json());if(res.error) throw new Error(res.error);localStorage.setItem('AZ_USER', JSON.stringify(res.user||res));currentUser=res.user||res;closeLogin();checkUserStatus();go('compte');}catch(e){document.getElementById('msgLogin').innerText=e.message;}}
+async function uploadImage(){const fi=document.getElementById('a-file');if(!fi.files[0])return null;const fd=new FormData();fd.append('image',fi.files[0]);const res=await fetch('/api/upload',{method:'POST',body:fd}).then(r=>r.json());return res.url||res.image;}
 
-function checkUserStatus(){
-  const boxCreate=document.getElementById('boxCreate');
-  const boxPending=document.getElementById('boxPending');
-  const formArtiste=document.getElementById('formArtiste');
-  const btnAmener=document.getElementById('btnAmener');
-  if(role==='acheteur') return;
-  if(!currentUser){
-    boxCreate.classList.remove('hidden'); boxPending.classList.add('hidden'); formArtiste.classList.add('hidden');
-    if(btnAmener) btnAmener.classList.add('hidden');
-    return;
-  }
-  if(currentUser.statut==='en_attente'){
-    boxCreate.classList.add('hidden'); formArtiste.classList.add('hidden'); boxPending.classList.remove('hidden');
-    document.getElementById('pendingName').innerText=currentUser.nom_artiste||currentUser.nom;
-    if(btnAmener) btnAmener.classList.add('hidden');
-  }
-  if(currentUser.statut==='valide'){
-    boxCreate.classList.add('hidden'); boxPending.classList.add('hidden'); formArtiste.classList.remove('hidden');
-    if(btnAmener) btnAmener.classList.remove('hidden');
-    loadMyStats();
-  }
-}
-
-async function loadMyStats(){
-  if(!currentUser) return;
-  try{
-    const arts=await fetch(`/api/artworks?all=true`).then(r=>r.json()).catch(()=>[]);
-    const mine=arts.filter(a=> (a.artiste?._id||a.artiste)===currentUser._id || a.artiste?.whatsapp===currentUser.whatsapp);
-    document.getElementById('myOeuvres').innerText=`${mine.length} en ligne`;
-  }catch(e){}
-}
-
-async function creerProfil(){
-  const nom=document.getElementById('p-nom').value.trim(), nom_artiste=document.getElementById('p-artiste').value.trim(), whatsapp=document.getElementById('p-wa').value.trim(), email=document.getElementById('p-email').value.trim(), password=document.getElementById('p-password').value;
-  if(!nom||!nom_artiste||!whatsapp||!email||!password) return document.getElementById('msgProfil').innerText='❌ Remplis tous *';
-  if(password.length<6) return document.getElementById('msgProfil').innerText='❌ 6 caractères min';
-  document.getElementById('btnCreer').innerText='⏳ Envoi...';
-  try{
-    const res=await fetch('/api/auth/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({nom, nom_artiste, whatsapp, email, password, ville:'Abomey-Calavi'})}).then(r=>r.json());
-    if(res.error) throw new Error(res.error);
-    const u=res.user||{_id:res._id, nom, nom_artiste, whatsapp, email, statut:'en_attente'};
-    localStorage.setItem('AZ_USER',JSON.stringify(u));currentUser=u;
-    document.getElementById('msgProfil').innerHTML='<span class="text-green-600 font-bold">✅ Envoyé! Attente admin 24h</span>';
-    setTimeout(()=>{closeProfil();checkUserStatus();},1200);
-  }catch(e){document.getElementById('msgProfil').innerText=e.message;document.getElementById('btnCreer').innerText='Envoyer';}
-}
-
-async function login(){
-  const identifiant=document.getElementById('l-identifiant').value.trim(), password=document.getElementById('l-password').value;
-  try{
-    const res=await fetch('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({identifiant, password})}).then(r=>r.json());
-    if(res.error) throw new Error(res.error);
-    const u=res.user||res; localStorage.setItem('AZ_USER', JSON.stringify(u)); currentUser=u;
-    closeLogin();checkUserStatus();go('compte');
-  }catch(e){document.getElementById('msgLogin').innerText=e.message;}
-}
-
-async function uploadImage(fileInput){
-  const fd=new FormData(); fd.append('image', fileInput.files[0]);
-  const res=await fetch('/api/upload',{method:'POST',body:fd}).then(r=>r.json());
-  return res.url||res.image;
-}
-
-// PROBLEME 1 - GALERIE AVEC ACHETER
 async function loadGalerie(){
   const arts=await fetch('/api/artworks').then(r=>r.json()).catch(()=>[]);
   document.getElementById('countG').innerText=`${arts.length} œuvres`;
   document.getElementById('gridGalerie').innerHTML=arts.map(a=>`
     <div class="bg-zinc-900 rounded-xl overflow-hidden flex flex-col">
       <img src="${a.images?.[0]||a.image||'https://picsum.photos/300'}" class="h-32 w-full object-cover">
-      <div class="p-2 flex-1"><p class="text-sm font-bold truncate">${a.titre}</p><p class="or text-xs">${(a.prix||0).toLocaleString()} FCFA</p><p class="text-[10px] text-zinc-500">${a.artiste?.nom_artiste||a.artiste?.nom||''} ❤️ ${a.votesCount||0}</p></div>
+      <div class="p-2 flex-1"><p class="text-sm font-bold truncate">${a.titre}</p><p class="or text-xs">${(a.prix||0).toLocaleString()} FCFA</p><p class="text-[10px] text-zinc-500 truncate">${a.artiste?.nom_artiste||a.artiste?.nom||''}</p></div>
       <div class="p-2 flex gap-1">
-        <button onclick="window.open('https://wa.me/${(a.artiste?.whatsapp||'').replace(/[^0-9]/g,'')}?text=Bonjour ${encodeURIComponent(a.artiste?.nom_artiste||'')} je veux acheter ${encodeURIComponent(a.titre)} à ${a.prix} FCFA sur ART-ZEDMO','_blank')" class="flex-1 bg-[#25D366] text-black py-2 rounded-full text-[11px] font-bold"><i class="fa-brands fa-whatsapp"></i> Acheter</button>
-        <button onclick="voteArtwork('${a._id}')" class="border border-or text-or px-3 py-2 rounded-full text-[11px]">❤️ ${a.votesCount||0}</button>
+        <button onclick="window.open('https://wa.me/${(a.artiste?.whatsapp||'').replace(/[^0-9]/g,'')}?text=Bonjour, je veux acheter ${encodeURIComponent(a.titre)} à ${a.prix} FCFA sur ART-ZEDMO','_blank')" class="flex-1 bg-[#25D366] text-black py-2 rounded-full text-[11px] font-bold"><i class="fa-brands fa-whatsapp"></i> Acheter</button>
+        <button onclick="partagerOeuvre('${a._id}')" class="border border-zinc-700 px-3 py-2 rounded-full text-[11px]"><i class="fa-solid fa-share"></i></button>
       </div>
     </div>
   `).join('')||'<p class="text-zinc-500 text-center py-10">0 oeuvre</p>';
 }
+function partagerOeuvre(id){ const lien=`${location.origin}/oeuvre/${id}`; window.open(`https://wa.me/?text=Decouvre cette oeuvre sur ART-ZEDMO: ${lien}`,'_blank'); }
 
-// PROBLEME 2 - EXPO AVEC VOTER + AMENER
-async function loadExpo(){
-  try{
-    const ex=await fetch('/api/expositions/active').then(r=>r.json()).catch(()=>({}));
-    if(!ex._id){ document.getElementById('listExpoOeuvres').innerHTML='<p class="text-zinc-500 text-center py-6">Pas d\'expo active</p>'; return; }
-    EXPO_ACTIVE=ex;
-    document.getElementById('expoTitre').innerText=ex.titre||'Expo active';
-    document.getElementById('listExpoOeuvres').innerHTML=(ex.oeuvres||[]).map((a,i)=>`
-      <div class="bg-zinc-900 p-3 rounded-xl flex gap-3 items-center">
-        <b class="or">#${i+1}</b>
-        <img src="${a.images?.[0]||a.image||'https://picsum.photos/100'}" class="w-14 h-14 rounded-lg object-cover">
-        <div class="flex-1"><p class="text-sm font-bold truncate">${a.titre}</p><p class="text-[11px] text-zinc-400">${a.artiste?.nom_artiste||''} • ${a.votesCount||0} votes</p></div>
-        <button onclick="voteArtwork('${a._id}')" class="bg-or text-black px-4 py-2 rounded-full text-xs font-bold">❤️ Voter (${a.votesCount||0})</button>
-      </div>
-    `).join('')||'<p class="text-zinc-500">0 œuvre en expo</p>';
-  }catch(e){ console.log(e); }
-}
+async function loadExpo(){const ex=await fetch('/api/expositions/active').then(r=>r.json()).catch(()=>({}));if(!ex._id)return;document.getElementById('listExpoOeuvres').innerHTML=(ex.oeuvres||[]).map((a,i)=>`<div class="bg-zinc-900 p-3 rounded-xl flex gap-3 items-center"><b class="or">#${i+1}</b><img src="${a.images?.[0]||'https://picsum.photos/100'}" class="w-12 h-12 rounded"><p class="text-sm flex-1">${a.titre}</p></div>`).join('');}
+async function loadEncheres(){const en=await fetch('/api/encheres').then(r=>r.json()).catch(()=>[]);document.getElementById('listEncheres').innerHTML=en.map(e=>`<div class="bg-zinc-900 p-3 rounded-xl"><p class="font-bold text-sm">${e.artwork?.titre}</p><p class="or text-xs">${e.enchereActuelle} FCFA</p></div>`).join('')||'<p class="text-zinc-500">0 enchère</p>';}
+function partager(){ if(!currentUser) return alert('Connecte-toi'); const lien=`${location.origin}/vote/${currentUser._id}`; document.getElementById('lienViral').innerText=lien; window.open(`https://wa.me/?text=Vote pour moi: ${lien}`,'_blank');}
+async function publierOeuvre(){ alert('Utilise le bouton Publier une œuvre dans Galerie'); }
 
-async function voteArtwork(artId){
-  try{
-    const res=await fetch('/api/votes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({artworkId:artId, userId:currentUser?._id, expositionId:EXPO_ACTIVE?._id})}).then(r=>r.json());
-    if(res.error) return alert(res.error);
-    alert('✅ Vote compté! Total: '+res.total_votes_oeuvre);
-    loadExpo(); loadGalerie();
-  }catch(e){ alert('Erreur vote: '+e.message); }
-}
-
-async function openMesOeuvresExpo(){
-  if(!currentUser) return alert('Connecte-toi');
-  const box=document.getElementById('mesOeuvresExpo');
-  box.classList.remove('hidden');
-  box.innerHTML='Chargement...';
-  const all=await fetch('/api/artworks?all=true').then(r=>r.json()).catch(()=>[]);
-  const mine=all.filter(a=> (a.artiste?._id||a.artiste)===currentUser._id || a.artiste?.whatsapp===currentUser.whatsapp);
-  if(mine.length===0){ box.innerHTML='<p class="text-xs">Tu n\'as pas d\'œuvre validée. Publie d\'abord.</p>'; return; }
-  box.innerHTML=mine.map(a=>`<div class="flex justify-between items-center bg-black p-2 rounded-lg mb-2 text-xs"><span>${a.titre} - ${a.statut}</span><button onclick="amenerOeuvre('${a._id}')" class="bg-or text-black px-3 py-1 rounded-full">+ Expo</button></div>`).join('');
-}
-
-async function amenerOeuvre(artId){
-  if(!EXPO_ACTIVE) return alert('Pas d\'expo active');
-  const res=await fetch(`/api/expositions/${EXPO_ACTIVE._id}/add-artwork`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({artworkId:artId})}).then(r=>r.json());
-  alert('✅ Ajoutée à l\'expo! Partage: '+res.whatsapp);
-  document.getElementById('mesOeuvresExpo').classList.add('hidden');
-  loadExpo();
-}
-
-async function loadEncheres(){const en=await fetch('/api/encheres').then(r=>r.json()).catch(()=>[]);document.getElementById('listEncheres').innerHTML=en.map(e=>`<div class="bg-zinc-900 p-4 rounded-xl"><img src="${e.artwork?.images?.[0]||'https://picsum.photos/300'}" class="h-40 w-full object-cover rounded-xl"><p class="font-bold text-sm mt-2">${e.artwork?.titre}</p><p class="or font-black">${e.enchereActuelle} FCFA</p></div>`).join('')||'<p class="text-zinc-500">Pas d\'enchère</p>';}
-
-async function publierOeuvre(){
-  const titre=document.getElementById('a-titre').value, prix=document.getElementById('a-prix').value, cat=document.getElementById('a-cat').value;
-  if(!titre||!prix) return document.getElementById('msgPub').innerText='❌ Titre + Prix';
-  if(!document.getElementById('a-file').files[0]) return document.getElementById('msgPub').innerText='❌ Image';
-  try{const img=await uploadImage(document.getElementById('a-file'));await fetch('/api/artworks',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({artiste:currentUser._id, titre, prix:Number(prix), images:[img], categorie:cat})}).then(r=>r.json());document.getElementById('msgPub').innerHTML='<span class="text-green-400">✅ En attente admin</span>';}catch(e){document.getElementById('msgPub').innerText=e.message;}
-}
-
+// ===== SEUL FIX - BOUTON PUBLIER -> EN ATTENTE =====
 async function publierOeuvreGalerie(){
-  const titre=document.getElementById('o-titre').value, technique=document.getElementById('o-technique').value, desc=document.getElementById('o-desc').value, prix=document.getElementById('o-prix').value;
-  if(!titre||!technique||!desc||!prix) return document.getElementById('msgOeuvre').innerText='❌ Tous les champs';
-  if(!document.getElementById('o-file').files[0]) return document.getElementById('msgOeuvre').innerText='❌ Image';
-  try{const img=await uploadImage(document.getElementById('o-file'));await fetch('/api/artworks',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({artiste:currentUser._id, titre, technique, description:desc, prix:Number(prix), images:[img], categorie:technique})}).then(r=>r.json());document.getElementById('msgOeuvre').innerHTML='<span class="text-green-600">✅ Publiée!</span>';setTimeout(()=>{closePublier();loadGalerie();},1000);}catch(e){document.getElementById('msgOeuvre').innerText=e.message;}
-}
+  const titre=document.getElementById('o-titre').value.trim();
+  const prix=document.getElementById('o-prix').value;
+  const fileInput=document.getElementById('o-file');
+  const msg=document.getElementById('msgOeuvreGalerie');
+  const btn=document.getElementById('btnPublierGalerie');
 
-function partager(){
-  if(!currentUser){ alert('Connecte-toi'); return; }
-  const lien=`${location.origin}/vote/${currentUser._id}`;
-  document.getElementById('lienViral').innerText=lien;
-  window.open(`https://wa.me/?text=${encodeURIComponent('Vote pour moi sur ART-ZEDMO: '+lien)}`,'_blank');
-}
+  if(!currentUser) return msg.innerText='❌ Connecte-toi d\'abord';
+  if(!titre||!prix) return msg.innerText='❌ Titre + Prix requis';
+  if(!fileInput.files[0]) return msg.innerText='❌ Image requise';
 
-loadGalerie();checkUserStatus();loadAnnonceLive();
+  try{
+    btn.disabled=true;
+    msg.innerText='⏳ Upload image...';
+    const fd=new FormData();
+    fd.append('image', fileInput.files[0]);
+    const up=await fetch('/api/upload',{method:'POST',body:fd}).then(r=>r.json());
+    const imgUrl=up.url||up.image||up.secure_url;
+    if(!imgUrl) throw new Error('Upload échoué');
+
+    msg.innerText='⏳ Envoi en attente admin...';
+    const res=await fetch('/api/artworks',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        artiste: currentUser._id,
+        titre,
+        prix: Number(prix),
+        images:[imgUrl],
+        categorie:'Peinture',
+        ville:'Abomey-Calavi'
+      })
+    }).then(r=>r.json());
+
+    if(res.error) throw new Error(res.error);
+
+    msg.innerHTML='<span class="text-green-600 font-bold">✅ Envoyée! En attente validation admin 24h</span>';
+    setTimeout(()=>{ closePublier(); loadGalerie(); },1500);
+
+  }catch(e){
+    msg.innerText='❌ '+e.message;
+    btn.disabled=false;
+  }
+}
+// ===== FIN FIX PUBLIER =====
+
+checkUserStatus(); loadAnnonceLive();
 </script>
 </body>
 </html>
