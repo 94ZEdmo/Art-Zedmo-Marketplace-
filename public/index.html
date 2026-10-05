@@ -48,13 +48,11 @@ body{background:var(--noir);color:white;font-family:'Inter',sans-serif;}
 
 <section id="expos" class="tab hidden-tab p-4">
   <h2 class="font-black text-xl or">Expositions</h2>
-  <!-- FIX 2 : BOUTON AMENER RESTAURÉ -->
   <div class="flex gap-2 mt-3">
     <button id="btnAmener" onclick="openMesOeuvresExpo()" class="bg-white text-black px-4 py-2 rounded-full text-xs font-bold"><i class="fa-solid fa-plus"></i> Amener mon œuvre</button>
     <button onclick="loadExpo()" class="border border-zinc-700 px-4 py-2 rounded-full text-xs">Actualiser</button>
   </div>
   <div id="mesOeuvresExpo" class="hidden mt-3 bg-zinc-900 p-3 rounded-xl text-xs"></div>
-  <!-- FIN FIX 2 -->
   <div id="listExpoOeuvres" class="mt-4 space-y-2"></div>
   <button onclick="partager()" class="w-full bg-or text-black mt-4 py-3 rounded-full font-black text-sm"><i class="fa-solid fa-share"></i> Partager mon lien de vote WhatsApp</button>
   <p id="lienViral" class="text-[10px] text-zinc-500 mt-2 text-center break-all"></p>
@@ -79,6 +77,17 @@ body{background:var(--noir);color:white;font-family:'Inter',sans-serif;}
     <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-4 flex justify-between items-center"><span class="text-sm">Mes Œuvres</span><span id="myOeuvres" class="or font-bold text-sm">0 en ligne</span></div>
     <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-4 flex justify-between items-center"><span class="text-sm">Mes Ventes</span><span class="or font-bold text-sm">0 FCFA</span></div>
     <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-4 flex justify-between items-center"><span class="text-sm">Mon Solde</span><button class="bg-or text-black px-4 py-1.5 rounded-full text-xs font-bold">Retirer via MoMo</button></div>
+  </div>
+  <!-- BLOC COLLECTIONNEUR - FIX VIDE -->
+  <div id="blocCollectionneurContent" class="hidden mt-4 space-y-3">
+    <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-4 flex justify-between items-center"><span class="text-sm">Mes Votes</span><span class="or font-bold text-sm">0 vote</span></div>
+    <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-4 flex justify-between items-center"><span class="text-sm">Ma Collection</span><span class="or font-bold text-sm">0 acheté</span></div>
+    <div class="bg-zinc-900 border border-or/30 rounded-xl p-4 text-center">
+      <p class="text-sm font-bold">Trouvez votre coup de cœur</p>
+      <p class="text-[11px] text-zinc-400 mt-1">Achat direct WhatsApp, 85% revient à l'artiste.</p>
+      <button onclick="go('galerie')" class="w-full mt-3 bg-or text-black py-3 rounded-full font-bold text-sm">Explorer la Galerie</button>
+      <button onclick="go('encheres')" class="w-full mt-2 border border-white/20 py-3 rounded-full font-bold text-sm">Voir Enchères</button>
+    </div>
   </div>
   <div id="formArtiste" class="hidden mt-5 space-y-3">
     <div class="bg-green-900/30 border border-green-600 p-3 rounded-xl text-xs text-green-400">✅ Profil validé par admin - tu peux publier</div>
@@ -139,17 +148,20 @@ loadAnnonceLive(); setInterval(loadAnnonceLive,10000);
 
 function go(id){document.querySelectorAll('.tab').forEach(s=>s.classList.add('hidden-tab'));document.getElementById(id).classList.remove('hidden-tab');document.querySelectorAll('.tab-btn').forEach(b=>{b.classList.remove('tab-active');b.classList.add('text-zinc-500')});document.getElementById('nav-'+id).classList.add('tab-active');document.getElementById('nav-'+id).classList.remove('text-zinc-500');if(id==='galerie')loadGalerie();if(id==='expos')loadExpo();if(id==='encheres')loadEncheres();checkUserStatus();window.scrollTo(0,0);}
 
-// FIX 1 : SWITCH ARTISTE / COLLECTIONNEUR QUI MARCHE
 function setRole(r){
   role=r;
   document.getElementById('btnArt').className=r==='artiste'?'flex-1 bg-or text-black py-2.5 rounded-full':'flex-1 text-zinc-400 py-2.5';
   document.getElementById('btnCol').className=r==='acheteur'?'flex-1 bg-or text-black py-2.5 rounded-full':'flex-1 text-zinc-400 py-2.5';
   document.getElementById('blocArtisteDesc').classList.toggle('hidden', r!=='artiste');
-  document.getElementById('blocCollectionneurDesc').classList.toggle('hidden', r!=='acheteur');
   document.getElementById('blocStats').classList.toggle('hidden', r!=='artiste');
-  document.getElementById('formArtiste').classList.toggle('hidden', r!=='artiste');
+  document.getElementById('blocCollectionneurDesc').classList.toggle('hidden', r!=='acheteur');
+  document.getElementById('blocCollectionneurContent').classList.toggle('hidden', r!=='acheteur');
   document.getElementById('descRole').innerText=r==='artiste'?'Votre espace créateur.':'Votre espace collectionneur.';
-  if(r==='artiste') checkUserStatus();
+  if(r==='artiste') checkUserStatus(); else {
+    document.getElementById('formArtiste').classList.add('hidden');
+    document.getElementById('boxCreate').classList.add('hidden');
+    document.getElementById('boxPending').classList.add('hidden');
+  }
 }
 
 function openProfil(){document.getElementById('modalProfil').classList.remove('hidden')}function closeProfil(){document.getElementById('modalProfil').classList.add('hidden')}
@@ -163,21 +175,20 @@ async function creerProfil(){const nom=document.getElementById('p-nom').value.tr
 async function login(){const identifiant=document.getElementById('l-identifiant').value.trim();const password=document.getElementById('l-password').value;try{const res=await fetch('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({identifiant, password})}).then(r=>r.json());if(res.error) throw new Error(res.error);localStorage.setItem('AZ_USER', JSON.stringify(res.user||res));currentUser=res.user||res;closeLogin();checkUserStatus();go('compte');}catch(e){document.getElementById('msgLogin').innerText=e.message;}}
 async function uploadImage(){const fi=document.getElementById('a-file');if(!fi.files[0])return null;const fd=new FormData();fd.append('image',fi.files[0]);const res=await fetch('/api/upload',{method:'POST',body:fd}).then(r=>r.json());return res.url||res.image;}
 
+// FIX IMAGE + BOUTON PARTAGER ENLEVÉ
 async function loadGalerie(){
   const arts=await fetch('/api/artworks').then(r=>r.json()).catch(()=>[]);
   document.getElementById('countG').innerText=`${arts.length} œuvres`;
   document.getElementById('gridGalerie').innerHTML=arts.map(a=>`
     <div class="bg-zinc-900 rounded-xl overflow-hidden flex flex-col">
-      <img src="${a.images?.[0]||a.image||'https://picsum.photos/300'}" class="h-32 w-full object-cover">
+      <img src="${a.images?.[0]||a.image||a.imageUrl||'https://via.placeholder.com/300x300/111/D4AF37?text=ART-ZEDMO'}" class="h-32 w-full object-cover" onerror="this.src='https://via.placeholder.com/300x300/111/D4AF37?text=ART-ZEDMO'">
       <div class="p-2 flex-1"><p class="text-sm font-bold truncate">${a.titre}</p><p class="or text-xs">${(a.prix||0).toLocaleString()} FCFA</p><p class="text-[10px] text-zinc-500 truncate">${a.artiste?.nom_artiste||a.artiste?.nom||''}</p></div>
-      <div class="p-2 flex gap-1">
-        <button onclick="window.open('https://wa.me/${(a.artiste?.whatsapp||'').replace(/[^0-9]/g,'')}?text=Bonjour, je veux acheter ${encodeURIComponent(a.titre)} à ${a.prix} FCFA sur ART-ZEDMO','_blank')" class="flex-1 bg-[#25D366] text-black py-2 rounded-full text-[11px] font-bold"><i class="fa-brands fa-whatsapp"></i> Acheter</button>
-        <button onclick="partagerOeuvre('${a._id}')" class="border border-zinc-700 px-3 py-2 rounded-full text-[11px]"><i class="fa-solid fa-share"></i></button>
+      <div class="p-2">
+        <button onclick="window.open('https://wa.me/${(a.artiste?.whatsapp||'').replace(/[^0-9]/g,'')}?text=Bonjour, je veux acheter ${encodeURIComponent(a.titre)} à ${a.prix} FCFA sur ART-ZEDMO','_blank')" class="w-full bg-[#25D366] text-black py-2 rounded-full text-[11px] font-bold"><i class="fa-brands fa-whatsapp"></i> Acheter</button>
       </div>
     </div>
   `).join('')||'<p class="text-zinc-500 text-center py-10">0 oeuvre</p>';
 }
-function partagerOeuvre(id){ const lien=`${location.origin}/oeuvre/${id}`; window.open(`https://wa.me/?text=Decouvre cette oeuvre sur ART-ZEDMO: ${lien}`,'_blank'); }
 
 async function loadExpo(){const ex=await fetch('/api/expositions/active').then(r=>r.json()).catch(()=>({}));if(!ex._id)return;document.getElementById('listExpoOeuvres').innerHTML=(ex.oeuvres||[]).map((a,i)=>`<div class="bg-zinc-900 p-3 rounded-xl flex gap-3 items-center"><b class="or">#${i+1}</b><img src="${a.images?.[0]||'https://picsum.photos/100'}" class="w-12 h-12 rounded"><p class="text-sm flex-1">${a.titre}</p></div>`).join('');}
 async function loadEncheres(){const en=await fetch('/api/encheres').then(r=>r.json()).catch(()=>[]);document.getElementById('listEncheres').innerHTML=en.map(e=>`<div class="bg-zinc-900 p-3 rounded-xl"><p class="font-bold text-sm">${e.artwork?.titre}</p><p class="or text-xs">${e.enchereActuelle} FCFA</p></div>`).join('')||'<p class="text-zinc-500">0 enchère</p>';}
@@ -213,7 +224,6 @@ async function publierOeuvreGalerie(){
   }catch(e){ msg.innerText='❌ '+e.message; btn.disabled=false; }
 }
 
-// FIX AMENER OEUVRE
 async function openMesOeuvresExpo(){
   const box=document.getElementById('mesOeuvresExpo');
   box.classList.toggle('hidden');
