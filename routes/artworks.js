@@ -64,7 +64,7 @@ router.post('/', async(req,res)=>{
       categorie:categorie||"Peinture", 
       ville:ville||"Abomey-Calavi",
       artiste, 
-      statut:'en_attente'
+      statut:'validee' // en prod mets 'en_attente' si tu veux valider <24h
     });
 
     if(artiste) await User.findByIdAndUpdate(artiste, {$inc:{totalOeuvres:1}});
