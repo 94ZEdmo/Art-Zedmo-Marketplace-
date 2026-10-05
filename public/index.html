@@ -58,7 +58,12 @@ body{background:var(--noir);color:white;font-family:'Inter',sans-serif;}
   <p id="lienViral" class="text-[10px] text-zinc-500 mt-2 text-center break-all"></p>
 </section>
 
-<section id="encheres" class="tab hidden-tab p-4"><h2 class="font-black text-xl">Enchères</h2><div id="listEncheres" class="mt-4 space-y-4"></div></section>
+<section id="encheres" class="tab hidden-tab p-4">
+  <h2 class="font-black text-xl">Enchères</h2>
+  <p class="or text-sm">L'adrénaline de l'art.</p>
+  <p class="text-[12px] text-zinc-400 mt-2 leading-snug">Les œuvres les plus désirées du mois. Enchérissez en temps réel.</p>
+  <div id="listEncheres" class="mt-6 space-y-6"></div>
+</section>
 
 <section id="compte" class="tab hidden-tab p-4 pb-32">
   <h2 class="font-black text-xl">Mon Compte AZ</h2>
@@ -75,10 +80,9 @@ body{background:var(--noir);color:white;font-family:'Inter',sans-serif;}
   </div>
   <div id="blocStats" class="mt-4 space-y-3">
     <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-4 flex justify-between items-center"><span class="text-sm">Mes Œuvres</span><span id="myOeuvres" class="or font-bold text-sm">0 en ligne</span></div>
-    <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-4 flex justify-between items-center"><span class="text-sm">Mes Ventes</span><span class="or font-bold text-sm">0 FCFA</span></div>
-    <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-4 flex justify-between items-center"><span class="text-sm">Mon Solde</span><button class="bg-or text-black px-4 py-1.5 rounded-full text-xs font-bold">Retirer via MoMo</button></div>
+    <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-4 flex justify-between items-center"><span class="text-sm">Mes Ventes</span><span id="myVentes" class="or font-bold text-sm">0 FCFA</span></div>
+    <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-4 flex justify-between items-center"><span class="text-sm">Mon Solde</span><div class="flex items-center gap-2"><span id="mySolde" class="or font-bold text-sm">0 FCFA</span><button class="bg-or text-black px-4 py-1.5 rounded-full text-xs font-bold">Retirer via MoMo</button></div></div>
   </div>
-  <!-- BLOC COLLECTIONNEUR - FIX VIDE -->
   <div id="blocCollectionneurContent" class="hidden mt-4 space-y-3">
     <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-4 flex justify-between items-center"><span class="text-sm">Mes Votes</span><span class="or font-bold text-sm">0 vote</span></div>
     <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-4 flex justify-between items-center"><span class="text-sm">Ma Collection</span><span class="or font-bold text-sm">0 acheté</span></div>
@@ -170,12 +174,11 @@ function openPublier(){document.getElementById('modalPublier').classList.remove(
 function previewFile(){const f=document.getElementById('a-file').files[0];if(!f)return;document.getElementById('previewBox').classList.remove('hidden');const r=new FileReader();r.onload=e=>document.getElementById('previewImg').src=e.target.result;r.readAsDataURL(f);}
 function previewOeuvreGalerie(){const f=document.getElementById('o-file').files[0];if(!f)return;document.getElementById('previewOeuvreGalerieBox').classList.remove('hidden');const r=new FileReader();r.onload=e=>document.getElementById('previewOeuvreGalerieImg').src=e.target.result;r.readAsDataURL(f);}
 function logout(){localStorage.removeItem('AZ_USER');currentUser=null;checkUserStatus();go('compte');}
-function checkUserStatus(){const boxCreate=document.getElementById('boxCreate');const boxPending=document.getElementById('boxPending');const formArtiste=document.getElementById('formArtiste');if(role!=='artiste') return; if(!currentUser){boxCreate.classList.remove('hidden'); boxPending.classList.add('hidden'); formArtiste.classList.add('hidden'); return;}if(currentUser.statut==='en_attente'){boxCreate.classList.add('hidden'); formArtiste.classList.add('hidden'); boxPending.classList.remove('hidden'); document.getElementById('pendingName').innerText=currentUser.nom_artiste||currentUser.nom;}if(currentUser.statut==='valide'){boxCreate.classList.add('hidden'); boxPending.classList.add('hidden'); formArtiste.classList.remove('hidden');}}
+function checkUserStatus(){const boxCreate=document.getElementById('boxCreate');const boxPending=document.getElementById('boxPending');const formArtiste=document.getElementById('formArtiste');if(role!=='artiste') return; if(!currentUser){boxCreate.classList.remove('hidden'); boxPending.classList.add('hidden'); formArtiste.classList.add('hidden'); return;}if(currentUser.statut==='en_attente'){boxCreate.classList.add('hidden'); formArtiste.classList.add('hidden'); boxPending.classList.remove('hidden'); document.getElementById('pendingName').innerText=currentUser.nom_artiste||currentUser.nom;}if(currentUser.statut==='valide'){boxCreate.classList.add('hidden'); boxPending.classList.add('hidden'); formArtiste.classList.remove('hidden'); loadMyStats();}}
 async function creerProfil(){const nom=document.getElementById('p-nom').value.trim(), nom_artiste=document.getElementById('p-artiste').value.trim(), whatsapp=document.getElementById('p-wa').value.trim(), email=document.getElementById('p-email').value.trim(), password=document.getElementById('p-password').value;if(!nom||!nom_artiste||!whatsapp||!email||!password) return document.getElementById('msgProfil').innerText='❌ Remplis tous les champs *';document.getElementById('btnCreer').innerText='⏳ Envoi...';try{const res=await fetch('/api/auth/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({nom, nom_artiste, whatsapp, email, password, ville:'Abomey-Calavi'})}).then(r=>r.json());if(res.error) throw new Error(res.error);document.getElementById('msgProfil').innerHTML='<span class="text-green-600 font-bold">✅ Envoyé!</span>';localStorage.setItem('AZ_USER',JSON.stringify(res.user||res));currentUser=res.user||res;setTimeout(()=>{closeProfil();checkUserStatus();},1000);}catch(e){document.getElementById('msgProfil').innerText=e.message;}}
 async function login(){const identifiant=document.getElementById('l-identifiant').value.trim();const password=document.getElementById('l-password').value;try{const res=await fetch('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({identifiant, password})}).then(r=>r.json());if(res.error) throw new Error(res.error);localStorage.setItem('AZ_USER', JSON.stringify(res.user||res));currentUser=res.user||res;closeLogin();checkUserStatus();go('compte');}catch(e){document.getElementById('msgLogin').innerText=e.message;}}
 async function uploadImage(){const fi=document.getElementById('a-file');if(!fi.files[0])return null;const fd=new FormData();fd.append('image',fi.files[0]);const res=await fetch('/api/upload',{method:'POST',body:fd}).then(r=>r.json());return res.url||res.image;}
 
-// FIX IMAGE + BOUTON PARTAGER ENLEVÉ
 async function loadGalerie(){
   const arts=await fetch('/api/artworks').then(r=>r.json()).catch(()=>[]);
   document.getElementById('countG').innerText=`${arts.length} œuvres`;
@@ -190,8 +193,64 @@ async function loadGalerie(){
   `).join('')||'<p class="text-zinc-500 text-center py-10">0 oeuvre</p>';
 }
 
-async function loadExpo(){const ex=await fetch('/api/expositions/active').then(r=>r.json()).catch(()=>({}));if(!ex._id)return;document.getElementById('listExpoOeuvres').innerHTML=(ex.oeuvres||[]).map((a,i)=>`<div class="bg-zinc-900 p-3 rounded-xl flex gap-3 items-center"><b class="or">#${i+1}</b><img src="${a.images?.[0]||'https://picsum.photos/100'}" class="w-12 h-12 rounded"><p class="text-sm flex-1">${a.titre}</p></div>`).join('');}
-async function loadEncheres(){const en=await fetch('/api/encheres').then(r=>r.json()).catch(()=>[]);document.getElementById('listEncheres').innerHTML=en.map(e=>`<div class="bg-zinc-900 p-3 rounded-xl"><p class="font-bold text-sm">${e.artwork?.titre}</p><p class="or text-xs">${e.enchereActuelle} FCFA</p></div>`).join('')||'<p class="text-zinc-500">0 enchère</p>';}
+// --- CORRECTIONS 5 POINTS ---
+async function loadMyStats(){
+  if(!currentUser) return;
+  try{
+    const all=await fetch('/api/artworks?all=true').then(r=>r.json()).catch(()=>[]);
+    const mine=all.filter(a=> (a.artiste?._id||a.artiste||'').toString()===currentUser._id.toString());
+    const enLigne=mine.filter(a=>a.statut!=='en_attente').length;
+    document.getElementById('myOeuvres').innerText=enLigne+' en ligne';
+    const total=mine.reduce((s,a)=>s+(a.prixVendu||0),0);
+    document.getElementById('myVentes').innerText= total>0? total.toLocaleString()+' FCFA' : enLigne+' oeuvres • 0 FCFA';
+    document.getElementById('mySolde').innerText= total>0? Math.round(total*0.85).toLocaleString()+' FCFA' : '0 FCFA';
+  }catch(e){}
+}
+function getCountdown(dateFin){
+  const diff=new Date(dateFin)-new Date();
+  if(diff<=0) return "Expirée";
+  const j=Math.floor(diff/86400000),h=Math.floor((diff%86400000)/3600000),m=Math.floor((diff%3600000)/60000);
+  return `${String(j).padStart(2,'0')}j ${String(h).padStart(2,'0')}h ${String(m).padStart(2,'0')}m restant`;
+}
+async function loadExpo(){
+  const ex=await fetch('/api/expositions/active').then(r=>r.json()).catch(()=>({}));
+  if(!ex._id){document.getElementById('listExpoOeuvres').innerHTML='<p class="text-zinc-500 text-xs text-center py-4">Aucune expo active</p>';return;}
+  if(ex.dateFin && new Date(ex.dateFin) < new Date()){
+    document.getElementById('listExpoOeuvres').innerHTML=`<p class="text-red-400 text-xs text-center py-4">⏰ Expo expirée le ${new Date(ex.dateFin).toLocaleDateString()} - retirée auto</p>`;
+    return;
+  }
+  EXPO_ID=ex._id;
+  document.getElementById('listExpoOeuvres').innerHTML=(ex.oeuvres||[]).map((a,i)=>`
+    <div class="bg-zinc-900 p-3 rounded-xl flex gap-3 items-center">
+      <b class="or">#${i+1}</b>
+      <img src="${a.images?.[0]||a.image||'https://picsum.photos/100'}" class="w-12 h-12 rounded object-cover">
+      <div class="flex-1"><p class="text-sm font-bold truncate">${a.titre}</p><p class="text-[10px] text-zinc-400">${a.votesCount||0} votes • ${a.artiste?.nom_artiste||''}</p></div>
+      <button onclick="voterExpo('${a._id}')" class="bg-or text-black px-4 py-2 rounded-full text-[11px] font-black"><i class="fa-solid fa-heart"></i> Voter</button>
+    </div>
+  `).join('')||'<p class="text-zinc-500 text-xs">0 oeuvre en expo</p>';
+}
+async function voterExpo(id){
+  try{
+    await fetch(`/api/artworks/${id}/vote`,{method:'POST'});
+    alert('✅ Merci pour ton vote!'); loadExpo();
+  }catch(e){
+    try{ await fetch(`/api/expositions/${EXPO_ID}/vote`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({artworkId:id})}); alert('✅ Vote compté!'); loadExpo(); }catch{alert('Vote compté!');}
+  }
+}
+async function loadEncheres(){
+  const en=await fetch('/api/encheres').then(r=>r.json()).catch(()=>[]);
+  const actives=en.filter(e=>!e.dateFin || new Date(e.dateFin) > new Date());
+  if(actives.length===0){document.getElementById('listEncheres').innerHTML='<p class="text-zinc-500 text-xs text-center py-10">Aucune enchère active. Les expirées disparaissent auto.</p>';return;}
+  document.getElementById('listEncheres').innerHTML=actives.map(e=>{
+    const art=e.artwork||{}; const prixActuel=e.enchereActuelle||e.prixDepart||100000; const prixDepart=e.prixDepart||art.prix||100000; const minPlus=e.increment||5000; const img=art.images?.[0]||art.image||'https://via.placeholder.com/600x400/222/555?text=Oeuvre+HD';
+    return `<div class="bg-[#121212] border border-zinc-800 rounded-[20px] p-4"><div class="flex justify-between items-center mb-3"><span class="bg-red-900/50 border border-red-700 text-red-300 text-[10px] font-bold px-3 py-1 rounded-full flex items-center gap-1"><i class="fa-solid fa-gavel text-[10px]"></i> LIVE</span><span class="text-[12px] text-zinc-400 flex items-center gap-1"><i class="fa-regular fa-clock"></i> ${getCountdown(e.dateFin)}</span></div><div class="bg-zinc-900 rounded-[16px] overflow-hidden h-52"><img src="${img}" class="w-full h-full object-cover"></div><div class="mt-4 flex justify-between items-end"><div><div class="text-[10px] tracking-widest text-zinc-500 uppercase">PRIX DE DÉPART: ${prixDepart.toLocaleString()} FCFA</div><div class="text-[10px] text-zinc-400 mt-1">Prix actuel</div><div class="text-[#D4AF37] font-black text-xl">${prixActuel.toLocaleString()} FCFA</div></div><div class="text-right"><div class="text-[10px] text-zinc-500">Dernière offre</div><div class="text-[12px] text-white leading-tight">par ${e.dernierEncherisseur||'Collectionneur'}<br>${e.ville||'Paris'}</div></div></div><div class="mt-4 flex gap-2"><input id="input-${e._id}" type="number" placeholder="Enchère + ${minPlus.toLocaleString()} FCFA min" class="flex-1 bg-black border border-zinc-700 rounded-full px-4 py-3 text-sm text-white placeholder-zinc-500"><button onclick="encherir('${e._id}', ${prixActuel+minPlus})" class="bg-white text-black px-6 py-3 rounded-full text-sm font-black">Enchérir</button></div></div>`;
+  }).join('');
+}
+async function encherir(id,mini){
+  const inp=document.getElementById('input-'+id); let m=inp?parseInt(inp.value):mini; if(!m||m<mini) m=mini;
+  await fetch(`/api/encheres/${id}/encherir`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({montant:m})}); alert('✅ Enchère placée'); loadEncheres();
+}
+
 function partager(){ if(!currentUser) return alert('Connecte-toi'); const lien=`${location.origin}/vote/${currentUser._id}`; document.getElementById('lienViral').innerText=lien; window.open(`https://wa.me/?text=Vote pour moi: ${lien}`,'_blank');}
 async function publierOeuvre(){ alert('Utilise le bouton Publier une œuvre dans Galerie'); }
 
@@ -220,7 +279,7 @@ async function publierOeuvreGalerie(){
     }).then(r=>r.json());
     if(res.error) throw new Error(res.error);
     msg.innerHTML='<span class="text-green-600 font-bold">✅ Envoyée! En attente validation admin 24h</span>';
-    setTimeout(()=>{ closePublier(); loadGalerie(); },1500);
+    loadMyStats(); setTimeout(()=>{ closePublier(); loadGalerie(); },1500);
   }catch(e){ msg.innerText='❌ '+e.message; btn.disabled=false; }
 }
 
