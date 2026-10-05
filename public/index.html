@@ -48,6 +48,13 @@ body{background:var(--noir);color:white;font-family:'Inter',sans-serif;}
 
 <section id="expos" class="tab hidden-tab p-4">
   <h2 class="font-black text-xl or">Expositions</h2>
+  <!-- FIX 2 : BOUTON AMENER RESTAURÉ -->
+  <div class="flex gap-2 mt-3">
+    <button id="btnAmener" onclick="openMesOeuvresExpo()" class="bg-white text-black px-4 py-2 rounded-full text-xs font-bold"><i class="fa-solid fa-plus"></i> Amener mon œuvre</button>
+    <button onclick="loadExpo()" class="border border-zinc-700 px-4 py-2 rounded-full text-xs">Actualiser</button>
+  </div>
+  <div id="mesOeuvresExpo" class="hidden mt-3 bg-zinc-900 p-3 rounded-xl text-xs"></div>
+  <!-- FIN FIX 2 -->
   <div id="listExpoOeuvres" class="mt-4 space-y-2"></div>
   <button onclick="partager()" class="w-full bg-or text-black mt-4 py-3 rounded-full font-black text-sm"><i class="fa-solid fa-share"></i> Partager mon lien de vote WhatsApp</button>
   <p id="lienViral" class="text-[10px] text-zinc-500 mt-2 text-center break-all"></p>
@@ -57,15 +64,18 @@ body{background:var(--noir);color:white;font-family:'Inter',sans-serif;}
 
 <section id="compte" class="tab hidden-tab p-4 pb-32">
   <h2 class="font-black text-xl">Mon Compte AZ</h2>
-  <p class="or text-sm font-bold">Votre espace créateur & collectionneur.</p>
+  <p id="descRole" class="or text-sm font-bold">Votre espace créateur & collectionneur.</p>
   <div class="flex bg-zinc-900 rounded-full p-1 mt-4 text-xs font-bold">
     <button id="btnArt" onclick="setRole('artiste')" class="flex-1 bg-or text-black py-2.5 rounded-full">Je suis Artiste</button>
     <button id="btnCol" onclick="setRole('acheteur')" class="flex-1 text-zinc-400 py-2.5">Je suis Collectionneur</button>
   </div>
-  <div class="bg-zinc-900/50 p-4 rounded-xl mt-4 text-[12px] leading-relaxed text-zinc-300">
+  <div id="blocArtisteDesc" class="bg-zinc-900/50 p-4 rounded-xl mt-4 text-[12px] leading-relaxed text-zinc-300">
     <p><b class="text-white">Artiste:</b> Gérez votre profil, vos œuvres, vos ventes, vos soumissions aux expos et votre solde.</p>
   </div>
-  <div class="mt-4 space-y-3">
+  <div id="blocCollectionneurDesc" class="hidden bg-zinc-900/50 p-4 rounded-xl mt-4 text-[12px] leading-relaxed text-zinc-300">
+    <p><b class="text-white">Collectionneur:</b> Votez pour vos œuvres préférées, enchérissez et achetez direct via WhatsApp.</p>
+  </div>
+  <div id="blocStats" class="mt-4 space-y-3">
     <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-4 flex justify-between items-center"><span class="text-sm">Mes Œuvres</span><span id="myOeuvres" class="or font-bold text-sm">0 en ligne</span></div>
     <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-4 flex justify-between items-center"><span class="text-sm">Mes Ventes</span><span class="or font-bold text-sm">0 FCFA</span></div>
     <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-4 flex justify-between items-center"><span class="text-sm">Mon Solde</span><button class="bg-or text-black px-4 py-1.5 rounded-full text-xs font-bold">Retirer via MoMo</button></div>
@@ -99,7 +109,7 @@ body{background:var(--noir);color:white;font-family:'Inter',sans-serif;}
 
 <div id="modalProfil" class="fixed inset-0 bg-black/90 z-[100] hidden flex items-end justify-center"><div class="bg-white text-black w-full rounded-t-[24px] p-6 max-h-[90vh] overflow-y-auto"><div class="flex justify-between items-center"><h3 class="font-black">Créer profil Artiste</h3><button onclick="closeProfil()" class="w-8 h-8 bg-zinc-100 rounded-full">✕</button></div><div class="mt-4 space-y-3"><input id="p-nom" placeholder="Nom complet *" class="w-full bg-zinc-100 rounded-xl px-4 py-3 text-sm border"><input id="p-artiste" placeholder="Nom d'artiste *" class="w-full bg-zinc-100 rounded-xl px-4 py-3 text-sm border"><input id="p-wa" placeholder="Numéro WhatsApp +229 *" class="w-full bg-zinc-100 rounded-xl px-4 py-3 text-sm border"><input id="p-email" type="email" placeholder="Email *" class="w-full bg-zinc-100 rounded-xl px-4 py-3 text-sm border"><input id="p-password" type="password" placeholder="Mot de passe (6+ caractères) *" class="w-full bg-zinc-100 rounded-xl px-4 py-3 text-sm border"><button onclick="creerProfil()" id="btnCreer" class="w-full bg-black text-white py-3.5 rounded-full font-bold text-sm mt-2">Envoyer pour validation admin</button><p id="msgProfil" class="text-center text-xs"></p></div></div></div>
 <div id="modalLogin" class="fixed inset-0 bg-black/90 z-[100] hidden flex items-end justify-center"><div class="bg-white text-black w-full rounded-t-[24px] p-6"><div class="flex justify-between items-center"><h3 class="font-black">Connexion Artiste</h3><button onclick="closeLogin()" class="w-8 h-8 bg-zinc-100 rounded-full">✕</button></div><div class="mt-4 space-y-3"><input id="l-identifiant" placeholder="Email ou WhatsApp *" class="w-full bg-zinc-100 rounded-xl px-4 py-3 text-sm border"><input id="l-password" type="password" placeholder="Mot de passe *" class="w-full bg-zinc-100 rounded-xl px-4 py-3 text-sm border"><button onclick="login()" id="btnLogin" class="w-full bg-black text-white py-3.5 rounded-full font-bold text-sm mt-2">Se connecter</button><p id="msgLogin" class="text-center text-xs"></p></div></div></div>
-<div id="modalPublier" class="fixed inset-0 bg-black/90 z-[100] hidden flex items-end justify-center"><div class="bg-white text-black w-full rounded-t-[24px] p-6"><div class="flex justify-between items-center"><h3 class="font-black">Publier une œuvre</h3><button onclick="closePublier()" class="w-8 h-8 bg-zinc-100 rounded-full">✕</button></div><div class="mt-4 space-y-3"><input id="o-titre" placeholder="Titre" class="w-full bg-zinc-100 border rounded-xl px-4 py-3 text-sm"><input id="o-prix" type="number" placeholder="Prix FCFA" class="w-full bg-zinc-100 border rounded-xl px-4 py-3 text-sm"><input type="file" id="o-file" accept="image/*" class="hidden"><button onclick="document.getElementById('o-file').click()" class="bg-black text-white px-4 py-2 rounded-full text-xs">Upload</button><button onclick="publierOeuvreGalerie()" class="w-full bg-black text-white py-3.5 rounded-full font-black">Publier</button></div></div></div>
+<div id="modalPublier" class="fixed inset-0 bg-black/90 z-[100] hidden flex items-end justify-center"><div class="bg-white text-black w-full rounded-t-[24px] p-6"><div class="flex justify-between items-center"><h3 class="font-black">Publier une œuvre</h3><button onclick="closePublier()" class="w-8 h-8 bg-zinc-100 rounded-full">✕</button></div><div class="mt-4 space-y-3"><input id="o-titre" placeholder="Titre" class="w-full bg-zinc-100 border rounded-xl px-4 py-3 text-sm"><input id="o-prix" type="number" placeholder="Prix FCFA" class="w-full bg-zinc-100 border rounded-xl px-4 py-3 text-sm"><input type="file" id="o-file" accept="image/*" class="hidden" onchange="previewOeuvreGalerie()"><div id="previewOeuvreGalerieBox" class="hidden"><img id="previewOeuvreGalerieImg" class="w-full h-32 object-cover rounded-xl mb-2"></div><button onclick="document.getElementById('o-file').click()" class="bg-black text-white px-4 py-2 rounded-full text-xs">Upload</button><button onclick="publierOeuvreGalerie()" id="btnPublierGalerie" class="w-full bg-black text-white py-3.5 rounded-full font-black">Publier</button><p id="msgOeuvreGalerie" class="text-center text-xs"></p></div></div></div>
 
 <nav class="fixed bottom-0 left-0 right-0 bg-black border-t border-zinc-800 flex justify-around py-2.5 z-50">
   <button onclick="go('accueil')" id="nav-accueil" class="tab-btn tab-active flex flex-col items-center text-[10px] gap-1"><i class="fa-solid fa-house text-[16px]"></i>Accueil</button>
@@ -112,7 +122,6 @@ body{background:var(--noir);color:white;font-family:'Inter',sans-serif;}
 <script>
 let role='artiste', cat='Tous', EXPO_ID=null, currentUser=JSON.parse(localStorage.getItem('AZ_USER')||'null');
 
-// ===== FIX PROBLEME 4 - ANNONCE LIVE DYNAMIQUE =====
 async function loadAnnonceLive(){
   try{
     const annonces = await fetch('/api/annonces').then(r=>r.json());
@@ -127,21 +136,33 @@ async function loadAnnonceLive(){
   }catch(e){}
 }
 loadAnnonceLive(); setInterval(loadAnnonceLive,10000);
-// ===== FIN FIX 4 =====
 
 function go(id){document.querySelectorAll('.tab').forEach(s=>s.classList.add('hidden-tab'));document.getElementById(id).classList.remove('hidden-tab');document.querySelectorAll('.tab-btn').forEach(b=>{b.classList.remove('tab-active');b.classList.add('text-zinc-500')});document.getElementById('nav-'+id).classList.add('tab-active');document.getElementById('nav-'+id).classList.remove('text-zinc-500');if(id==='galerie')loadGalerie();if(id==='expos')loadExpo();if(id==='encheres')loadEncheres();checkUserStatus();window.scrollTo(0,0);}
-function setRole(r){role=r;document.getElementById('btnArt').className=r==='artiste'?'flex-1 bg-or text-black py-2.5 rounded-full':'flex-1 text-zinc-400 py-2.5';document.getElementById('btnCol').className=r==='acheteur'?'flex-1 bg-or text-black py-2.5 rounded-full':'flex-1 text-zinc-400 py-2.5';}
+
+// FIX 1 : SWITCH ARTISTE / COLLECTIONNEUR QUI MARCHE
+function setRole(r){
+  role=r;
+  document.getElementById('btnArt').className=r==='artiste'?'flex-1 bg-or text-black py-2.5 rounded-full':'flex-1 text-zinc-400 py-2.5';
+  document.getElementById('btnCol').className=r==='acheteur'?'flex-1 bg-or text-black py-2.5 rounded-full':'flex-1 text-zinc-400 py-2.5';
+  document.getElementById('blocArtisteDesc').classList.toggle('hidden', r!=='artiste');
+  document.getElementById('blocCollectionneurDesc').classList.toggle('hidden', r!=='acheteur');
+  document.getElementById('blocStats').classList.toggle('hidden', r!=='artiste');
+  document.getElementById('formArtiste').classList.toggle('hidden', r!=='artiste');
+  document.getElementById('descRole').innerText=r==='artiste'?'Votre espace créateur.':'Votre espace collectionneur.';
+  if(r==='artiste') checkUserStatus();
+}
+
 function openProfil(){document.getElementById('modalProfil').classList.remove('hidden')}function closeProfil(){document.getElementById('modalProfil').classList.add('hidden')}
 function openLogin(){document.getElementById('modalLogin').classList.remove('hidden')}function closeLogin(){document.getElementById('modalLogin').classList.add('hidden')}
 function openPublier(){document.getElementById('modalPublier').classList.remove('hidden')}function closePublier(){document.getElementById('modalPublier').classList.add('hidden')}
 function previewFile(){const f=document.getElementById('a-file').files[0];if(!f)return;document.getElementById('previewBox').classList.remove('hidden');const r=new FileReader();r.onload=e=>document.getElementById('previewImg').src=e.target.result;r.readAsDataURL(f);}
+function previewOeuvreGalerie(){const f=document.getElementById('o-file').files[0];if(!f)return;document.getElementById('previewOeuvreGalerieBox').classList.remove('hidden');const r=new FileReader();r.onload=e=>document.getElementById('previewOeuvreGalerieImg').src=e.target.result;r.readAsDataURL(f);}
 function logout(){localStorage.removeItem('AZ_USER');currentUser=null;checkUserStatus();go('compte');}
-function checkUserStatus(){const boxCreate=document.getElementById('boxCreate');const boxPending=document.getElementById('boxPending');const formArtiste=document.getElementById('formArtiste');if(!currentUser){boxCreate.classList.remove('hidden'); boxPending.classList.add('hidden'); formArtiste.classList.add('hidden'); return;}if(currentUser.statut==='en_attente'){boxCreate.classList.add('hidden'); formArtiste.classList.add('hidden'); boxPending.classList.remove('hidden'); document.getElementById('pendingName').innerText=currentUser.nom_artiste||currentUser.nom;}if(currentUser.statut==='valide'){boxCreate.classList.add('hidden'); boxPending.classList.add('hidden'); formArtiste.classList.remove('hidden');}}
+function checkUserStatus(){const boxCreate=document.getElementById('boxCreate');const boxPending=document.getElementById('boxPending');const formArtiste=document.getElementById('formArtiste');if(role!=='artiste') return; if(!currentUser){boxCreate.classList.remove('hidden'); boxPending.classList.add('hidden'); formArtiste.classList.add('hidden'); return;}if(currentUser.statut==='en_attente'){boxCreate.classList.add('hidden'); formArtiste.classList.add('hidden'); boxPending.classList.remove('hidden'); document.getElementById('pendingName').innerText=currentUser.nom_artiste||currentUser.nom;}if(currentUser.statut==='valide'){boxCreate.classList.add('hidden'); boxPending.classList.add('hidden'); formArtiste.classList.remove('hidden');}}
 async function creerProfil(){const nom=document.getElementById('p-nom').value.trim(), nom_artiste=document.getElementById('p-artiste').value.trim(), whatsapp=document.getElementById('p-wa').value.trim(), email=document.getElementById('p-email').value.trim(), password=document.getElementById('p-password').value;if(!nom||!nom_artiste||!whatsapp||!email||!password) return document.getElementById('msgProfil').innerText='❌ Remplis tous les champs *';document.getElementById('btnCreer').innerText='⏳ Envoi...';try{const res=await fetch('/api/auth/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({nom, nom_artiste, whatsapp, email, password, ville:'Abomey-Calavi'})}).then(r=>r.json());if(res.error) throw new Error(res.error);document.getElementById('msgProfil').innerHTML='<span class="text-green-600 font-bold">✅ Envoyé!</span>';localStorage.setItem('AZ_USER',JSON.stringify(res.user||res));currentUser=res.user||res;setTimeout(()=>{closeProfil();checkUserStatus();},1000);}catch(e){document.getElementById('msgProfil').innerText=e.message;}}
 async function login(){const identifiant=document.getElementById('l-identifiant').value.trim();const password=document.getElementById('l-password').value;try{const res=await fetch('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({identifiant, password})}).then(r=>r.json());if(res.error) throw new Error(res.error);localStorage.setItem('AZ_USER', JSON.stringify(res.user||res));currentUser=res.user||res;closeLogin();checkUserStatus();go('compte');}catch(e){document.getElementById('msgLogin').innerText=e.message;}}
 async function uploadImage(){const fi=document.getElementById('a-file');if(!fi.files[0])return null;const fd=new FormData();fd.append('image',fi.files[0]);const res=await fetch('/api/upload',{method:'POST',body:fd}).then(r=>r.json());return res.url||res.image;}
 
-// ===== FIX PROBLEME 1 - BOUTON ACHETER =====
 async function loadGalerie(){
   const arts=await fetch('/api/artworks').then(r=>r.json()).catch(()=>[]);
   document.getElementById('countG').innerText=`${arts.length} œuvres`;
@@ -157,13 +178,61 @@ async function loadGalerie(){
   `).join('')||'<p class="text-zinc-500 text-center py-10">0 oeuvre</p>';
 }
 function partagerOeuvre(id){ const lien=`${location.origin}/oeuvre/${id}`; window.open(`https://wa.me/?text=Decouvre cette oeuvre sur ART-ZEDMO: ${lien}`,'_blank'); }
-// ===== FIN FIX 1 =====
 
 async function loadExpo(){const ex=await fetch('/api/expositions/active').then(r=>r.json()).catch(()=>({}));if(!ex._id)return;document.getElementById('listExpoOeuvres').innerHTML=(ex.oeuvres||[]).map((a,i)=>`<div class="bg-zinc-900 p-3 rounded-xl flex gap-3 items-center"><b class="or">#${i+1}</b><img src="${a.images?.[0]||'https://picsum.photos/100'}" class="w-12 h-12 rounded"><p class="text-sm flex-1">${a.titre}</p></div>`).join('');}
 async function loadEncheres(){const en=await fetch('/api/encheres').then(r=>r.json()).catch(()=>[]);document.getElementById('listEncheres').innerHTML=en.map(e=>`<div class="bg-zinc-900 p-3 rounded-xl"><p class="font-bold text-sm">${e.artwork?.titre}</p><p class="or text-xs">${e.enchereActuelle} FCFA</p></div>`).join('')||'<p class="text-zinc-500">0 enchère</p>';}
 function partager(){ if(!currentUser) return alert('Connecte-toi'); const lien=`${location.origin}/vote/${currentUser._id}`; document.getElementById('lienViral').innerText=lien; window.open(`https://wa.me/?text=Vote pour moi: ${lien}`,'_blank');}
 async function publierOeuvre(){ alert('Utilise le bouton Publier une œuvre dans Galerie'); }
-async function publierOeuvreGalerie(){ alert('Logique publication à connecter à /api/artworks'); closePublier(); loadGalerie(); }
+
+async function publierOeuvreGalerie(){
+  const titre=document.getElementById('o-titre').value.trim();
+  const prix=document.getElementById('o-prix').value;
+  const fileInput=document.getElementById('o-file');
+  const msg=document.getElementById('msgOeuvreGalerie');
+  const btn=document.getElementById('btnPublierGalerie');
+  if(!currentUser) return msg.innerText='❌ Connecte-toi d\'abord';
+  if(!titre||!prix) return msg.innerText='❌ Titre + Prix requis';
+  if(!fileInput.files[0]) return msg.innerText='❌ Image requise';
+  try{
+    btn.disabled=true;
+    msg.innerText='⏳ Upload image...';
+    const fd=new FormData();
+    fd.append('image', fileInput.files[0]);
+    const up=await fetch('/api/upload',{method:'POST',body:fd}).then(r=>r.json());
+    const imgUrl=up.url||up.image||up.secure_url;
+    if(!imgUrl) throw new Error('Upload échoué');
+    msg.innerText='⏳ Envoi en attente admin...';
+    const res=await fetch('/api/artworks',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({artiste: currentUser._id, titre, prix: Number(prix), images:[imgUrl], categorie:'Peinture', ville:'Abomey-Calavi'})
+    }).then(r=>r.json());
+    if(res.error) throw new Error(res.error);
+    msg.innerHTML='<span class="text-green-600 font-bold">✅ Envoyée! En attente validation admin 24h</span>';
+    setTimeout(()=>{ closePublier(); loadGalerie(); },1500);
+  }catch(e){ msg.innerText='❌ '+e.message; btn.disabled=false; }
+}
+
+// FIX AMENER OEUVRE
+async function openMesOeuvresExpo(){
+  const box=document.getElementById('mesOeuvresExpo');
+  box.classList.toggle('hidden');
+  if(!box.classList.contains('hidden') && currentUser){
+    box.innerHTML='Chargement...';
+    const all=await fetch('/api/artworks?all=true').then(r=>r.json()).catch(()=>[]);
+    const mine=all.filter(a=> (a.artiste?._id||a.artiste)===currentUser._id);
+    box.innerHTML=mine.map(a=>`<div class="flex justify-between items-center bg-black p-2 rounded mb-2"><span>${a.titre}</span><button onclick="amenerOeuvre('${a._id}')" class="bg-or text-black px-3 py-1 rounded-full">+ Expo</button></div>`).join('')||'Aucune oeuvre';
+  }
+}
+async function amenerOeuvre(artId){
+  try{
+    const ex=await fetch('/api/expositions/active').then(r=>r.json());
+    if(!ex._id) return alert('Pas d expo active');
+    await fetch(`/api/expositions/${ex._id}/add-artwork`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({artworkId:artId})}).then(r=>r.json());
+    alert('✅ Ajoutée à expo!'); document.getElementById('mesOeuvresExpo').classList.add('hidden'); loadExpo();
+  }catch(e){ alert(e.message); }
+}
+
 checkUserStatus(); loadAnnonceLive();
 </script>
 </body>
