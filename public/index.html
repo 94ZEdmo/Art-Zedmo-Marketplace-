@@ -48,7 +48,20 @@ body{background:var(--noir);color:white;font-family:'Inter',sans-serif;}
 
 <section id="expos" class="tab hidden-tab p-4">
   <h2 class="font-black text-xl or">Expositions</h2>
-  <div class="flex gap-2 mt-3">
+
+  <!-- SEUL AJOUT : CREER EXPOSITION -->
+  <div class="bg-zinc-900 border border-or/30 rounded-xl p-4 mt-3">
+    <p class="font-bold text-sm or"><i class="fa-solid fa-plus"></i> Créer une Exposition (Admin)</p>
+    <input id="expoTitre" placeholder="Titre ex: Exposition le 5 octobre 2026" class="w-full mt-3 bg-black border border-zinc-700 rounded-xl px-3 py-2.5 text-xs">
+    <div class="grid grid-cols-2 gap-2 mt-2">
+      <div><label class="text-[10px] text-zinc-400">Date début</label><input id="expoDebut" type="date" class="w-full bg-black border border-zinc-700 rounded-xl px-3 py-2 text-xs text-white"></div>
+      <div><label class="text-[10px] text-zinc-400">Date fin</label><input id="expoFin" type="date" class="w-full bg-black border border-zinc-700 rounded-xl px-3 py-2 text-xs text-white"></div>
+    </div>
+    <button onclick="creerExpoManuelle()" id="btnCreerExpo" class="w-full bg-or text-black mt-3 py-2.5 rounded-full font-black text-xs">Créer l'Exposition</button>
+    <p id="msgExpo" class="text-[10px] text-center mt-2 text-zinc-400"></p>
+  </div>
+
+  <div class="flex gap-2 mt-4">
     <button id="btnAmener" onclick="openMesOeuvresExpo()" class="bg-white text-black px-4 py-2 rounded-full text-xs font-bold"><i class="fa-solid fa-plus"></i> Amener mon œuvre</button>
     <button onclick="loadExpo()" class="border border-zinc-700 px-4 py-2 rounded-full text-xs">Actualiser</button>
   </div>
@@ -234,10 +247,33 @@ async function openMesOeuvresExpo(){
     box.innerHTML=mine.map(a=>`<div class="flex justify-between items-center bg-black p-2 rounded mb-2"><span>${a.titre}</span><button onclick="amenerOeuvre('${a._id}')" class="bg-or text-black px-3 py-1 rounded-full">+ Expo</button></div>`).join('')||'Aucune oeuvre';
   }
 }
+
+// SEULES 2 FONCTIONS MODIFIÉES : creerExpoManuelle + amenerOeuvre
+async function creerExpoManuelle(){
+  const titre = document.getElementById('expoTitre').value.trim();
+  const debut = document.getElementById('expoDebut').value;
+  const fin = document.getElementById('expoFin').value;
+  const msg = document.getElementById('msgExpo');
+  const btn = document.getElementById('btnCreerExpo');
+  if(!titre ||!debut ||!fin) return msg.innerText = '❌ Remplis titre + date début + date fin';
+  try{
+    btn.innerText = '⏳ Création...';
+    const res = await fetch('/api/expositions',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ titre, dateDebut: debut, dateFin: fin, active: true, description: titre })
+    }).then(r=>r.json());
+    if(res.error) throw new Error(res.error);
+    msg.innerHTML = '<span class="text-green-400">✅ Expo créée : '+titre+' du '+debut+' au '+fin+'</span>';
+    loadExpo(); loadAnnonceLive();
+  }catch(e){ msg.innerText = '❌ '+e.message; }
+  finally{ btn.innerText = 'Créer l\'Exposition'; }
+}
+
 async function amenerOeuvre(artId){
   try{
-    const ex=await fetch('/api/expositions/active').then(r=>r.json());
-    if(!ex._id) return alert('Pas d expo active');
+    const ex=await fetch('/api/expositions/active').then(r=>r.json()).catch(()=>null);
+    if(!ex ||!ex._id) return alert('Pas d expo active : Crée d abord ton exposition en haut avec date début et fin');
     await fetch(`/api/expositions/${ex._id}/add-artwork`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({artworkId:artId})}).then(r=>r.json());
     alert('✅ Ajoutée à expo!'); document.getElementById('mesOeuvresExpo').classList.add('hidden'); loadExpo();
   }catch(e){ alert(e.message); }
