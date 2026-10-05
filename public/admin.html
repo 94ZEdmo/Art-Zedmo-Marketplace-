@@ -3,10 +3,11 @@
 <body class="bg-[#F9F7F2]"><nav class="bg-black text-white p-3 flex justify-between"><span class="font-bold">⚙️ ADMIN ZEDMO - Backend Live</span><div class="flex gap-3"><a href="/api/health" target="_blank" class="text-xs bg-white text-black px-3 py-1 rounded-full">Health</a><a href="/" class="underline text-sm">Voir site</a></div></nav>
 
 <div class="max-w-6xl mx-auto p-4 space-y-6">
-<div class="grid grid-cols-2 md:grid-cols-5 gap-3">
+<div class="grid grid-cols-2 md:grid-cols-6 gap-3">
 <div class="bg-white border p-4 rounded-[16px]"><div class="text-xs opacity-60">Artistes en attente</div><div id="statArtisteAtt" class="font-bold text-2xl text-orange-600">0</div></div>
+<div class="bg-white border-2 border-green-500 p-4 rounded-[16px]"><div class="text-xs opacity-60">Artistes validés</div><div id="statArtisteVal" class="font-bold text-2xl text-green-600">0</div></div>
 <div class="bg-white border p-4 rounded-[16px]"><div class="text-xs opacity-60">Oeuvres en attente</div><div id="statAttente" class="font-bold text-2xl">0</div></div>
-<div class="bg-white border p-4 rounded-[16px]"><div class="text-xs opacity-60">Validées</div><div id="statValide" class="font-bold text-2xl">0</div></div>
+<div class="bg-white border p-4 rounded-[16px]"><div class="text-xs opacity-60">Validées (oeuvres)</div><div id="statValide" class="font-bold text-2xl">0</div></div>
 <div class="bg-white border p-4 rounded-[16px]"><div class="text-xs opacity-60">Total votes</div><div id="statVotes" class="font-bold text-2xl">0</div></div>
 <div class="bg-white border p-4 rounded-[16px]"><div class="text-xs opacity-60">En enchère</div><div id="statEnchere" class="font-bold text-2xl">0</div></div>
 </div>
@@ -20,6 +21,11 @@
 <div class="bg-white border-2 border-orange-300 rounded-[20px] p-6">
 <h3 class="font-bold mb-3">👤 Artistes à valider - Nom complet / Nom d'artiste / WhatsApp / Email (avant publication galerie)</h3>
 <div id="artistesAttenteList" class="space-y-3">Chargement artistes...</div>
+</div>
+
+<div class="bg-white border-2 border-green-200 rounded-[20px] p-6">
+<h3 class="font-bold mb-3">✅ Artistes validés - ils peuvent publier</h3>
+<div id="artistesValidesList" class="space-y-2 text-sm"></div>
 </div>
 
 <div class="bg-white border rounded-[20px] p-6">
@@ -50,11 +56,14 @@ async function loadAdmin(tri){
   const expoRes = await fetch(API+'/expositions/active').then(r=>r.json()).catch(()=>null);
   if(expoRes && expoRes._id) EXPO_ACTIVE = expoRes;
 
-  // FIX: on tape directement sur /api/auth qui existe chez toi
   try{
     const users = await fetch(API+'/auth').then(r=>r.json()).catch(()=>[]);
-    const artistesPending = Array.isArray(users)? users.filter(u=>u.statut==='en_attente' || u.statut==undefined) : [];
+    const artistesPending = Array.isArray(users)? users.filter(u=>u.statut==='en_attente') : [];
+    const artistesValides = Array.isArray(users)? users.filter(u=>u.statut==='valide') : [];
+
     document.getElementById('statArtisteAtt').innerText=artistesPending.length;
+    document.getElementById('statArtisteVal').innerText=artistesValides.length; // NOUVEAU COMPTEUR
+
     document.getElementById('artistesAttenteList').innerHTML=artistesPending.map(u=>`
       <div class="flex gap-3 bg-orange-50 border border-orange-200 p-4 rounded-xl">
         <div class="w-12 h-12 bg-black text-white rounded-full flex items-center justify-center font-bold">${(u.nom_artiste||u.nom||'?')[0].toUpperCase()}</div>
@@ -64,12 +73,15 @@ async function loadAdmin(tri){
           <div class="text-[10px] opacity-60 mt-1">Ville: ${u.ville||''} • ${new Date(u.createdAt).toLocaleString()}</div>
         </div>
         <div class="flex flex-col gap-1">
-          <button onclick="validerArtiste('${u._id}')" class="bg-black text-white px-4 py-2 rounded-full text-xs font-bold">Valider profil</button>
+          <button onclick="validerArtiste('${u._id}')" class="bg-black text-white px-4 py-2 rounded-full text-xs font-bold">Valider + Email</button>
           <button onclick="refuserArtiste('${u._id}')" class="border border-red-300 text-red-600 px-4 py-1.5 rounded-full text-xs">Refuser</button>
           <a href="https://wa.me/${u.whatsapp}?text=Bienvenue sur ART-ZEDMO" target="_blank" class="bg-green-600 text-white px-4 py-1.5 rounded-full text-xs text-center">WhatsApp</a>
         </div>
       </div>
     `).join('') || '<div class="text-sm opacity-60 text-center py-4">✅ Aucun artiste en attente</div>';
+
+    document.getElementById('artistesValidesList').innerHTML=artistesValides.map(u=>`<div class="flex justify-between bg-green-50 p-2 rounded-lg"><span>✅ ${u.nom_artiste} (${u.email}) - ${u.whatsapp}</span><span class="text-[10px] opacity-60">${new Date(u.createdAt).toLocaleDateString()}</span></div>`).join('') || '<p class="opacity-60">0 validé</p>';
+
   }catch(e){ document.getElementById('artistesAttenteList').innerHTML='<p class="text-red-500 text-xs">Erreur: '+e.message+'</p>';}
 
   const q = tri? `?all=true&tri=${tri}` : '?all=true';
@@ -93,7 +105,12 @@ async function loadAdmin(tri){
   document.getElementById('statEnchere').innerText=enchs.length;
   document.getElementById('enchereList').innerHTML=enchs.map(e=>`<div class="flex justify-between bg-black text-white p-3 rounded-xl text-xs"><span>${e.artwork?.titre} - ${e.enchereActuelle} FCFA</span><span class="opacity-60">${new Date(e.dateFin).toLocaleString()}</span></div>`).join('') || '<p class="text-xs opacity-50">Pas d\'enchère</p>';
 }
-async function validerArtiste(id){ await fetch(`${API}/auth/${id}/valider`,{method:'PUT'}); alert('✅ Artiste validé - peut publier'); loadAdmin(); }
+async function validerArtiste(id){
+  const btn = event.target; btn.innerText='⏳ Envoi email...';
+  const res = await fetch(`${API}/auth/${id}/valider`,{method:'PUT'}).then(r=>r.json());
+  alert('✅ Artiste validé + email envoyé à '+res.email);
+  loadAdmin();
+}
 async function refuserArtiste(id){ if(!confirm('Refuser cet artiste?'))return; await fetch(`${API}/auth/${id}`,{method:'DELETE'}); loadAdmin(); }
 async function valider(id){ await fetch(`${API}/artworks/${id}/valider`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({statut:'validee'})}); loadAdmin(); }
 async function refuser(id){ if(!confirm('Supprimer?')) return; await fetch(`${API}/artworks/${id}`,{method:'DELETE'}); loadAdmin(); }
