@@ -28,7 +28,6 @@
 <div id="artistesValidesList" class="space-y-2 text-sm"></div>
 </div>
 
-<!-- BLOC AJOUTÉ - CREATION EXPO ADMIN AVEC DATES -->
 <div class="bg-black text-white border-2 border-yellow-500 rounded-[20px] p-6">
 <h3 class="font-bold mb-3">➕ Créer une Exposition (Admin)</h3>
 <p id="expoActiveInfo" class="text-[11px] opacity-60 mb-3">Aucune expo active</p>
@@ -69,7 +68,12 @@ async function loadAdmin(tri){
   const expoRes = await fetch(API+'/expositions/active').then(r=>r.json()).catch(()=>null);
   if(expoRes && expoRes._id){
     EXPO_ACTIVE = expoRes;
-    document.getElementById('expoActiveInfo').innerHTML = `✅ Expo ACTIVE : <b class="text-yellow-400">${expoRes.titre}</b> du ${new Date(expoRes.dateDebut||expoRes.createdAt).toLocaleDateString()} au ${new Date(expoRes.dateFin||'').toLocaleDateString()}`;
+    // CORRECTION EXPIRATION AUTO ADMIN
+    if(expoRes.dateFin && new Date(expoRes.dateFin) < new Date()){
+      document.getElementById('expoActiveInfo').innerHTML = `⏰ Expo EXPIRÉE le ${new Date(expoRes.dateFin).toLocaleDateString()} - <span class="text-red-400">retirée auto côté public, plus de votes</span>`;
+    } else {
+      document.getElementById('expoActiveInfo').innerHTML = `✅ Expo ACTIVE : <b class="text-yellow-400">${expoRes.titre}</b> du ${new Date(expoRes.dateDebut||expoRes.createdAt).toLocaleDateString()} au ${new Date(expoRes.dateFin||'').toLocaleDateString()}`;
+    }
   } else {
     document.getElementById('expoActiveInfo').innerText = '⚠️ Aucune expo active - Crée-en une ci-dessous';
   }
@@ -116,15 +120,15 @@ async function loadAdmin(tri){
       <div class="flex flex-col gap-1"><button onclick="valider('${a._id}')" class="bg-black text-white px-4 py-1.5 rounded-full text-xs">Valider</button><button onclick="refuser('${a._id}')" class="border px-4 py-1.5 rounded-full text-xs">Refuser</button></div>
     </div>
   `).join('') || '<div class="text-sm opacity-60">✅ Aucune oeuvre en attente</div>';
+  // CORRECTION BOUTON SUPPRIMER AJOUTÉ
   document.getElementById('valideList').innerHTML=valides.map(a=>`
-    <div class="border rounded-xl overflow-hidden bg-white"><img src="${a.image||a.images?.[0]||'https://picsum.photos/200'}" class="h-28 w-full object-cover"><div class="p-2"><div class="font-bold text-xs truncate">${a.titre}</div><div class="text-[11px]">${a.statut} • ${a.votesCount||0} votes</div><button onclick="addToExpo('${a._id}')" class="mt-2 w-full border text-[11px] py-1 rounded-full">+ Expo</button></div></div>
+    <div class="border rounded-xl overflow-hidden bg-white"><img src="${a.image||a.images?.[0]||'https://picsum.photos/200'}" class="h-28 w-full object-cover"><div class="p-2"><div class="font-bold text-xs truncate">${a.titre}</div><div class="text-[11px]">${a.statut} • ${a.votesCount||0} votes</div><div class="flex gap-1 mt-2"><button onclick="addToExpo('${a._id}')" class="flex-1 border text-[11px] py-1.5 rounded-full">+ Expo</button><button onclick="supprimerGalerie('${a._id}')" class="bg-red-600 text-white text-[11px] px-3 py-1.5 rounded-full">🗑️</button></div></div></div>
   `).join('');
   const enchs=await fetch(API+'/encheres').then(r=>r.json()).catch(()=>[]);
   document.getElementById('statEnchere').innerText=enchs.length;
   document.getElementById('enchereList').innerHTML=enchs.map(e=>`<div class="flex justify-between bg-black text-white p-3 rounded-xl text-xs"><span>${e.artwork?.titre} - ${e.enchereActuelle} FCFA</span><span class="opacity-60">${new Date(e.dateFin).toLocaleString()}</span></div>`).join('') || '<p class="text-xs opacity-50">Pas d\'enchère</p>';
 }
 
-// NOUVELLE FONCTION ADMIN POUR CREER EXPO AVEC DATES
 async function creerExpoAdmin(){
   const titre=document.getElementById('expoTitre').value.trim();
   const debut=document.getElementById('expoDebut').value;
@@ -146,6 +150,9 @@ async function creerExpoAdmin(){
   }catch(e){ msg.innerText='❌ '+e.message; }
   finally{ btn.innerText="Créer l'Exposition"; }
 }
+
+// FONCTION SUPPRIMER GALERIE - NOUVEAU
+async function supprimerGalerie(id){ if(!confirm('Supprimer cette oeuvre de la galerie?')) return; await fetch(`${API}/artworks/${id}`,{method:'DELETE'}); loadAdmin(); }
 
 async function validerArtiste(id){
   const btn = event.target; btn.innerText='⏳ Envoi email...';
