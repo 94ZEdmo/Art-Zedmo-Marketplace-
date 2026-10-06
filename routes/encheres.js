@@ -29,4 +29,37 @@ router.post('/:id/encherir', async(req,res)=>{
   }catch(e){ res.status(500).json({error:e.message}); }
 });
 
+// === FIX 1: SUPPRIMER - pour ton bouton rouge 🗑 Supprimer ===
+router.delete('/:id', async(req,res)=>{
+  try{
+    const ench = await Enchere.findById(req.params.id);
+    if(!ench) return res.status(404).json({error:"Non trouvée"});
+    if(ench.artwork){
+      await Artwork.findByIdAndUpdate(ench.artwork, {statut:'validee'});
+    }
+    await Enchere.findByIdAndDelete(req.params.id);
+    res.json({success:true, message:"Enchère supprimée - oeuvre remise en galerie"});
+  }catch(e){ res.status(500).json({error:e.message}); }
+});
+
+// === FIX 2: MODIFIER UNE DATE LIVE ===
+router.put('/:id', async(req,res)=>{
+  try{
+    const ench = await Enchere.findByIdAndUpdate(req.params.id, 
+      {dateFin: new Date(req.body.dateFin)}, 
+      {new:true}
+    );
+    res.json(ench);
+  }catch(e){ res.status(500).json({error:e.message}); }
+});
+
+// === FIX 3: MODIFIER TOUTES LES DATES LIVE D'UN COUP - pour que 02j 03h 13m change ===
+router.put('/bulk/update-date', async(req,res)=>{
+  try{
+    const dateFin = new Date(req.body.dateFin);
+    const result = await Enchere.updateMany({statut:'en_cours'}, {dateFin});
+    res.json({success:true, modified:result.modifiedCount, dateFin});
+  }catch(e){ res.status(500).json({error:e.message}); }
+});
+
 export default router;
