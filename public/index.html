@@ -134,6 +134,7 @@ body{background:var(--noir);color:white;font-family:'Inter',sans-serif;}
 
 <script>
 let role='artiste', cat='Tous', EXPO_ID=null, currentUser=JSON.parse(localStorage.getItem('AZ_USER')||'null');
+let intervalEncheres = null;
 
 async function loadAnnonceLive(){
   try{
@@ -205,13 +206,18 @@ async function loadMyStats(){
     document.getElementById('mySolde').innerText= total>0? Math.round(total*0.85).toLocaleString()+' FCFA' : '0 FCFA';
   }catch(e){}
 }
+
+// === FIX LIVE DECOMPTE AVEC SECONDES ===
 function getCountdown(dateFin){
   const diff=new Date(dateFin)-new Date();
   if(diff<=0) return "Expirée";
-  const j=Math.floor(diff/86400000),h=Math.floor((diff%86400000)/3600000),m=Math.floor((diff%3600000)/60000);
-  return `${String(j).padStart(2,'0')}j ${String(h).padStart(2,'0')}h ${String(m).padStart(2,'0')}m restant`;
+  const j=Math.floor(diff/86400000);
+  const h=Math.floor((diff%86400000)/3600000);
+  const m=Math.floor((diff%3600000)/60000);
+  const s=Math.floor((diff%60000)/1000);
+  return `${String(j).padStart(2,'0')}j ${String(h).padStart(2,'0')}h ${String(m).padStart(2,'0')}m ${String(s).padStart(2,'0')}s restant`;
 }
-// --- SEULEMENT CORRECTION PROBLEME 2 : COMPTEUR VOTE ---
+
 async function loadExpo(){
   const ex=await fetch('/api/expositions/active').then(r=>r.json()).catch(()=>({}));
   if(!ex._id){document.getElementById('listExpoOeuvres').innerHTML='<p class="text-zinc-500 text-xs text-center py-4">Aucune expo active</p>';return;}
@@ -230,7 +236,6 @@ async function loadExpo(){
   `).join('')||'<p class="text-zinc-500 text-xs">0 oeuvre en expo</p>';
 }
 async function voterExpo(id){
-  // FIX COMPTEUR : update instantané avant même le reload serveur
   const el=document.getElementById(`vc-${id}`);
   if(el){
     const cur=parseInt((el.innerText.match(/\d+/)||[0])[0])||0;
@@ -239,7 +244,6 @@ async function voterExpo(id){
   }
   try{
     const res=await fetch(`/api/artworks/${id}/vote`,{method:'POST'}).then(r=>r.json()).catch(()=>({}));
-    // si serveur renvoie nouveau compte on l'utilise
     if(res && (res.votesCount!==undefined||res.votes!==undefined)){
       if(el) el.innerText=`${res.votesCount||res.votes} votes • ${res.artiste?.nom_artiste||''}`;
     }
@@ -247,21 +251,40 @@ async function voterExpo(id){
   try{ await fetch(`/api/expositions/${EXPO_ID}/vote`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({artworkId:id})}); }catch(e){}
   setTimeout(()=>loadExpo(),600);
 }
-// --- SEULEMENT CORRECTION PROBLEME 1 : IMAGE ENCHERE BIEN VISIBLE ---
+
+// === FIX PROBLEME IMAGE + DECOMPTE LIVE QUI BOUGE CHAQUE SECONDE ===
 async function loadEncheres(){
   const en=await fetch('/api/encheres').then(r=>r.json()).catch(()=>[]);
   const actives=en.filter(e=>!e.dateFin || new Date(e.dateFin) > new Date());
   if(actives.length===0){document.getElementById('listEncheres').innerHTML='<p class="text-zinc-500 text-xs text-center py-10">Aucune enchère active. Les expirées disparaissent auto.</p>';return;}
+
   document.getElementById('listEncheres').innerHTML=actives.map(e=>{
     const art=e.artwork||e.oeuvre||{};
     const prixActuel=e.enchereActuelle||e.prixActuel||e.currentPrice||e.prixDepart||100000;
     const prixDepart=e.prixDepart||art.prix||100000;
     const minPlus=e.increment||e.pas||5000;
-    // FIX IMAGE : cherche partout + fallback + visible HD
     const img = art.images?.[0] || art.image || art.imageUrl || art.photo || e.images?.[0] || e.image || e.imageUrl || 'https://via.placeholder.com/600x400/111/D4AF37?text=ART-ZEDMO';
-    return `<div class="bg-[#121212] border border-zinc-800 rounded-[20px] p-4"><div class="flex justify-between items-center mb-3"><span class="bg-red-900/50 border border-red-700 text-red-300 text-[10px] font-bold px-3 py-1 rounded-full flex items-center gap-1"><i class="fa-solid fa-gavel text-[10px]"></i> LIVE</span><span class="text-[12px] text-zinc-400 flex items-center gap-1"><i class="fa-regular fa-clock"></i> ${getCountdown(e.dateFin)}</span></div><div class="bg-black rounded-[16px] overflow-hidden h-72 border border-zinc-900 flex items-center justify-center"><img src="${img}" class="w-full h-full object-contain" onerror="this.onerror=null;this.src='https://via.placeholder.com/600x400/111/D4AF37?text=Image+non+dispo';this.className='w-full h-full object-cover'"></div><div class="mt-4 flex justify-between items-end"><div><div class="text-[10px] tracking-widest text-zinc-500 uppercase">PRIX DE DÉPART: ${prixDepart.toLocaleString()} FCFA</div><div class="text-[10px] text-zinc-400 mt-1">Prix actuel</div><div class="text-[#D4AF37] font-black text-xl">${prixActuel.toLocaleString()} FCFA</div></div><div class="text-right"><div class="text-[10px] text-zinc-500">Dernière offre</div><div class="text-[12px] text-white leading-tight">par ${e.dernierEncherisseur||e.lastBidder||'Collectionneur'}<br>${e.ville||'Paris'}</div></div></div><div class="mt-4 flex gap-2"><input id="input-${e._id}" type="number" placeholder="Enchère + ${minPlus.toLocaleString()} FCFA min" class="flex-1 bg-black border border-zinc-700 rounded-full px-4 py-3 text-sm text-white placeholder-zinc-500"><button onclick="encherir('${e._id}', ${prixActuel+minPlus})" class="bg-white text-black px-6 py-3 rounded-full text-sm font-black">Enchérir</button></div></div>`;
+    return `<div class="bg-[#121212] border border-zinc-800 rounded-[20px] p-4">
+      <div class="flex justify-between items-center mb-3">
+        <span class="bg-red-900/50 border border-red-700 text-red-300 text-[10px] font-bold px-3 py-1 rounded-full flex items-center gap-1"><i class="fa-solid fa-gavel text-[10px]"></i> LIVE</span>
+        <span class="countdown text-[12px] text-zinc-400 flex items-center gap-1" data-datefin="${e.dateFin}"><i class="fa-regular fa-clock"></i> ${getCountdown(e.dateFin)}</span>
+      </div>
+      <div class="bg-black rounded-[16px] overflow-hidden h-72 border border-zinc-900 flex items-center justify-center"><img src="${img}" class="w-full h-full object-contain" onerror="this.onerror=null;this.src='https://via.placeholder.com/600x400/111/D4AF37?text=Image+non+dispo';this.className='w-full h-full object-cover'"></div>
+      <div class="mt-4 flex justify-between items-end"><div><div class="text-[10px] tracking-widest text-zinc-500 uppercase">PRIX DE DÉPART: ${prixDepart.toLocaleString()} FCFA</div><div class="text-[10px] text-zinc-400 mt-1">Prix actuel</div><div class="text-[#D4AF37] font-black text-xl">${prixActuel.toLocaleString()} FCFA</div></div><div class="text-right"><div class="text-[10px] text-zinc-500">Dernière offre</div><div class="text-[12px] text-white leading-tight">par ${e.dernierEncherisseur||e.lastBidder||'Collectionneur'}<br>${e.ville||'Paris'}</div></div></div>
+      <div class="mt-4 flex gap-2"><input id="input-${e._id}" type="number" placeholder="Enchère + ${minPlus.toLocaleString()} FCFA min" class="flex-1 bg-black border border-zinc-700 rounded-full px-4 py-3 text-sm text-white placeholder-zinc-500"><button onclick="encherir('${e._id}', ${prixActuel+minPlus})" class="bg-white text-black px-6 py-3 rounded-full text-sm font-black">Enchérir</button></div>
+    </div>`;
   }).join('');
+
+  // FIX C'EST ICI QUE CA DECOMPTE LIVE - ton bug sur capture entourée en vert
+  if(intervalEncheres) clearInterval(intervalEncheres);
+  intervalEncheres = setInterval(()=>{
+    document.querySelectorAll('.countdown').forEach(el=>{
+      const df = el.getAttribute('data-datefin');
+      if(df) el.innerHTML = `<i class="fa-regular fa-clock"></i> ${getCountdown(df)}`;
+    });
+  }, 1000);
 }
+
 async function encherir(id,mini){
   const inp=document.getElementById('input-'+id); let m=inp?parseInt(inp.value):mini; if(!m||m<mini) m=mini;
   await fetch(`/api/encheres/${id}/encherir`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({montant:m})}); alert('✅ Enchère placée'); loadEncheres();
