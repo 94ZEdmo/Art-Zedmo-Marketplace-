@@ -15,7 +15,7 @@ router.get('/active', async(req,res)=>{
     const expo = await Exposition.findOne({statut:{$in:['active','vote_clos','enchere']}}).populate({
       path:'oeuvres', 
       match:{statut:{$in:['validee','en_expo','en_enchere']}}, 
-      populate:{path:'artiste', select:'nom nom_artiste ville whatsapp'}, // FIX 2: pour bouton Acheter + Voter
+      populate:{path:'artiste', select:'nom nom_artiste ville whatsapp'},
       options:{sort:{votesCount:-1}}
     }).sort({dateDebut:-1});
     if(!expo) return res.json({message:"Pas d'expo active", oeuvres:[]});
@@ -30,7 +30,6 @@ router.post('/', async(req,res)=>{
   }catch(e){ res.status(500).json({error:e.message}); }
 });
 
-// FIX PROBLEME 2 : Amener mon œuvre (utilisé par le bouton dans Mon Compte)
 router.post('/:id/add-artwork', async(req,res)=>{
   try{
     const expo = await Exposition.findById(req.params.id);
@@ -56,11 +55,14 @@ router.post('/:id/add-artwork', async(req,res)=>{
   }catch(e){ res.status(500).json({error:e.message}); }
 });
 
-// Calcul Top10 + passage en enchère avec prix x2
+// === CORRECTION LIVE DECOMPTE + FIX UNDEFINED ===
 router.post('/:id/calculer-top-et-encherir', async(req,res)=>{
   try{
     const expo = await Exposition.findById(req.params.id);
     if(!expo) return res.status(404).json({error:"Expo non trouvée"});
+    
+    // FIX 1: Prend la date LIVE envoyée par admin.html, sinon +3 jours par défaut
+    const dateFin = req.body.dateFin ? new Date(req.body.dateFin) : new Date(Date.now()+3*24*60*60*1000);
     
     const top10 = await Artwork.find({exposition:expo._id, statut:'en_expo'}).sort({votesCount:-1}).limit(10);
     
@@ -68,14 +70,19 @@ router.post('/:id/calculer-top-et-encherir', async(req,res)=>{
       const existe = await Enchere.findOne({artwork:art._id, statut:'en_cours'});
       if(!existe){
         await Enchere.create({
-          artwork: art._id, 
+          artwork: art._id,
+          titre: art.titre, // FIX 2: Pour éviter "undefined"
           exposition: expo._id, 
           prixDepart: art.prix, 
-          enchereActuelle: Math.round(art.prix * 2), // FIX 2 : x2 vraiment
-          dateFin: new Date(Date.now()+3*24*60*60*1000)
+          enchereActuelle: Math.round(art.prix * 2),
+          dateFin: dateFin // FIX LIVE: Utilise la date de l'admin -> 02j 03h 50m restant
         });
         art.statut='en_enchere'; 
         await art.save();
+      } else {
+        // Si existe déjà, on met à jour sa dateFin avec celle de l'admin
+        existe.dateFin = dateFin;
+        await existe.save();
       }
     }
     
@@ -83,7 +90,7 @@ router.post('/:id/calculer-top-et-encherir', async(req,res)=>{
     expo.statut='enchere'; 
     await expo.save();
     
-    res.json({success:true, message:"Top10 en enchère LIVE - prix x2", top:top10});
+    res.json({success:true, message:`Top10 en enchère LIVE jusqu'à ${dateFin.toLocaleString()} - prix x2`, top:top10, dateFin});
   }catch(e){ res.status(500).json({error:e.message}); }
 });
 
