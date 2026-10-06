@@ -92,4 +92,17 @@ router.delete('/:id', async(req,res)=>{
   }catch(e){ res.status(500).json({error:e.message}); }
 });
 
+// === CORRECTION 1 : VOTE QUI DOIT MONTER PARTOUT (APP + ADMIN) ===
+router.post('/:id/vote', async(req,res)=>{
+  try{
+    const art = await Artwork.findByIdAndUpdate(
+      req.params.id,
+      { $inc: { votesCount: 1, votes: 1, vues: 1 } },
+      { new: true }
+    ).populate('artiste','nom nom_artiste');
+    if(!art) return res.status(404).json({error:"Oeuvre non trouvée"});
+    res.json({success:true, votesCount: art.votesCount, votes: art.votesCount, artwork: art});
+  }catch(e){ res.status(500).json({error:e.message}); }
+});
+
 export default router;
