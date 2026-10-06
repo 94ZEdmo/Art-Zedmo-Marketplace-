@@ -157,7 +157,12 @@ async function creerExpoAdmin(){
 }
 
 async function supprimerGalerie(id){ if(!confirm('Supprimer cette oeuvre de la galerie?')) return; await fetch(`${API}/artworks/${id}`,{method:'DELETE'}); loadAdmin(); }
-async function supprimerEnchere(id){ if(!confirm('Supprimer cette oeuvre de l\'enchère LIVE?')) return; await fetch(`${API}/encheres/${id}`,{method:'DELETE'}); loadAdmin(); }
+async function supprimerEnchere(id){
+  if(!confirm('Supprimer cette oeuvre de l\'enchère LIVE?')) return;
+  const r = await fetch(`${API}/encheres/${id}`,{method:'DELETE'}).then(res=>res.json()).catch(()=>({}));
+  if(r.error) alert('❌ '+r.error);
+  loadAdmin();
+}
 async function validerArtiste(id){ const btn = event.target; btn.innerText='⏳ Envoi email...'; const res = await fetch(`${API}/auth/${id}/valider`,{method:'PUT'}).then(r=>r.json()); alert('✅ Artiste validé + email envoyé à '+res.email); loadAdmin(); }
 async function refuserArtiste(id){ if(!confirm('Refuser cet artiste?'))return; await fetch(`${API}/auth/${id}`,{method:'DELETE'}); loadAdmin(); }
 async function valider(id){ await fetch(`${API}/artworks/${id}/valider`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({statut:'validee'})}); loadAdmin(); }
@@ -165,15 +170,37 @@ async function refuser(id){ if(!confirm('Supprimer?')) return; await fetch(`${AP
 async function publierAnnonce(){ const t=document.getElementById('annonceInput').value; if(!t)return alert('Message'); await fetch(API+'/annonces',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({titre:t, message:t, type:'expo'})}); document.getElementById('annonceInput').value=''; loadAdmin(); }
 async function desactiverAnnonce(id){ await fetch(`${API}/annonces/${id}`,{method:'DELETE'}).catch(async()=>{await fetch(`${API}/annonces/${id}/desactiver`,{method:'PUT'});}); loadAdmin(); }
 async function addToExpo(artId){ if(!EXPO_ACTIVE){ alert('Crée d\'abord une expo active avec le bloc ci-dessus'); return; } const res=await fetch(`${API}/expositions/${EXPO_ACTIVE._id}/add-artwork`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({artworkId:artId})}).then(r=>r.json()); alert('Ajoutée Expo! '+(res.lien_viral||'')); }
+
 async function calculerTop(){
   if(!EXPO_ACTIVE) return alert('Pas d\'expo active');
   const dateFinInput = document.getElementById('enchDateFinAdmin').value;
-  if(!dateFinInput) return alert('Choisis d\'abord la date de fin du LIVE pour que ça décompte 02j 03h 50m');
+  if(!dateFinInput) return alert('Choisis d\'abord la date Fin LIVE: ex 06/10/2026 15:36');
+
+  const enchs = await fetch(API+'/encheres').then(r=>r.json()).catch(()=>[]);
+
+  if(enchs.length>0){
+    if(!confirm('Modifier la date LIVE de '+enchs.length+' enchères vers '+new Date(dateFinInput).toLocaleString()+'?')) return;
+    const res = await fetch(API+'/encheres/bulk/update-date',{
+      method:'PUT',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({dateFin:dateFinInput})
+    }).then(r=>r.json());
+    if(res.error) return alert('❌ '+res.error);
+    alert('✅ Date LIVE mise à jour: '+new Date(dateFinInput).toLocaleString()+' - Le 02j 03h 13m restant va changer en live dans l\'app');
+    loadAdmin();
+    return;
+  }
+
   if(!confirm('Top10 → enchère x2 avec fin le '+new Date(dateFinInput).toLocaleString()+'?'))return;
-  const res=await fetch(`${API}/expositions/${EXPO_ACTIVE._id}/calculer-top-et-encherir`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({dateFin: dateFinInput})}).then(r=>r.json());
-  alert((res.top?.length||res.length||10)+' en enchère LIVE jusqu\'à '+new Date(dateFinInput).toLocaleString());
+  const res=await fetch(`${API}/expositions/${EXPO_ACTIVE._id}/calculer-top-et-encherir`,{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({dateFin: dateFinInput})
+  }).then(r=>r.json());
+  alert((res.top?.length||10)+' en enchère LIVE jusqu\'à '+new Date(dateFinInput).toLocaleString());
   loadAdmin();
 }
+
 function passerEnExpo(){ alert('Clique + Expo sous chaque oeuvre'); }
 loadAdmin(); setInterval(loadAdmin,15000);
 </script></body></html>
