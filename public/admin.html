@@ -47,12 +47,20 @@
 
 <div class="bg-white border rounded-[20px] p-6">
 <h3 class="font-bold mb-3">✅ Galerie validée + Expo OCT 2026</h3>
-<div class="flex gap-2 mb-4"><button onclick="loadAdmin('populaire')" class="border px-3 py-1.5 rounded-full text-xs">Tri Populaire</button><button onclick="passerEnExpo()" class="bg-black text-white px-4 py-1.5 rounded-full text-xs">+ Expo</button><button onclick="calculerTop()" class="bg-[#D4AF37] text-black px-4 py-1.5 rounded-full text-xs font-bold">Top10 → Enchère x2</button></div>
+<div class="flex flex-wrap gap-2 mb-4 items-center">
+  <button onclick="loadAdmin('populaire')" class="border px-3 py-1.5 rounded-full text-xs">Tri Populaire</button>
+  <button onclick="passerEnExpo()" class="bg-black text-white px-4 py-1.5 rounded-full text-xs">+ Expo</button>
+  <div class="flex gap-2 items-center bg-yellow-50 border border-yellow-300 px-3 py-1.5 rounded-full">
+    <span class="text-[10px] font-bold">Fin LIVE:</span>
+    <input id="enchDateFinAdmin" type="datetime-local" class="text-xs bg-white border rounded-full px-2 py-1">
+  </div>
+  <button onclick="calculerTop()" class="bg-[#D4AF37] text-black px-4 py-1.5 rounded-full text-xs font-bold">Top10 → Enchère x2</button>
+</div>
 <div id="valideList" class="grid md:grid-cols-3 gap-3"></div>
 </div>
 
 <div class="bg-white border rounded-[20px] p-6">
-<h3 class="font-bold mb-3">🔥 Enchères en cours</h3>
+<h3 class="font-bold mb-3">🔥 Enchères en cours - LIVE décompte</h3>
 <div id="enchereList" class="space-y-2"></div>
 </div>
 </div>
@@ -61,6 +69,13 @@
 const API='/api';
 let EXPO_ACTIVE=null;
 
+function getCountdown(dateFin){
+  const diff=new Date(dateFin)-new Date();
+  if(diff<=0) return "Expirée";
+  const j=Math.floor(diff/86400000),h=Math.floor((diff%86400000)/3600000),m=Math.floor((diff%3600000)/60000);
+  return `${String(j).padStart(2,'0')}j ${String(h).padStart(2,'0')}h ${String(m).padStart(2,'0')}m restant`;
+}
+
 async function loadAdmin(tri){
   const annonces=await fetch(API+'/annonces').then(r=>r.json()).catch(()=>[]);
   document.getElementById('listAnnonces').innerHTML=annonces.map(a=>`<div class="flex justify-between bg-gray-50 p-3 rounded-xl text-sm"><div><b class="text-[10px] bg-black text-white px-2 py-0.5 rounded-full mr-2">${a.type}</b>${a.titre||a.message}</div><button onclick="desactiverAnnonce('${a._id}')" class="text-red-500 text-xs">Désactiver</button></div>`).join('') || '<p class="text-xs opacity-50">Aucune annonce</p>';
@@ -68,7 +83,6 @@ async function loadAdmin(tri){
   const expoRes = await fetch(API+'/expositions/active').then(r=>r.json()).catch(()=>null);
   if(expoRes && expoRes._id){
     EXPO_ACTIVE = expoRes;
-    // CORRECTION EXPIRATION AUTO ADMIN
     if(expoRes.dateFin && new Date(expoRes.dateFin) < new Date()){
       document.getElementById('expoActiveInfo').innerHTML = `⏰ Expo EXPIRÉE le ${new Date(expoRes.dateFin).toLocaleDateString()} - <span class="text-red-400">retirée auto côté public, plus de votes</span>`;
     } else {
@@ -82,10 +96,8 @@ async function loadAdmin(tri){
     const users = await fetch(API+'/auth').then(r=>r.json()).catch(()=>[]);
     const artistesPending = Array.isArray(users)? users.filter(u=>u.statut==='en_attente') : [];
     const artistesValides = Array.isArray(users)? users.filter(u=>u.statut==='valide') : [];
-
     document.getElementById('statArtisteAtt').innerText=artistesPending.length;
     document.getElementById('statArtisteVal').innerText=artistesValides.length;
-
     document.getElementById('artistesAttenteList').innerHTML=artistesPending.map(u=>`
       <div class="flex gap-3 bg-orange-50 border border-orange-200 p-4 rounded-xl">
         <div class="w-12 h-12 bg-black text-white rounded-full flex items-center justify-center font-bold">${(u.nom_artiste||u.nom||'?')[0].toUpperCase()}</div>
@@ -101,9 +113,7 @@ async function loadAdmin(tri){
         </div>
       </div>
     `).join('') || '<div class="text-sm opacity-60 text-center py-4">✅ Aucun artiste en attente</div>';
-
     document.getElementById('artistesValidesList').innerHTML=artistesValides.map(u=>`<div class="flex justify-between bg-green-50 p-2 rounded-lg"><span>✅ ${u.nom_artiste} (${u.email}) - ${u.whatsapp}</span><span class="text-[10px] opacity-60">${new Date(u.createdAt).toLocaleDateString()}</span></div>`).join('') || '<p class="opacity-60">0 validé</p>';
-
   }catch(e){ document.getElementById('artistesAttenteList').innerHTML='<p class="text-red-500 text-xs">Erreur: '+e.message+'</p>';}
 
   const q = tri? `?all=true&tri=${tri}` : '?all=true';
@@ -112,7 +122,7 @@ async function loadAdmin(tri){
   const valides = all.filter(a=>a.statut!=='en_attente');
   document.getElementById('statAttente').innerText=pending.length;
   document.getElementById('statValide').innerText=valides.length;
-  document.getElementById('statVotes').innerText=all.reduce((s,a)=>s+(a.votesCount||0),0);
+  document.getElementById('statVotes').innerText=all.reduce((s,a)=>s+(a.votesCount||a.votes||0),0);
   document.getElementById('attenteList').innerHTML=pending.map(a=>`
     <div class="flex gap-3 bg-yellow-50 border border-yellow-200 p-3 rounded-xl">
       <img src="${a.image||a.images?.[0]||'https://picsum.photos/100'}" class="w-16 h-16 rounded-xl object-cover">
@@ -120,13 +130,12 @@ async function loadAdmin(tri){
       <div class="flex flex-col gap-1"><button onclick="valider('${a._id}')" class="bg-black text-white px-4 py-1.5 rounded-full text-xs">Valider</button><button onclick="refuser('${a._id}')" class="border px-4 py-1.5 rounded-full text-xs">Refuser</button></div>
     </div>
   `).join('') || '<div class="text-sm opacity-60">✅ Aucune oeuvre en attente</div>';
-  // CORRECTION BOUTON SUPPRIMER AJOUTÉ
   document.getElementById('valideList').innerHTML=valides.map(a=>`
-    <div class="border rounded-xl overflow-hidden bg-white"><img src="${a.image||a.images?.[0]||'https://picsum.photos/200'}" class="h-28 w-full object-cover"><div class="p-2"><div class="font-bold text-xs truncate">${a.titre}</div><div class="text-[11px]">${a.statut} • ${a.votesCount||0} votes</div><div class="flex gap-1 mt-2"><button onclick="addToExpo('${a._id}')" class="flex-1 border text-[11px] py-1.5 rounded-full">+ Expo</button><button onclick="supprimerGalerie('${a._id}')" class="bg-red-600 text-white text-[11px] px-3 py-1.5 rounded-full">🗑️</button></div></div></div>
+    <div class="border rounded-xl overflow-hidden bg-white"><img src="${a.image||a.images?.[0]||'https://picsum.photos/200'}" class="h-28 w-full object-cover"><div class="p-2"><div class="font-bold text-xs truncate">${a.titre}</div><div class="text-[11px]">${a.statut} • ${a.votesCount||a.votes||0} votes</div><div class="flex gap-1 mt-2"><button onclick="addToExpo('${a._id}')" class="flex-1 border text-[11px] py-1.5 rounded-full">+ Expo</button><button onclick="supprimerGalerie('${a._id}')" class="bg-red-600 text-white text-[11px] px-3 py-1.5 rounded-full">🗑️</button></div></div></div>
   `).join('');
   const enchs=await fetch(API+'/encheres').then(r=>r.json()).catch(()=>[]);
   document.getElementById('statEnchere').innerText=enchs.length;
-  document.getElementById('enchereList').innerHTML=enchs.map(e=>`<div class="flex justify-between bg-black text-white p-3 rounded-xl text-xs"><span>${e.artwork?.titre} - ${e.enchereActuelle} FCFA</span><span class="opacity-60">${new Date(e.dateFin).toLocaleString()}</span></div>`).join('') || '<p class="text-xs opacity-50">Pas d\'enchère</p>';
+  document.getElementById('enchereList').innerHTML=enchs.map(e=>`<div class="flex justify-between bg-black text-white p-3 rounded-xl text-xs items-center"><span class="flex-1"><b class="text-[#D4AF37]">${e.artwork?.titre || e.titre || e.oeuvre?.titre || 'Oeuvre'}</b> - ${(e.enchereActuelle||e.prixDepart||e.currentPrice||0).toLocaleString()} FCFA<br><span class="opacity-60 text-[10px]">Fin: ${new Date(e.dateFin).toLocaleString()} • ${getCountdown(e.dateFin)}</span></span><button onclick="supprimerEnchere('${e._id}')" class="bg-red-600 text-white px-3 py-1.5 rounded-full text-[11px] ml-2">🗑 Supprimer</button></div>`).join('') || '<p class="text-xs opacity-50">Pas d\'enchère</p>';
 }
 
 async function creerExpoAdmin(){
@@ -138,11 +147,7 @@ async function creerExpoAdmin(){
   if(!titre||!debut||!fin) return msg.innerText='❌ Remplis titre + début + fin';
   try{
     btn.innerText='⏳ Création...';
-    const res=await fetch(API+'/expositions',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({titre, dateDebut:debut, dateFin:fin, active:true, description:titre})
-    }).then(r=>r.json());
+    const res=await fetch(API+'/expositions',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({titre, dateDebut:debut, dateFin:fin, active:true, description:titre})}).then(r=>r.json());
     if(res.error) throw new Error(res.error);
     msg.innerHTML='<span class="text-green-400">✅ Expo créée : '+titre+' du '+debut+' au '+fin+' - ACTIVE</span>';
     document.getElementById('expoTitre').value='';
@@ -151,22 +156,24 @@ async function creerExpoAdmin(){
   finally{ btn.innerText="Créer l'Exposition"; }
 }
 
-// FONCTION SUPPRIMER GALERIE - NOUVEAU
 async function supprimerGalerie(id){ if(!confirm('Supprimer cette oeuvre de la galerie?')) return; await fetch(`${API}/artworks/${id}`,{method:'DELETE'}); loadAdmin(); }
-
-async function validerArtiste(id){
-  const btn = event.target; btn.innerText='⏳ Envoi email...';
-  const res = await fetch(`${API}/auth/${id}/valider`,{method:'PUT'}).then(r=>r.json());
-  alert('✅ Artiste validé + email envoyé à '+res.email);
-  loadAdmin();
-}
+async function supprimerEnchere(id){ if(!confirm('Supprimer cette oeuvre de l\'enchère LIVE?')) return; await fetch(`${API}/encheres/${id}`,{method:'DELETE'}); loadAdmin(); }
+async function validerArtiste(id){ const btn = event.target; btn.innerText='⏳ Envoi email...'; const res = await fetch(`${API}/auth/${id}/valider`,{method:'PUT'}).then(r=>r.json()); alert('✅ Artiste validé + email envoyé à '+res.email); loadAdmin(); }
 async function refuserArtiste(id){ if(!confirm('Refuser cet artiste?'))return; await fetch(`${API}/auth/${id}`,{method:'DELETE'}); loadAdmin(); }
 async function valider(id){ await fetch(`${API}/artworks/${id}/valider`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({statut:'validee'})}); loadAdmin(); }
 async function refuser(id){ if(!confirm('Supprimer?')) return; await fetch(`${API}/artworks/${id}`,{method:'DELETE'}); loadAdmin(); }
 async function publierAnnonce(){ const t=document.getElementById('annonceInput').value; if(!t)return alert('Message'); await fetch(API+'/annonces',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({titre:t, message:t, type:'expo'})}); document.getElementById('annonceInput').value=''; loadAdmin(); }
 async function desactiverAnnonce(id){ await fetch(`${API}/annonces/${id}`,{method:'DELETE'}).catch(async()=>{await fetch(`${API}/annonces/${id}/desactiver`,{method:'PUT'});}); loadAdmin(); }
 async function addToExpo(artId){ if(!EXPO_ACTIVE){ alert('Crée d\'abord une expo active avec le bloc ci-dessus'); return; } const res=await fetch(`${API}/expositions/${EXPO_ACTIVE._id}/add-artwork`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({artworkId:artId})}).then(r=>r.json()); alert('Ajoutée Expo! '+(res.lien_viral||'')); }
-async function calculerTop(){ if(!EXPO_ACTIVE) return alert('Pas d\'expo active'); if(!confirm('Top10 → enchère x2?'))return; const res=await fetch(`${API}/expositions/${EXPO_ACTIVE._id}/calculer-top-et-encherir`,{method:'POST'}).then(r=>r.json()); alert(res.top.length+' en enchère'); loadAdmin(); }
+async function calculerTop(){
+  if(!EXPO_ACTIVE) return alert('Pas d\'expo active');
+  const dateFinInput = document.getElementById('enchDateFinAdmin').value;
+  if(!dateFinInput) return alert('Choisis d\'abord la date de fin du LIVE pour que ça décompte 02j 03h 50m');
+  if(!confirm('Top10 → enchère x2 avec fin le '+new Date(dateFinInput).toLocaleString()+'?'))return;
+  const res=await fetch(`${API}/expositions/${EXPO_ACTIVE._id}/calculer-top-et-encherir`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({dateFin: dateFinInput})}).then(r=>r.json());
+  alert((res.top?.length||res.length||10)+' en enchère LIVE jusqu\'à '+new Date(dateFinInput).toLocaleString());
+  loadAdmin();
+}
 function passerEnExpo(){ alert('Clique + Expo sous chaque oeuvre'); }
 loadAdmin(); setInterval(loadAdmin,15000);
 </script></body></html>
