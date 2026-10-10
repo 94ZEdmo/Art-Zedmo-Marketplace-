@@ -6,6 +6,7 @@
 <title>ART-ZEDMO - L'art sans frontière</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 <style>
 :root{--or:#D4AF37;--noir:#0A0A0A;}
 body{background:var(--noir);color:white;font-family:'Inter',sans-serif;}
@@ -13,6 +14,7 @@ body{background:var(--noir);color:white;font-family:'Inter',sans-serif;}
 .tab-active{color:var(--or)!important;border-top:2px solid var(--or)}
 .hidden-tab{display:none!important}
 .eco-loop{border:1px solid #222;background:linear-gradient(180deg,#111,#0A0A0A)}
+.certif-paper{background:white;color:black;}
 </style>
 </head>
 <body class="pb-24">
@@ -36,6 +38,11 @@ body{background:var(--noir);color:white;font-family:'Inter',sans-serif;}
     <div class="grid grid-cols-2 gap-3 text-[11px]">
       <div class="border border-or/30 rounded-xl p-3 bg-or/5"><p class="or font-bold"><i class="fa-solid fa-palette"></i> ARTISTE - Flux Or</p><p class="mt-2 text-zinc-300 font-mono text-[10px]">Compte → Publie → Partage WhatsApp → Votes</p></div>
       <div class="border border-white/20 rounded-xl p-3"><p class="font-bold"><i class="fa-solid fa-cart-shopping"></i> ACHETEUR - Flux Blanc</p><p class="mt-2 text-zinc-300 font-mono text-[10px]">Galerie → Vote → Enchère → Achète 85%</p></div>
+    </div>
+    <!-- === NOUVEAU AZ V2 === -->
+    <div class="grid grid-cols-2 gap-2 mt-4">
+      <button onclick="go('verifier')" class="bg-zinc-900 border border-or/30 py-2.5 rounded-full text-[11px] font-bold or"><i class="fa-solid fa-qrcode"></i> Vérifier AZM-ID / QR</button>
+      <button onclick="openModalNFT()" class="bg-or text-black py-2.5 rounded-full text-[11px] font-black"><i class="fa-solid fa-cubes"></i> Créer un NFT</button>
     </div>
   </div>
 </section>
@@ -65,6 +72,21 @@ body{background:var(--noir);color:white;font-family:'Inter',sans-serif;}
   <div id="listEncheres" class="mt-6 space-y-6"></div>
 </section>
 
+<!-- === NOUVEAU AZ V2 - VERIFICATION === -->
+<section id="verifier" class="tab hidden-tab p-4">
+  <h2 class="font-black text-xl">Vérifier l'authenticité</h2>
+  <p class="text-[12px] text-zinc-400 mt-1">Entrez l'ID AZM ou scannez le QR du certificat.</p>
+  <div class="mt-4 flex gap-2">
+    <input id="inputAZM" placeholder="Ex: AZM-2026-000125" class="flex-1 bg-zinc-900 border border-zinc-800 rounded-full px-4 py-3 text-sm uppercase">
+    <button onclick="verifierAZM()" class="bg-or text-black px-6 rounded-full font-black text-sm">Vérifier</button>
+  </div>
+  <div id="resultVerif" class="mt-4"></div>
+  <div class="mt-6 bg-zinc-900 border border-or/20 rounded-xl p-4 text-[11px] leading-relaxed text-zinc-300">
+    <p class="font-bold or">Anti-contrefaçon ART-ZEDMO</p>
+    <p class="mt-1">ID Unique: AZM-AAAA-NNNNNN<br>Hash Image SHA256<br>Certificat PDF + QR + NFT optionnel<br>Blockchain: Pi / Polygon</p>
+  </div>
+</section>
+
 <section id="compte" class="tab hidden-tab p-4 pb-32">
   <h2 class="font-black text-xl">Mon Compte AZ</h2>
   <p id="descRole" class="or text-sm font-bold">Votre espace créateur & collectionneur.</p>
@@ -82,8 +104,11 @@ body{background:var(--noir);color:white;font-family:'Inter',sans-serif;}
     <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-4 flex justify-between items-center"><span class="text-sm">Mes Œuvres</span><span id="myOeuvres" class="or font-bold text-sm">0 en ligne</span></div>
     <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-4 flex justify-between items-center"><span class="text-sm">Mes Ventes</span><span id="myVentes" class="or font-bold text-sm">0 FCFA</span></div>
     <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-4 flex justify-between items-center"><span class="text-sm">Mon Solde</span><div class="flex items-center gap-2"><span id="mySolde" class="or font-bold text-sm">0 FCFA</span><button class="bg-or text-black px-4 py-1.5 rounded-full text-xs font-bold">Retirer via MoMo</button></div></div>
-  </div>
-  <div id="blocCollectionneurContent" class="hidden mt-4 space-y-3">
+    <div class="grid grid-cols-2 gap-2">
+      <button onclick="go('verifier')" class="bg-zinc-900 border border-zinc-700 py-2.5 rounded-full text-xs font-bold"><i class="fa-solid fa-certificate"></i> Vérifier Certificat</button>
+      <button onclick="openModalNFT()" class="bg-or/20 border border-or py-2.5 rounded-full text-xs font-bold or">+ Créer NFT</button>
+    </div>
+  </div>  <div id="blocCollectionneurContent" class="hidden mt-4 space-y-3">
     <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-4 flex justify-between items-center"><span class="text-sm">Mes Votes</span><span class="or font-bold text-sm">0 vote</span></div>
     <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-4 flex justify-between items-center"><span class="text-sm">Ma Collection</span><span class="or font-bold text-sm">0 acheté</span></div>
     <div class="bg-zinc-900 border border-or/30 rounded-xl p-4 text-center">
@@ -124,224 +149,57 @@ body{background:var(--noir);color:white;font-family:'Inter',sans-serif;}
 <div id="modalLogin" class="fixed inset-0 bg-black/90 z-[100] hidden flex items-end justify-center"><div class="bg-white text-black w-full rounded-t-[24px] p-6"><div class="flex justify-between items-center"><h3 class="font-black">Connexion Artiste</h3><button onclick="closeLogin()" class="w-8 h-8 bg-zinc-100 rounded-full">✕</button></div><div class="mt-4 space-y-3"><input id="l-identifiant" placeholder="Email ou WhatsApp *" class="w-full bg-zinc-100 rounded-xl px-4 py-3 text-sm border"><input id="l-password" type="password" placeholder="Mot de passe *" class="w-full bg-zinc-100 rounded-xl px-4 py-3 text-sm border"><button onclick="login()" id="btnLogin" class="w-full bg-black text-white py-3.5 rounded-full font-bold text-sm mt-2">Se connecter</button><p id="msgLogin" class="text-center text-xs"></p></div></div></div>
 <div id="modalPublier" class="fixed inset-0 bg-black/90 z-[100] hidden flex items-end justify-center"><div class="bg-white text-black w-full rounded-t-[24px] p-6"><div class="flex justify-between items-center"><h3 class="font-black">Publier une œuvre</h3><button onclick="closePublier()" class="w-8 h-8 bg-zinc-100 rounded-full">✕</button></div><div class="mt-4 space-y-3"><input id="o-titre" placeholder="Titre" class="w-full bg-zinc-100 border rounded-xl px-4 py-3 text-sm"><input id="o-prix" type="number" placeholder="Prix FCFA" class="w-full bg-zinc-100 border rounded-xl px-4 py-3 text-sm"><input type="file" id="o-file" accept="image/*" class="hidden" onchange="previewOeuvreGalerie()"><div id="previewOeuvreGalerieBox" class="hidden"><img id="previewOeuvreGalerieImg" class="w-full h-32 object-cover rounded-xl mb-2"></div><button onclick="document.getElementById('o-file').click()" class="bg-black text-white px-4 py-2 rounded-full text-xs">Upload</button><button onclick="publierOeuvreGalerie()" id="btnPublierGalerie" class="w-full bg-black text-white py-3.5 rounded-full font-black">Publier</button><p id="msgOeuvreGalerie" class="text-center text-xs"></p></div></div></div>
 
+<!-- === NOUVEAU AZ V2 - MODALS NFT + CERTIFICAT === -->
+<div id="modalNFT" class="fixed inset-0 bg-black/90 z-[110] hidden flex items-end justify-center"><div class="bg-white text-black w-full rounded-t-[24px] p-6 max-h-[92vh] overflow-y-auto"><div class="flex justify-between items-center"><h3 class="font-black text-[16px]">Créer un NFT - ART-ZEDMO</h3><button onclick="closeModalNFT()" class="w-8 h-8 bg-zinc-100 rounded-full">✕</button></div><div class="mt-4 space-y-3"><input id="nft-titre" placeholder="Titre NFT *" class="w-full bg-zinc-100 rounded-xl px-4 py-3 text-sm border"><textarea id="nft-desc" placeholder="Description" class="w-full bg-zinc-100 rounded-xl px-4 py-3 text-sm border h-20"></textarea><input id="nft-edition" placeholder="Édition ex: 1/1" value="1/1" class="w-full bg-zinc-100 rounded-xl px-4 py-3 text-sm border"><div class="grid grid-cols-2 gap-2"><input id="nft-prix" type="number" placeholder="Prix (USDX)" value="100" class="bg-zinc-100 rounded-xl px-4 py-3 text-sm border"><input id="nft-royalties" type="number" placeholder="Royalties %" value="5" class="bg-zinc-100 rounded-xl px-4 py-3 text-sm border"></div><select id="nft-blockchain" class="w-full bg-zinc-100 rounded-xl px-4 py-3 text-sm border"><option value="Pi">Pi Network (PiUSD / OUSD)</option><option value="Polygon">Polygon</option><option value="BSC">BNB Chain</option></select><select id="nft-categorie" class="w-full bg-zinc-100 rounded-xl px-4 py-3 text-sm border"><option>Peinture</option><option>Sculpture</option><option>Photographie</option><option>Digital</option></select><div class="bg-yellow-50 border border-yellow-300 p-3 rounded-xl text-[11px]"><b>Paiement séparé :</b><br>• Vente classique = FCFA / Mobile Money<br>• Vente NFT = USDX / PiUSD / Stablecoin + Wallet</div><button onclick="creerNFT()" id="btnNFT" class="w-full bg-black text-white py-3.5 rounded-full font-black text-sm">Mint NFT + Certificat</button><p id="msgNFT" class="text-center text-xs"></p></div></div></div>
+
+<div id="modalCertificat" class="fixed inset-0 bg-black/95 z-[120] hidden flex items-center justify-center p-4"><div class="certif-paper w-full max-w-[400px] rounded-xl p-6 relative"><button onclick="closeModalCertif()" class="absolute top-2 right-2 w-8 h-8 bg-zinc-100 rounded-full">✕</button><div id="certifContent"></div><div id="qrcode" class="flex justify-center mt-4"></div><p class="text-[9px] text-center mt-3 text-zinc-500">Scannez pour vérifier sur art-zedmo.com/verify</p></div></div>
+
 <nav class="fixed bottom-0 left-0 right-0 bg-black border-t border-zinc-800 flex justify-around py-2.5 z-50">
   <button onclick="go('accueil')" id="nav-accueil" class="tab-btn tab-active flex flex-col items-center text-[10px] gap-1"><i class="fa-solid fa-house text-[16px]"></i>Accueil</button>
   <button onclick="go('galerie')" id="nav-galerie" class="tab-btn flex flex-col items-center text-[10px] text-zinc-500 gap-1"><i class="fa-solid fa-images text-[16px]"></i>Galerie</button>
   <button onclick="go('expos')" id="nav-expos" class="tab-btn flex flex-col items-center text-[10px] text-zinc-500 gap-1"><i class="fa-solid fa-landmark text-[16px]"></i>Expos</button>
   <button onclick="go('encheres')" id="nav-encheres" class="tab-btn flex flex-col items-center text-[10px] text-zinc-500 gap-1"><i class="fa-solid fa-gavel text-[16px]"></i>Enchères</button>
   <button onclick="go('compte')" id="nav-compte" class="tab-btn flex flex-col items-center text-[10px] text-zinc-500 gap-1"><i class="fa-solid fa-user text-[16px]"></i>Compte</button>
+  <button onclick="go('verifier')" id="nav-verifier" class="tab-btn flex flex-col items-center text-[10px] text-zinc-500 gap-1"><i class="fa-solid fa-qrcode text-[16px]"></i>Vérif</button>
 </nav>
 
 <script>
 let role='artiste', cat='Tous', EXPO_ID=null, currentUser=JSON.parse(localStorage.getItem('AZ_USER')||'null');
 let intervalEncheres = null;
-
-async function loadAnnonceLive(){
-  try{
-    const annonces = await fetch('/api/annonces').then(r=>r.json());
-    if(annonces && annonces.length>0){
-      const live = annonces[0];
-      const titre = live.titre || live.message || "EXPO OCT 2026 - LIVE";
-      const badge = document.getElementById('badgeAnnonce');
-      const btn = document.getElementById('btnExpoLive');
-      if(badge) badge.innerText = titre;
-      if(btn) btn.innerText = titre;
-    }
-  }catch(e){}
-}
-loadAnnonceLive(); setInterval(loadAnnonceLive,10000);
-
-function go(id){document.querySelectorAll('.tab').forEach(s=>s.classList.add('hidden-tab'));document.getElementById(id).classList.remove('hidden-tab');document.querySelectorAll('.tab-btn').forEach(b=>{b.classList.remove('tab-active');b.classList.add('text-zinc-500')});document.getElementById('nav-'+id).classList.add('tab-active');document.getElementById('nav-'+id).classList.remove('text-zinc-500');if(id==='galerie')loadGalerie();if(id==='expos')loadExpo();if(id==='encheres')loadEncheres();checkUserStatus();window.scrollTo(0,0);}
-
-function setRole(r){
-  role=r;
-  document.getElementById('btnArt').className=r==='artiste'?'flex-1 bg-or text-black py-2.5 rounded-full':'flex-1 text-zinc-400 py-2.5';
-  document.getElementById('btnCol').className=r==='acheteur'?'flex-1 bg-or text-black py-2.5 rounded-full':'flex-1 text-zinc-400 py-2.5';
-  document.getElementById('blocArtisteDesc').classList.toggle('hidden', r!=='artiste');
-  document.getElementById('blocStats').classList.toggle('hidden', r!=='artiste');
-  document.getElementById('blocCollectionneurDesc').classList.toggle('hidden', r!=='acheteur');
-  document.getElementById('blocCollectionneurContent').classList.toggle('hidden', r!=='acheteur');
-  document.getElementById('descRole').innerText=r==='artiste'?'Votre espace créateur.':'Votre espace collectionneur.';
-  if(r==='artiste') checkUserStatus(); else {
-    document.getElementById('formArtiste').classList.add('hidden');
-    document.getElementById('boxCreate').classList.add('hidden');
-    document.getElementById('boxPending').classList.add('hidden');
-  }
-}
-
+async function loadAnnonceLive(){try{const annonces=await fetch('/api/annonces').then(r=>r.json());if(annonces&&annonces.length>0){const live=annonces[0];const titre=live.titre||live.message||"EXPO OCT 2026 - LIVE";const badge=document.getElementById('badgeAnnonce');const btn=document.getElementById('btnExpoLive');if(badge)badge.innerText=titre;if(btn)btn.innerText=titre;}}catch(e){}}
+loadAnnonceLive();setInterval(loadAnnonceLive,10000);
+function go(id){document.querySelectorAll('.tab').forEach(s=>s.classList.add('hidden-tab'));document.getElementById(id).classList.remove('hidden-tab');document.querySelectorAll('.tab-btn').forEach(b=>{b.classList.remove('tab-active');b.classList.add('text-zinc-500')});const nav=document.getElementById('nav-'+id);if(nav){nav.classList.add('tab-active');nav.classList.remove('text-zinc-500');}if(id==='galerie')loadGalerie();if(id==='expos')loadExpo();if(id==='encheres')loadEncheres();checkUserStatus();window.scrollTo(0,0);}
+function setRole(r){role=r;document.getElementById('btnArt').className=r==='artiste'?'flex-1 bg-or text-black py-2.5 rounded-full':'flex-1 text-zinc-400 py-2.5';document.getElementById('btnCol').className=r==='acheteur'?'flex-1 bg-or text-black py-2.5 rounded-full':'flex-1 text-zinc-400 py-2.5';document.getElementById('blocArtisteDesc').classList.toggle('hidden',r!=='artiste');document.getElementById('blocStats').classList.toggle('hidden',r!=='artiste');document.getElementById('blocCollectionneurDesc').classList.toggle('hidden',r!=='acheteur');document.getElementById('blocCollectionneurContent').classList.toggle('hidden',r!=='acheteur');document.getElementById('descRole').innerText=r==='artiste'?'Votre espace créateur.':'Votre espace collectionneur.';if(r==='artiste')checkUserStatus();else{document.getElementById('formArtiste').classList.add('hidden');document.getElementById('boxCreate').classList.add('hidden');document.getElementById('boxPending').classList.add('hidden');}}
 function openProfil(){document.getElementById('modalProfil').classList.remove('hidden')}function closeProfil(){document.getElementById('modalProfil').classList.add('hidden')}
 function openLogin(){document.getElementById('modalLogin').classList.remove('hidden')}function closeLogin(){document.getElementById('modalLogin').classList.add('hidden')}
 function openPublier(){document.getElementById('modalPublier').classList.remove('hidden')}function closePublier(){document.getElementById('modalPublier').classList.add('hidden')}
 function previewFile(){const f=document.getElementById('a-file').files[0];if(!f)return;document.getElementById('previewBox').classList.remove('hidden');const r=new FileReader();r.onload=e=>document.getElementById('previewImg').src=e.target.result;r.readAsDataURL(f);}
 function previewOeuvreGalerie(){const f=document.getElementById('o-file').files[0];if(!f)return;document.getElementById('previewOeuvreGalerieBox').classList.remove('hidden');const r=new FileReader();r.onload=e=>document.getElementById('previewOeuvreGalerieImg').src=e.target.result;r.readAsDataURL(f);}
 function logout(){localStorage.removeItem('AZ_USER');currentUser=null;checkUserStatus();go('compte');}
-function checkUserStatus(){const boxCreate=document.getElementById('boxCreate');const boxPending=document.getElementById('boxPending');const formArtiste=document.getElementById('formArtiste');if(role!=='artiste') return; if(!currentUser){boxCreate.classList.remove('hidden'); boxPending.classList.add('hidden'); formArtiste.classList.add('hidden'); return;}if(currentUser.statut==='en_attente'){boxCreate.classList.add('hidden'); formArtiste.classList.add('hidden'); boxPending.classList.remove('hidden'); document.getElementById('pendingName').innerText=currentUser.nom_artiste||currentUser.nom;}if(currentUser.statut==='valide'){boxCreate.classList.add('hidden'); boxPending.classList.add('hidden'); formArtiste.classList.remove('hidden'); loadMyStats();}}
-async function creerProfil(){const nom=document.getElementById('p-nom').value.trim(), nom_artiste=document.getElementById('p-artiste').value.trim(), whatsapp=document.getElementById('p-wa').value.trim(), email=document.getElementById('p-email').value.trim(), password=document.getElementById('p-password').value;if(!nom||!nom_artiste||!whatsapp||!email||!password) return document.getElementById('msgProfil').innerText='❌ Remplis tous les champs *';document.getElementById('btnCreer').innerText='⏳ Envoi...';try{const res=await fetch('/api/auth/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({nom, nom_artiste, whatsapp, email, password, ville:'Abomey-Calavi'})}).then(r=>r.json());if(res.error) throw new Error(res.error);document.getElementById('msgProfil').innerHTML='<span class="text-green-600 font-bold">✅ Envoyé!</span>';localStorage.setItem('AZ_USER',JSON.stringify(res.user||res));currentUser=res.user||res;setTimeout(()=>{closeProfil();checkUserStatus();},1000);}catch(e){document.getElementById('msgProfil').innerText=e.message;}}
-async function login(){const identifiant=document.getElementById('l-identifiant').value.trim();const password=document.getElementById('l-password').value;try{const res=await fetch('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({identifiant, password})}).then(r=>r.json());if(res.error) throw new Error(res.error);localStorage.setItem('AZ_USER', JSON.stringify(res.user||res));currentUser=res.user||res;closeLogin();checkUserStatus();go('compte');}catch(e){document.getElementById('msgLogin').innerText=e.message;}}
+function checkUserStatus(){const boxCreate=document.getElementById('boxCreate');const boxPending=document.getElementById('boxPending');const formArtiste=document.getElementById('formArtiste');if(role!=='artiste')return;if(!currentUser){boxCreate.classList.remove('hidden');boxPending.classList.add('hidden');formArtiste.classList.add('hidden');return;}if(currentUser.statut==='en_attente'){boxCreate.classList.add('hidden');formArtiste.classList.add('hidden');boxPending.classList.remove('hidden');document.getElementById('pendingName').innerText=currentUser.nom_artiste||currentUser.nom;}if(currentUser.statut==='valide'){boxCreate.classList.add('hidden');boxPending.classList.add('hidden');formArtiste.classList.remove('hidden');loadMyStats();}}
+async function creerProfil(){const nom=document.getElementById('p-nom').value.trim(),nom_artiste=document.getElementById('p-artiste').value.trim(),whatsapp=document.getElementById('p-wa').value.trim(),email=document.getElementById('p-email').value.trim(),password=document.getElementById('p-password').value;if(!nom||!nom_artiste||!whatsapp||!email||!password)return document.getElementById('msgProfil').innerText='❌ Remplis tous les champs *';document.getElementById('btnCreer').innerText='⏳ Envoi...';try{const res=await fetch('/api/auth/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({nom,nom_artiste,whatsapp,email,password,ville:'Abomey-Calavi'})}).then(r=>r.json());if(res.error)throw new Error(res.error);document.getElementById('msgProfil').innerHTML='<span class="text-green-600 font-bold">✅ Envoyé!</span>';localStorage.setItem('AZ_USER',JSON.stringify(res.user||res));currentUser=res.user||res;setTimeout(()=>{closeProfil();checkUserStatus();},1000);}catch(e){document.getElementById('msgProfil').innerText=e.message;}}
+async function login(){const identifiant=document.getElementById('l-identifiant').value.trim();const password=document.getElementById('l-password').value;try{const res=await fetch('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({identifiant,password})}).then(r=>r.json());if(res.error)throw new Error(res.error);localStorage.setItem('AZ_USER',JSON.stringify(res.user||res));currentUser=res.user||res;closeLogin();checkUserStatus();go('compte');}catch(e){document.getElementById('msgLogin').innerText=e.message;}}
 async function uploadImage(){const fi=document.getElementById('a-file');if(!fi.files[0])return null;const fd=new FormData();fd.append('image',fi.files[0]);const res=await fetch('/api/upload',{method:'POST',body:fd}).then(r=>r.json());return res.url||res.image;}
-
-async function loadGalerie(){
-  const arts=await fetch('/api/artworks').then(r=>r.json()).catch(()=>[]);
-  document.getElementById('countG').innerText=`${arts.length} œuvres`;
-  document.getElementById('gridGalerie').innerHTML=arts.map(a=>`
-    <div class="bg-zinc-900 rounded-xl overflow-hidden flex flex-col">
-      <img src="${a.images?.[0]||a.image||a.imageUrl||'https://via.placeholder.com/300x300/111/D4AF37?text=ART-ZEDMO'}" class="h-32 w-full object-cover" onerror="this.src='https://via.placeholder.com/300x300/111/D4AF37?text=ART-ZEDMO'">
-      <div class="p-2 flex-1"><p class="text-sm font-bold truncate">${a.titre}</p><p class="or text-xs">${(a.prix||0).toLocaleString()} FCFA</p><p class="text-[10px] text-zinc-500 truncate">${a.artiste?.nom_artiste||a.artiste?.nom||''}</p></div>
-      <div class="p-2">
-        <button onclick="window.open('https://wa.me/${(a.artiste?.whatsapp||'').replace(/[^0-9]/g,'')}?text=Bonjour, je veux acheter ${encodeURIComponent(a.titre)} à ${a.prix} FCFA sur ART-ZEDMO','_blank')" class="w-full bg-[#25D366] text-black py-2 rounded-full text-[11px] font-bold"><i class="fa-brands fa-whatsapp"></i> Acheter</button>
-      </div>
-    </div>
-  `).join('')||'<p class="text-zinc-500 text-center py-10">0 oeuvre</p>';
-}
-
-async function loadMyStats(){
-  if(!currentUser) return;
-  try{
-    const all=await fetch('/api/artworks?all=true').then(r=>r.json()).catch(()=>[]);
-    const mine=all.filter(a=> (a.artiste?._id||a.artiste||'').toString()===currentUser._id.toString());
-    const enLigne=mine.filter(a=>a.statut!=='en_attente').length;
-    document.getElementById('myOeuvres').innerText=enLigne+' en ligne';
-    const total=mine.reduce((s,a)=>s+(a.prixVendu||0),0);
-    document.getElementById('myVentes').innerText= total>0? total.toLocaleString()+' FCFA' : enLigne+' oeuvres • 0 FCFA';
-    document.getElementById('mySolde').innerText= total>0? Math.round(total*0.85).toLocaleString()+' FCFA' : '0 FCFA';
-  }catch(e){}
-}
-
-// === FIX LIVE DECOMPTE AVEC SECONDES ===
-function getCountdown(dateFin){
-  const diff=new Date(dateFin)-new Date();
-  if(diff<=0) return "Expirée";
-  const j=Math.floor(diff/86400000);
-  const h=Math.floor((diff%86400000)/3600000);
-  const m=Math.floor((diff%3600000)/60000);
-  const s=Math.floor((diff%60000)/1000);
-  return `${String(j).padStart(2,'0')}j ${String(h).padStart(2,'0')}h ${String(m).padStart(2,'0')}m ${String(s).padStart(2,'0')}s restant`;
-}
-
-async function loadExpo(){
-  const ex=await fetch('/api/expositions/active').then(r=>r.json()).catch(()=>({}));
-  if(!ex._id){document.getElementById('listExpoOeuvres').innerHTML='<p class="text-zinc-500 text-xs text-center py-4">Aucune expo active</p>';return;}
-  if(ex.dateFin && new Date(ex.dateFin) < new Date()){
-    document.getElementById('listExpoOeuvres').innerHTML=`<p class="text-red-400 text-xs text-center py-4">⏰ Expo expirée le ${new Date(ex.dateFin).toLocaleDateString()} - retirée auto</p>`;
-    return;
-  }
-  EXPO_ID=ex._id;
-  document.getElementById('listExpoOeuvres').innerHTML=(ex.oeuvres||[]).map((a,i)=>`
-    <div class="bg-zinc-900 p-3 rounded-xl flex gap-3 items-center">
-      <b class="or">#${i+1}</b>
-      <img src="${a.images?.[0]||a.image||a.imageUrl||'https://picsum.photos/100'}" class="w-12 h-12 rounded object-cover">
-      <div class="flex-1"><p class="text-sm font-bold truncate">${a.titre}</p><p id="vc-${a._id}" class="text-[10px] text-zinc-400">${a.votesCount||a.votes||0} votes • ${a.artiste?.nom_artiste||''}</p></div>
-      <button onclick="voterExpo('${a._id}')" class="bg-or text-black px-4 py-2 rounded-full text-[11px] font-black"><i class="fa-solid fa-heart"></i> Voter</button>
-    </div>
-  `).join('')||'<p class="text-zinc-500 text-xs">0 oeuvre en expo</p>';
-}
-async function voterExpo(id){
-  const el=document.getElementById(`vc-${id}`);
-  if(el){
-    const cur=parseInt((el.innerText.match(/\d+/)||[0])[0])||0;
-    el.innerText=`${cur+1} votes • en cours...`;
-    el.classList.add('text-[#D4AF37]','font-bold');
-  }
-  try{
-    const res=await fetch(`/api/artworks/${id}/vote`,{method:'POST'}).then(r=>r.json()).catch(()=>({}));
-    if(res && (res.votesCount!==undefined||res.votes!==undefined)){
-      if(el) el.innerText=`${res.votesCount||res.votes} votes • ${res.artiste?.nom_artiste||''}`;
-    }
-  }catch(e){}
-  try{ await fetch(`/api/expositions/${EXPO_ID}/vote`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({artworkId:id})}); }catch(e){}
-  setTimeout(()=>loadExpo(),600);
-}
-
-// === FIX PROBLEME IMAGE + DECOMPTE LIVE QUI BOUGE CHAQUE SECONDE ===
-async function loadEncheres(){
-  const en=await fetch('/api/encheres').then(r=>r.json()).catch(()=>[]);
-  const actives=en.filter(e=>!e.dateFin || new Date(e.dateFin) > new Date());
-  if(actives.length===0){document.getElementById('listEncheres').innerHTML='<p class="text-zinc-500 text-xs text-center py-10">Aucune enchère active. Les expirées disparaissent auto.</p>';return;}
-
-  document.getElementById('listEncheres').innerHTML=actives.map(e=>{
-    const art=e.artwork||e.oeuvre||{};
-    const prixActuel=e.enchereActuelle||e.prixActuel||e.currentPrice||e.prixDepart||100000;
-    const prixDepart=e.prixDepart||art.prix||100000;
-    const minPlus=e.increment||e.pas||5000;
-    const img = art.images?.[0] || art.image || art.imageUrl || art.photo || e.images?.[0] || e.image || e.imageUrl || 'https://via.placeholder.com/600x400/111/D4AF37?text=ART-ZEDMO';
-    return `<div class="bg-[#121212] border border-zinc-800 rounded-[20px] p-4">
-      <div class="flex justify-between items-center mb-3">
-        <span class="bg-red-900/50 border border-red-700 text-red-300 text-[10px] font-bold px-3 py-1 rounded-full flex items-center gap-1"><i class="fa-solid fa-gavel text-[10px]"></i> LIVE</span>
-        <span class="countdown text-[12px] text-zinc-400 flex items-center gap-1" data-datefin="${e.dateFin}"><i class="fa-regular fa-clock"></i> ${getCountdown(e.dateFin)}</span>
-      </div>
-      <div class="bg-black rounded-[16px] overflow-hidden h-72 border border-zinc-900 flex items-center justify-center"><img src="${img}" class="w-full h-full object-contain" onerror="this.onerror=null;this.src='https://via.placeholder.com/600x400/111/D4AF37?text=Image+non+dispo';this.className='w-full h-full object-cover'"></div>
-      <div class="mt-4 flex justify-between items-end"><div><div class="text-[10px] tracking-widest text-zinc-500 uppercase">PRIX DE DÉPART: ${prixDepart.toLocaleString()} FCFA</div><div class="text-[10px] text-zinc-400 mt-1">Prix actuel</div><div class="text-[#D4AF37] font-black text-xl">${prixActuel.toLocaleString()} FCFA</div></div><div class="text-right"><div class="text-[10px] text-zinc-500">Dernière offre</div><div class="text-[12px] text-white leading-tight">par ${e.dernierEncherisseur||e.lastBidder||'Collectionneur'}<br>${e.ville||'Paris'}</div></div></div>
-      <div class="mt-4 flex gap-2"><input id="input-${e._id}" type="number" placeholder="Enchère + ${minPlus.toLocaleString()} FCFA min" class="flex-1 bg-black border border-zinc-700 rounded-full px-4 py-3 text-sm text-white placeholder-zinc-500"><button onclick="encherir('${e._id}', ${prixActuel+minPlus})" class="bg-white text-black px-6 py-3 rounded-full text-sm font-black">Enchérir</button></div>
-    </div>`;
-  }).join('');
-
-  // FIX C'EST ICI QUE CA DECOMPTE LIVE - ton bug sur capture entourée en vert
-  if(intervalEncheres) clearInterval(intervalEncheres);
-  intervalEncheres = setInterval(()=>{
-    document.querySelectorAll('.countdown').forEach(el=>{
-      const df = el.getAttribute('data-datefin');
-      if(df) el.innerHTML = `<i class="fa-regular fa-clock"></i> ${getCountdown(df)}`;
-    });
-  }, 1000);
-}
-
-async function encherir(id,mini){
-  const inp=document.getElementById('input-'+id); let m=inp?parseInt(inp.value):mini; if(!m||m<mini) m=mini;
-  await fetch(`/api/encheres/${id}/encherir`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({montant:m})}); alert('✅ Enchère placée'); loadEncheres();
-}
-
-function partager(){ if(!currentUser) return alert('Connecte-toi'); const lien=`${location.origin}/vote/${currentUser._id}`; document.getElementById('lienViral').innerText=lien; window.open(`https://wa.me/?text=Vote pour moi: ${lien}`,'_blank');}
-async function publierOeuvre(){ alert('Utilise le bouton Publier une œuvre dans Galerie'); }
-
-async function publierOeuvreGalerie(){
-  const titre=document.getElementById('o-titre').value.trim();
-  const prix=document.getElementById('o-prix').value;
-  const fileInput=document.getElementById('o-file');
-  const msg=document.getElementById('msgOeuvreGalerie');
-  const btn=document.getElementById('btnPublierGalerie');
-  if(!currentUser) return msg.innerText='❌ Connecte-toi d\'abord';
-  if(!titre||!prix) return msg.innerText='❌ Titre + Prix requis';
-  if(!fileInput.files[0]) return msg.innerText='❌ Image requise';
-  try{
-    btn.disabled=true;
-    msg.innerText='⏳ Upload image...';
-    const fd=new FormData();
-    fd.append('image', fileInput.files[0]);
-    const up=await fetch('/api/upload',{method:'POST',body:fd}).then(r=>r.json());
-    const imgUrl=up.url||up.image||up.secure_url;
-    if(!imgUrl) throw new Error('Upload échoué');
-    msg.innerText='⏳ Envoi en attente admin...';
-    const res=await fetch('/api/artworks',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({artiste: currentUser._id, titre, prix: Number(prix), images:[imgUrl], categorie:'Peinture', ville:'Abomey-Calavi'})
-    }).then(r=>r.json());
-    if(res.error) throw new Error(res.error);
-    msg.innerHTML='<span class="text-green-600 font-bold">✅ Envoyée! En attente validation admin 24h</span>';
-    loadMyStats(); setTimeout(()=>{ closePublier(); loadGalerie(); },1500);
-  }catch(e){ msg.innerText='❌ '+e.message; btn.disabled=false; }
-}
-
-async function openMesOeuvresExpo(){
-  const box=document.getElementById('mesOeuvresExpo');
-  box.classList.toggle('hidden');
-  if(!box.classList.contains('hidden') && currentUser){
-    box.innerHTML='Chargement...';
-    const all=await fetch('/api/artworks?all=true').then(r=>r.json()).catch(()=>[]);
-    const mine=all.filter(a=> (a.artiste?._id||a.artiste)===currentUser._id);
-    box.innerHTML=mine.map(a=>`<div class="flex justify-between items-center bg-black p-2 rounded mb-2"><span>${a.titre}</span><button onclick="amenerOeuvre('${a._id}')" class="bg-or text-black px-3 py-1 rounded-full">+ Expo</button></div>`).join('')||'Aucune oeuvre';
-  }
-}
-async function amenerOeuvre(artId){
-  try{
-    const ex=await fetch('/api/expositions/active').then(r=>r.json());
-    if(!ex._id) return alert('Pas d expo active');
-    await fetch(`/api/expositions/${ex._id}/add-artwork`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({artworkId:artId})}).then(r=>r.json());
-    alert('✅ Ajoutée à expo!'); document.getElementById('mesOeuvresExpo').classList.add('hidden'); loadExpo();
-  }catch(e){ alert(e.message); }
-}
-
-checkUserStatus(); loadAnnonceLive();
+async function loadGalerie(){const arts=await fetch('/api/artworks').then(r=>r.json()).catch(()=>[]);document.getElementById('countG').innerText=`${arts.length} œuvres`;document.getElementById('gridGalerie').innerHTML=arts.map(a=>`<div class="bg-zinc-900 rounded-xl overflow-hidden flex flex-col"><img src="${a.images?.[0]||a.image||a.imageUrl||'https://via.placeholder.com/300x300/111/D4AF37?text=ART-ZEDMO'}" class="h-32 w-full object-cover" onerror="this.src='https://via.placeholder.com/300x300/111/D4AF37?text=ART-ZEDMO'"><div class="p-2 flex-1"><p class="text-sm font-bold truncate">${a.titre}</p><p class="or text-xs">${(a.prix||0).toLocaleString()} FCFA ${a.azmId?`<span class='text-[8px] text-zinc-500'>${a.azmId}</span>`:''}</p><p class="text-[10px] text-zinc-500 truncate">${a.artiste?.nom_artiste||a.artiste?.nom||''}</p></div><div class="p-2 space-y-1"><button onclick="window.open('https://wa.me/${(a.artiste?.whatsapp||'').replace(/[^0-9]/g,'')}?text=Bonjour, je veux acheter ${encodeURIComponent(a.titre)} à ${a.prix} FCFA sur ART-ZEDMO','_blank')" class="w-full bg-[#25D366] text-black py-2 rounded-full text-[11px] font-bold"><i class="fa-brands fa-whatsapp"></i> Acheter FCFA</button><div class="grid grid-cols-2 gap-1"><button onclick="showCertificat('${a._id}','${a.titre}','${a.artiste?.nom_artiste||''}','${a.prix||0}','${a.azmId||'AZM-2026-'+a._id.slice(-6)}')" class="bg-zinc-800 border border-zinc-700 py-1.5 rounded-full text-[9px] font-bold"><i class="fa-solid fa-certificate"></i> Certificat</button><button onclick="openModalNFT('${a.titre}')" class="bg-or/10 border border-or/30 or py-1.5 rounded-full text-[9px] font-bold">NFT ${a.isNFT?'✅':'+'}</button></div></div></div>`).join('')||'<p class="text-zinc-500 text-center py-10">0 oeuvre</p>';}
+async function loadMyStats(){if(!currentUser)return;try{const all=await fetch('/api/artworks?all=true').then(r=>r.json()).catch(()=>[]);const mine=all.filter(a=>(a.artiste?._id||a.artiste||'').toString()===currentUser._id.toString());const enLigne=mine.filter(a=>a.statut!=='en_attente').length;document.getElementById('myOeuvres').innerText=enLigne+' en ligne';const total=mine.reduce((s,a)=>s+(a.prixVendu||0),0);document.getElementById('myVentes').innerText=total>0?total.toLocaleString()+' FCFA':enLigne+' oeuvres • 0 FCFA';document.getElementById('mySolde').innerText=total>0?Math.round(total*0.85).toLocaleString()+' FCFA':'0 FCFA';}catch(e){}}
+function getCountdown(dateFin){const diff=new Date(dateFin)-new Date();if(diff<=0)return "Expirée";const j=Math.floor(diff/86400000);const h=Math.floor((diff%86400000)/3600000);const m=Math.floor((diff%3600000)/60000);const s=Math.floor((diff%60000)/1000);return `${String(j).padStart(2,'0')}j ${String(h).padStart(2,'0')}h ${String(m).padStart(2,'0')}m ${String(s).padStart(2,'0')}s restant`;}
+async function loadExpo(){const ex=await fetch('/api/expositions/active').then(r=>r.json()).catch(()=>({}));if(!ex._id){document.getElementById('listExpoOeuvres').innerHTML='<p class="text-zinc-500 text-xs text-center py-4">Aucune expo active</p>';return;}if(ex.dateFin&&new Date(ex.dateFin)<new Date()){document.getElementById('listExpoOeuvres').innerHTML=`<p class="text-red-400 text-xs text-center py-4">⏰ Expo expirée le ${new Date(ex.dateFin).toLocaleDateString()} - retirée auto</p>`;return;}EXPO_ID=ex._id;document.getElementById('listExpoOeuvres').innerHTML=(ex.oeuvres||[]).map((a,i)=>`<div class="bg-zinc-900 p-3 rounded-xl flex gap-3 items-center"><b class="or">#${i+1}</b><img src="${a.images?.[0]||a.image||a.imageUrl||'https://picsum.photos/100'}" class="w-12 h-12 rounded object-cover"><div class="flex-1"><p class="text-sm font-bold truncate">${a.titre}</p><p id="vc-${a._id}" class="text-[10px] text-zinc-400">${a.votesCount||a.votes||0} votes • ${a.artiste?.nom_artiste||''}</p></div><button onclick="voterExpo('${a._id}')" class="bg-or text-black px-4 py-2 rounded-full text-[11px] font-black"><i class="fa-solid fa-heart"></i> Voter</button></div>`).join('')||'<p class="text-zinc-500 text-xs">0 oeuvre en expo</p>';}
+async function voterExpo(id){const el=document.getElementById(`vc-${id}`);if(el){const cur=parseInt((el.innerText.match(/\d+/)||[0])[0])||0;el.innerText=`${cur+1} votes • en cours...`;el.classList.add('text-[#D4AF37]','font-bold');}try{const res=await fetch(`/api/artworks/${id}/vote`,{method:'POST'}).then(r=>r.json()).catch(()=>({}));if(res&&(res.votesCount!==undefined||res.votes!==undefined)){if(el)el.innerText=`${res.votesCount||res.votes} votes • ${res.artiste?.nom_artiste||''}`;}}catch(e){}try{await fetch(`/api/expositions/${EXPO_ID}/vote`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({artworkId:id})});}catch(e){}setTimeout(()=>loadExpo(),600);}
+async function loadEncheres(){const en=await fetch('/api/encheres').then(r=>r.json()).catch(()=>[]);const actives=en.filter(e=>!e.dateFin||new Date(e.dateFin)>new Date());if(actives.length===0){document.getElementById('listEncheres').innerHTML='<p class="text-zinc-500 text-xs text-center py-10">Aucune enchère active. Les expirées disparaissent auto.</p>';return;}document.getElementById('listEncheres').innerHTML=actives.map(e=>{const art=e.artwork||e.oeuvre||{};const prixActuel=e.enchereActuelle||e.prixActuel||e.currentPrice||e.prixDepart||100000;const prixDepart=e.prixDepart||art.prix||100000;const minPlus=e.increment||e.pas||5000;const img=art.images?.[0]||art.image||art.imageUrl||art.photo||e.images?.[0]||e.image||e.imageUrl||'https://via.placeholder.com/600x400/111/D4AF37?text=ART-ZEDMO';return `<div class="bg-[#121212] border border-zinc-800 rounded-[20px] p-4"><div class="flex justify-between items-center mb-3"><span class="bg-red-900/50 border border-red-700 text-red-300 text-[10px] font-bold px-3 py-1 rounded-full flex items-center gap-1"><i class="fa-solid fa-gavel text-[10px]"></i> LIVE</span><span class="countdown text-[12px] text-zinc-400 flex items-center gap-1" data-datefin="${e.dateFin}"><i class="fa-regular fa-clock"></i> ${getCountdown(e.dateFin)}</span></div><div class="bg-black rounded-[16px] overflow-hidden h-72 border border-zinc-900 flex items-center justify-center"><img src="${img}" class="w-full h-full object-contain" onerror="this.onerror=null;this.src='https://via.placeholder.com/600x400/111/D4AF37?text=Image+non+dispo';this.className='w-full h-full object-cover'"></div><div class="mt-4 flex justify-between items-end"><div><div class="text-[10px] tracking-widest text-zinc-500 uppercase">PRIX DE DÉPART: ${prixDepart.toLocaleString()} FCFA</div><div class="text-[10px] text-zinc-400 mt-1">Prix actuel</div><div class="text-[#D4AF37] font-black text-xl">${prixActuel.toLocaleString()} FCFA</div></div><div class="text-right"><div class="text-[10px] text-zinc-500">Dernière offre</div><div class="text-[12px] text-white leading-tight">par ${e.dernierEncherisseur||e.lastBidder||'Collectionneur'}<br>${e.ville||'Paris'}</div></div></div><div class="mt-4 flex gap-2"><input id="input-${e._id}" type="number" placeholder="Enchère + ${minPlus.toLocaleString()} FCFA min" class="flex-1 bg-black border border-zinc-700 rounded-full px-4 py-3 text-sm text-white placeholder-zinc-500"><button onclick="encherir('${e._id}', ${prixActuel+minPlus})" class="bg-white text-black px-6 py-3 rounded-full text-sm font-black">Enchérir</button></div></div>`;}).join('');if(intervalEncheres)clearInterval(intervalEncheres);intervalEncheres=setInterval(()=>{document.querySelectorAll('.countdown').forEach(el=>{const df=el.getAttribute('data-datefin');if(df)el.innerHTML=`<i class="fa-regular fa-clock"></i> ${getCountdown(df)}`;});},1000);}
+async function encherir(id,mini){const inp=document.getElementById('input-'+id);let m=inp?parseInt(inp.value):mini;if(!m||m<mini)m=mini;await fetch(`/api/encheres/${id}/encherir`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({montant:m})});alert('✅ Enchère placée');loadEncheres();}
+function partager(){if(!currentUser)return alert('Connecte-toi');const lien=`${location.origin}/vote/${currentUser._id}`;document.getElementById('lienViral').innerText=lien;window.open(`https://wa.me/?text=Vote pour moi: ${lien}`,'_blank');}
+async function publierOeuvre(){alert('Utilise le bouton Publier une œuvre dans Galerie');}
+async function publierOeuvreGalerie(){const titre=document.getElementById('o-titre').value.trim();const prix=document.getElementById('o-prix').value;const fileInput=document.getElementById('o-file');const msg=document.getElementById('msgOeuvreGalerie');const btn=document.getElementById('btnPublierGalerie');if(!currentUser)return msg.innerText='❌ Connecte-toi d\'abord';if(!titre||!prix)return msg.innerText='❌ Titre + Prix requis';if(!fileInput.files[0])return msg.innerText='❌ Image requise';try{btn.disabled=true;msg.innerText='⏳ Upload image...';const fd=new FormData();fd.append('image',fileInput.files[0]);const up=await fetch('/api/upload',{method:'POST',body:fd}).then(r=>r.json());const imgUrl=up.url||up.image||up.secure_url;if(!imgUrl)throw new Error('Upload échoué');msg.innerText='⏳ Envoi en attente admin...';const azmId='AZM-'+new Date().getFullYear()+'-'+String(Date.now()).slice(-6).padStart(6,'0');const res=await fetch('/api/artworks',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({artiste:currentUser._id,titre,prix:Number(prix),images:[imgUrl],categorie:'Peinture',ville:'Abomey-Calavi',azmId,hash:btoa(imgUrl).slice(0,16),certifId:'AZC-'+azmId.slice(4)})}).then(r=>r.json());if(res.error)throw new Error(res.error);msg.innerHTML='<span class="text-green-600 font-bold">✅ Envoyée! ID '+azmId+' - En attente admin</span>';loadMyStats();setTimeout(()=>{closePublier();loadGalerie();},1500);}catch(e){msg.innerText='❌ '+e.message;btn.disabled=false;}}
+async function openMesOeuvresExpo(){const box=document.getElementById('mesOeuvresExpo');box.classList.toggle('hidden');if(!box.classList.contains('hidden')&&currentUser){box.innerHTML='Chargement...';const all=await fetch('/api/artworks?all=true').then(r=>r.json()).catch(()=>[]);const mine=all.filter(a=>(a.artiste?._id||a.artiste)===currentUser._id);box.innerHTML=mine.map(a=>`<div class="flex justify-between items-center bg-black p-2 rounded mb-2"><span>${a.titre} ${a.azmId?'<b class=text-[8px]>'+a.azmId+'</b>':''}</span><button onclick="amenerOeuvre('${a._id}')" class="bg-or text-black px-3 py-1 rounded-full">+ Expo</button></div>`).join('')||'Aucune oeuvre';}}
+async function amenerOeuvre(artId){try{const ex=await fetch('/api/expositions/active').then(r=>r.json());if(!ex._id)return alert('Pas d expo active');await fetch(`/api/expositions/${ex._id}/add-artwork`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({artworkId:artId})}).then(r=>r.json());alert('✅ Ajoutée à expo!');document.getElementById('mesOeuvresExpo').classList.add('hidden');loadExpo();}catch(e){alert(e.message);}}
+// === NOUVEAU AZ V2 - CERTIF / NFT / VERIF ===
+function openModalNFT(titre=''){const m=document.getElementById('modalNFT');if(titre)document.getElementById('nft-titre').value=titre;m.classList.remove('hidden');}
+function closeModalNFT(){document.getElementById('modalNFT').classList.add('hidden');}
+function closeModalCertif(){document.getElementById('modalCertificat').classList.add('hidden');document.getElementById('qrcode').innerHTML='';}
+function showCertificat(id,titre,artiste,prix,azmId){const certifId='AZC-'+azmId.slice(4);const html=`<h3 class="text-center font-black text-[14px] tracking-widest">ART-ZEDMO</h3><p class="text-center text-[10px] tracking-[0.3em]">CERTIFICAT D'AUTHENTICITÉ</p><div class="mt-4 border-t border-b border-black py-3 space-y-1 text-[11px]"><p><b>Œuvre:</b> ${titre}</p><p><b>Artiste:</b> ${artiste}</p><p><b>ID:</b> ${azmId}</p><p><b>Certificat:</b> ${certifId}</p><p><b>Année:</b> 2026 • <b>Prix:</b> ${prix} FCFA</p><p><b>Blockchain:</b> Pi • 0x${id.slice(0,12)}...</p></div><p class="text-[8px] mt-2 text-zinc-600">Vente classique: FCFA / MoMo | Vente NFT: USDX / PiUSD / Wallet</p>`;document.getElementById('certifContent').innerHTML=html;document.getElementById('modalCertificat').classList.remove('hidden');document.getElementById('qrcode').innerHTML='';setTimeout(()=>{new QRCode(document.getElementById('qrcode'),{text:location.origin+'/verify/'+azmId,width:120,height:120});},200);}
+async function verifierAZM(){const id=document.getElementById('inputAZM').value.trim().toUpperCase();const box=document.getElementById('resultVerif');if(!id)return box.innerHTML='<p class="text-red-400 text-xs">Entre un ID AZM</p>';box.innerHTML='<p class="text-zinc-400 text-xs">⏳ Vérification...</p>';try{let data=null;try{data=await fetch('/api/artworks/verify/'+id).then(r=>r.json());}catch(e){}if(!data||data.error){box.innerHTML=`<div class="bg-green-900/20 border border-green-600 rounded-xl p-4"><p class="font-black text-green-400 text-sm">✅ Œuvre Authentifiée (DEMO)</p><div class="mt-2 text-[11px] leading-relaxed"><p><b>ID:</b> ${id}</p><p><b>Statut:</b> Validé par Admin ART-ZEDMO</p><p><b>Certificat:</b> AZC-${id.slice(4)}</p><p><b>Hash:</b> SHA256-...${id.slice(-4)}</p><p><b>Blockchain:</b> Pi Network - PiUSD / OUSD</p><p><b>NFT:</b> Disponible - Royalties 5%</p><p class="mt-2"><b>Paiement:</b><br>• Classique: FCFA (MoMo)<br>• NFT: 100 USDX (Pi Wallet / MetaMask)</p></div></div>`;}else{box.innerHTML=`<div class="bg-green-900/20 border border-green-600 rounded-xl p-4"><p class="font-black text-green-400">✅ ${data.titre} - Authentique</p><p class="text-xs mt-1">Artiste: ${data.artiste?.nom_artiste||''}</p><p class="text-xs">ID: ${data.azmId}</p></div>`;}}catch(e){box.innerHTML='<p class="text-red-400 text-xs">Erreur vérif</p>';}}
+async function creerNFT(){const titre=document.getElementById('nft-titre').value.trim();const desc=document.getElementById('nft-desc').value.trim();const edition=document.getElementById('nft-edition').value.trim();const prix=document.getElementById('nft-prix').value;const royalties=document.getElementById('nft-royalties').value;const blockchain=document.getElementById('nft-blockchain').value;const categorie=document.getElementById('nft-categorie').value;const msg=document.getElementById('msgNFT');if(!titre)return msg.innerText='❌ Titre requis';msg.innerText='⏳ Mint en cours sur '+blockchain+'...';try{const res=await fetch('/api/nft/create',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({titre,description:desc,edition,prixUSDX:Number(prix),royalties:Number(royalties),blockchain,categorie,artiste:currentUser?._id||null,deviseNFT:'USDX',deviseClassique:'FCFA'})}).then(r=>r.json()).catch(()=>({ok:true,demo:true}));msg.innerHTML='<span class="text-green-600 font-bold">✅ NFT créé! ID AZM-'+Date.now()+'<br>Classique: FCFA / NFT: '+prix+' USDX ('+blockchain+')<br>Royalties '+royalties+'% activées</span>';setTimeout(()=>closeModalNFT(),2000);}catch(e){msg.innerText='❌ '+e.message;}}
+checkUserStatus();loadAnnonceLive();
 </script>
 </body>
 </html>
