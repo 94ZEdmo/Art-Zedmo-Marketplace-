@@ -6,7 +6,7 @@ const artworkSchema = new mongoose.Schema({
   prix: { type: Number, required: true },
   prixReserve: Number,
   images: [String],
-  image: String, // compatibilité avec ton ancien front
+  image: String,
   categorie: { type: String, enum:['Peinture','Sculpture','Photographie','Textile','Digital','Autre'], default:'Peinture' },
   ville: String,
   artiste: { type: mongoose.Schema.Types.ObjectId, ref:'User', required:true },
@@ -14,7 +14,20 @@ const artworkSchema = new mongoose.Schema({
   statut: { type: String, enum:['en_attente','validee','en_expo','en_enchere','vendue','rejetee'], default:'validee' },
   votesCount: { type: Number, default:0 },
   vues: { type: Number, default:0 },
-  lien_vote_unique: String
+  lien_vote_unique: String,
+  // === FIX AZ V2 SEULEMENT ===
+  azmId: { type: String, unique:true, sparse:true },
+  certifId: String,
+  hash: String,
+  isNFT: { type:Boolean, default:false },
+  prixUSDX: Number,
+  prixFCFA: Number,
+  blockchain: { type:String, default:'Pi' },
+  royalties: { type:Number, default:5 },
+  edition: { type:String, default:'1/1' },
+  proprietaireWallet: String,
+  txHash: String,
+  dateVente: Date
 },{timestamps:true});
 
 artworkSchema.pre('save', function(next){
