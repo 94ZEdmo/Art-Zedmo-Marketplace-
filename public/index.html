@@ -282,7 +282,12 @@ async function loadGalerie(){
     if(a.isNFT){
       btns = isMine? `<div class="col-span-2 bg-zinc-800 text-zinc-400 py-2 rounded-full text-[10px] text-center">C'est ton NFT</div>` : `<button onclick="acheterNFT('${a._id}','${a.azmId||''}','${(a.titre||'').replace(/'/g,'')}')" class="col-span-2 bg-or text-black py-2 rounded-full text-[11px] font-black">Acheter NFT - ${a.prixUSDX||100} USDX</button>`;
     }else{
-      btns = isMine? `<button onclick="openModalNFT('${(a.titre||'').replace(/'/g,'')}','${a._id}')" class="col-span-2 bg-[#D4AF37] text-black py-2 rounded-full text-[11px] font-black"><i class="fa-solid fa-cubes"></i> Créer NFT associé</button>` : `<button onclick="openPaiementFCFA('${a._id}','${(a.titre||'').replace(/'/g,'')}')" class="col-span-2 bg-[#25D366] text-black py-2 rounded-full text-[11px] font-bold">Acheter en FCFA - ${(a.prix||0).toLocaleString()} FCFA</button>`;
+      // FIX UNIQUE - Affiche les 2 boutons quand c'est ton œuvre
+      if(isMine){
+        btns = `<button onclick="openModalNFT('${(a.titre||'').replace(/'/g,'')}','${a._id}')" class="col-span-2 bg-[#D4AF37] text-black py-2 rounded-full text-[11px] font-black"><i class="fa-solid fa-cubes"></i> Créer NFT associé</button><button onclick="openPaiementFCFA('${a._id}','${(a.titre||'').replace(/'/g,'')}')" class="col-span-2 bg-[#25D366] text-black py-2 rounded-full text-[11px] font-bold">Acheter - ${(a.prix||0).toLocaleString()} FCFA</button>`;
+      }else{
+        btns = `<button onclick="openPaiementFCFA('${a._id}','${(a.titre||'').replace(/'/g,'')}')" class="col-span-2 bg-[#25D366] text-black py-2 rounded-full text-[11px] font-bold">Acheter en FCFA - ${(a.prix||0).toLocaleString()} FCFA</button>`;
+      }
     }
     let rawImg = a.images?.[0]||a.image||a.imageUrl||a.fullUrl||'';
     let imgSrc = rawImg;
