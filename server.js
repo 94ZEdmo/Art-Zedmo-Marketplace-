@@ -25,6 +25,7 @@ app.use(express.urlencoded({extended:true}));
 const uploadDir = path.join(__dirname, 'public/uploads');
 if(!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, {recursive:true});
 
+// FIX IMAGE QUI DISPARAIT - toujours renvoyer URL absolue
 const storage = multer.diskStorage({
   destination: (req,file,cb)=>cb(null, uploadDir),
   filename: (req,file,cb)=>cb(null, Date.now()+'-'+file.originalname.replace(/\s/g,'_'))
@@ -32,8 +33,10 @@ const storage = multer.diskStorage({
 const upload = multer({storage, limits:{fileSize:5*1024*1024}});
 app.post('/api/upload', upload.single('image'), (req,res)=>{
   if(!req.file) return res.status(400).json({error:'Aucune image'});
-  const url = `/uploads/${req.file.filename}`;
-  res.json({success:true, url, image: url, fullUrl: `${req.protocol}://${req.get('host')}${url}`});
+  const relativeUrl = `/uploads/${req.file.filename}`;
+  const fullUrl = `${req.protocol}://${req.get('host')}${relativeUrl}`;
+  // On sauve toujours fullUrl pour que l'image reste visible même après restart Render
+  res.json({success:true, url: fullUrl, image: fullUrl, fullUrl: fullUrl, imageUrl: fullUrl});
 });
 
 app.use(express.static(path.join(__dirname, 'public')));
@@ -70,7 +73,6 @@ const nftSchema = new mongoose.Schema({
 },{strict:false});
 const NFT = mongoose.models.NFT || mongoose.model('NFT', nftSchema);
 
-// --- FIX #3 & #4 - SETTINGS PAIEMENTS avec tes adresses ---
 const settingsSchema = new mongoose.Schema({
   _id:String,
   momo:{type:String, default:'0196587303'},
@@ -92,7 +94,6 @@ app.post('/api/settings/paiements', async(req,res)=>{
   res.json({ok:true, settings:s});
 });
 
-// --- FIX 4 - ANNONCE ACTIVE pour accueil (Problème 4) ---
 app.get('/api/annonces/active', async(req,res)=>{
   try{
     const Annonce = mongoose.models.Annonce;
@@ -107,7 +108,6 @@ app.get('/api/annonces/active', async(req,res)=>{
   }catch(e){ res.json({texte:'Exposition en cours pour le 25 octobre 2026', active:true}); }
 });
 
-// --- FIX #7 - SUPPRESSION NFT + OEUVRES ADMIN ---
 app.delete('/api/nft/:id', async (req,res)=>{
   try{
     const id = req.params.id;
@@ -130,7 +130,6 @@ app.delete('/api/admin/nft/:id', async (req,res)=>{
   }catch(e){ res.status(500).json({error:e.message}); }
 });
 
-// --- FIX #4 & #5 - COMPTE ARTISTE / COLLECTIONNEUR ---
 app.get('/api/compte/solde', async(req,res)=>{
   const total = await NFT.countDocuments({vendu:true});
   res.json({solde: total*85});
@@ -148,7 +147,6 @@ app.get('/api/compte/nft-vendus', async(req,res)=>{
   res.json(vendus);
 });
 
-// --- FIX 5 - CREER NFT ASSOCIÉ À UNE OEUVRE (Problème 5) ---
 app.post('/api/nft/create', async (req,res)=>{
   try{
     const {titre, description, prixUSDX, royalties, blockchain, artiste, artworkId} = req.body;
@@ -157,7 +155,7 @@ app.post('/api/nft/create', async (req,res)=>{
     let imageUrl = '';
     if(artworkId && mongoose.Types.ObjectId.isValid(artworkId) && mongoose.models.Artwork){
       const art = await mongoose.models.Artwork.findById(artworkId);
-      if(art) imageUrl = art.images?.[0]||art.image||'';
+      if(art) imageUrl = art.images?.[0]||art.image||art.imageUrl||'';
     }
     const nft = await NFT.create({
       titre, description, prixUSDX: Number(prixUSDX)||100, royalties: Number(royalties)||5,
@@ -168,7 +166,6 @@ app.post('/api/nft/create', async (req,res)=>{
   }catch(e){ res.status(500).json({error:e.message}); }
 });
 
-// --- ROUTE /api/nft/:id/buy (Problème 3 wallet) ---
 app.post('/api/nft/:id/buy', async (req,res)=>{
   try{
     const {buyer, wallet} = req.body;
@@ -181,7 +178,7 @@ app.post('/api/nft/:id/buy', async (req,res)=>{
       const art = mongoose.Types.ObjectId.isValid(raw)? await mongoose.models.Artwork.findById(raw) : await mongoose.models.Artwork.findOne({azmId: raw.toUpperCase()});
       if(art){
         const {azmId, certifId, hash} = art.azmId? {azmId: art.azmId, certifId: art.certifId, hash: art.hash} : await getNextAZM();
-        nft = await NFT.create({ titre: art.titre, description: art.description, imageUrl: art.images?.[0]||art.image, prixUSDX:100, royalties:5, azmId, certifId, hash, artiste: art.artiste, blockchain:'Pi' });
+        nft = await NFT.create({ titre: art.titre, description: art.description, imageUrl: art.images?.[0]||art.image||art.imageUrl, prixUSDX:100, royalties:5, azmId, certifId, hash, artiste: art.artiste, blockchain:'Pi' });
       }
     }
     if(!nft) return res.status(404).json({error:'NFT / Oeuvre non trouvée'});
@@ -217,7 +214,7 @@ app.post('/api/pay/pi/complete', async (req,res)=>{
     if(!nft) nft = await NFT.findOne({azmId: artworkId?.toUpperCase()});
     if(!nft && mongoose.models.Artwork){
       const art = mongoose.Types.ObjectId.isValid(artworkId)? await mongoose.models.Artwork.findById(artworkId) : null;
-      if(art) nft = await NFT.findOne({azmId: art.azmId}) || await NFT.create({ titre: art.titre, imageUrl: art.images?.[0]||art.image, prixUSDX:100, azmId: art.azmId, certifId: art.certifId, hash: art.hash, artiste: art.artiste, blockchain:'Pi', isNFT:true });
+      if(art) nft = await NFT.findOne({azmId: art.azmId}) || await NFT.create({ titre: art.titre, imageUrl: art.images?.[0]||art.image||art.imageUrl, prixUSDX:100, azmId: art.azmId, certifId: art.certifId, hash: art.hash, artiste: art.artiste, blockchain:'Pi', isNFT:true });
     }
     if(nft){ nft.vendu=true; nft.txHash=txid; nft.blockchain='Pi'; nft.proprietaire=buyer; nft.proprietaireWallet=wallet; nft.prixVenteFinal=100; nft.dateVente=new Date(); await nft.save(); }
     res.json({success:true, txHash:txid, azmId:nft?.azmId, verifyUrl:`${req.protocol}://${req.get('host')}/verify/${nft?.azmId}`, downloadUrl:`${req.protocol}://${req.get('host')}/api/nft/${nft?.azmId}/download?key=${txid}`});
