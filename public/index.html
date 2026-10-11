@@ -7,6 +7,8 @@
 <script src="https://cdn.tailwindcss.com"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+<script src="https://sdk.minepi.com/pi-sdk.js"></script>
+<script>try{ Pi.init({version:"2.0", sandbox:true}); }catch(e){}</script>
 <style>
 :root{--or:#D4AF37;--noir:#0A0A0A;}
 body{background:var(--noir);color:white;font-family:'Inter',sans-serif;}
@@ -103,7 +105,6 @@ body{background:var(--noir);color:white;font-family:'Inter',sans-serif;}
 <div id="modalNFT" class="fixed inset-0 bg-black/90 z-[110] hidden flex items-end justify-center"><div class="bg-white text-black w-full rounded-t-[24px] p-6"><div class="flex justify-between"><h3 class="font-black">Créer un NFT</h3><button onclick="closeModalNFT()" class="w-8 h-8 bg-zinc-100 rounded-full">✕</button></div><div class="mt-4 space-y-3"><input id="nft-titre" placeholder="Titre NFT *" class="w-full bg-zinc-100 rounded-xl px-4 py-3 text-sm border"><textarea id="nft-desc" placeholder="Description" class="w-full bg-zinc-100 rounded-xl px-4 py-3 text-sm border h-20"></textarea><div class="grid grid-cols-2 gap-2"><input id="nft-prix" type="number" value="100" class="bg-zinc-100 rounded-xl px-4 py-3 text-sm border"><input id="nft-royalties" type="number" value="5" class="bg-zinc-100 rounded-xl px-4 py-3 text-sm border"></div><select id="nft-blockchain" class="w-full bg-zinc-100 rounded-xl px-4 py-3 text-sm border"><option value="Pi">Pi Network</option><option value="Polygon">Polygon</option></select><button onclick="creerNFT()" id="btnNFT" class="w-full bg-black text-white py-3.5 rounded-full font-black">Mint NFT</button><p id="msgNFT" class="text-center text-xs"></p></div></div></div>
 <div id="modalCertificat" class="fixed inset-0 bg-black/95 z-[120] hidden flex items-center justify-center p-4"><div class="certif-paper w-full max-w-[400px] rounded-xl p-6 relative"><button onclick="closeModalCertif()" class="absolute top-2 right-2 w-8 h-8 bg-zinc-100 rounded-full">✕</button><div id="certifContent"></div><div id="qrcode" class="flex justify-center mt-4"></div></div></div>
 
-<!-- FIX WALLET INVALIDE : NOUVEAU MODAL -->
 <div id="modalBuyNFT" class="fixed inset-0 bg-black/90 z-[130] hidden flex items-end justify-center">
   <div class="bg-white text-black w-full rounded-t-[24px] p-6">
     <div class="flex justify-between items-center">
@@ -133,7 +134,15 @@ body{background:var(--noir);color:white;font-family:'Inter',sans-serif;}
 <script>
 let role='artiste', EXPO_ID=null, currentUser=JSON.parse(localStorage.getItem('AZ_USER')||'null');
 function go(id){document.querySelectorAll('.tab').forEach(s=>s.classList.add('hidden-tab'));document.getElementById(id).classList.remove('hidden-tab');document.querySelectorAll('.tab-btn').forEach(b=>{b.classList.remove('tab-active');b.classList.add('text-zinc-500')});const nav=document.getElementById('nav-'+id);if(nav){nav.classList.add('tab-active');nav.classList.remove('text-zinc-500');}if(id==='galerie')loadGalerie();if(id==='expos')loadExpo();if(id==='encheres')loadEncheres();checkUserStatus();window.scrollTo(0,0);}
-function setRole(r){role=r;document.getElementById('btnArt').className=r==='artiste'?'flex-1 bg-or text-black py-2.5 rounded-full':'flex-1 text-zinc-400 py-2.5';document.getElementById('btnCol').className=r==='acheteur'?'flex-1 bg-or text-black py-2.5 rounded-full':'flex-1 text-zinc-400 py-2.5';document.getElementById('blocArtisteDesc').classList.toggle('hidden',r!=='artiste');document.getElementById('blocStats').classList.toggle('hidden',r!=='artiste');document.getElementById('blocCollectionneurDesc').classList.toggle('hidden',r!=='acheteur');document.getElementById('blocCollectionneurContent').classList.toggle('hidden',r!=='acheteur');}
+function setRole(r){
+  role=r;
+  document.getElementById('btnArt').className=r==='artiste'?'flex-1 bg-or text-black py-2.5 rounded-full':'flex-1 text-zinc-400 py-2.5';
+  document.getElementById('btnCol').className=r==='acheteur'?'flex-1 bg-or text-black py-2.5 rounded-full':'flex-1 text-zinc-400 py-2.5';
+  document.getElementById('blocArtisteDesc').classList.toggle('hidden',r!=='artiste');
+  document.getElementById('blocStats').classList.toggle('hidden',r!=='artiste');
+  document.getElementById('blocCollectionneurDesc').classList.toggle('hidden',r!=='acheteur');
+  const cc=document.getElementById('blocCollectionneurContent'); if(cc) cc.classList.toggle('hidden',r!=='acheteur');
+}
 function openProfil(){document.getElementById('modalProfil').classList.remove('hidden')}function closeProfil(){document.getElementById('modalProfil').classList.add('hidden')}
 function openLogin(){document.getElementById('modalLogin').classList.remove('hidden')}function closeLogin(){document.getElementById('modalLogin').classList.add('hidden')}
 function openPublier(){document.getElementById('modalPublier').classList.remove('hidden')}function closePublier(){document.getElementById('modalPublier').classList.add('hidden')}
@@ -161,33 +170,52 @@ async function loadGalerie(){
 
 let buyCurrentId=null, buyCurrentAzm='';
 function acheterNFT(id, azmId, titre){
-  buyCurrentId=id; buyCurrentAzm=azmId;
-  document.getElementById('buyNFTTitle').innerText = `"${titre}" • ${azmId||id} • 100 USDX`;
-  document.getElementById('buy-wallet').value='';
-  document.getElementById('buy-name').value='';
+  buyCurrentId=id; buyCurrentAzm=azmId||id;
+  document.getElementById('buyNFTTitle').innerText = `"${titre}" • ${azmId||id} • 100 Pi`;
+  document.getElementById('buy-wallet').value='GAW2HX5BWU7PXFPZ43JYCGKSISYDTGCN';
+  document.getElementById('buy-name').value='Zedmo';
   document.getElementById('msgBuyNFT').innerText='';
   document.getElementById('modalBuyNFT').classList.remove('hidden');
 }
+
 async function confirmBuyNFT(){
   const wallet=document.getElementById('buy-wallet').value.trim();
-  const buyer=document.getElementById('buy-name').value.trim()||'Collectionneur AZ';
+  const buyer=document.getElementById('buy-name').value.trim()||'Zedmo';
   const msg=document.getElementById('msgBuyNFT');
-  if(wallet.length<3){ msg.innerText='❌ Entre ton wallet (G... ou 0x... ou Pi)'; return; }
   const btn=document.getElementById('btnConfirmBuy');
-  btn.disabled=true; btn.innerText='⏳ Mint...';
+  if(wallet.length<3){ msg.innerText='❌ Entre wallet'; return; }
+  btn.disabled=true; btn.innerText='⏳ Traitement...';
   try{
-    const res=await fetch(`/api/nft/${buyCurrentId}/buy`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({buyer, wallet, prixUSDX:100})}).then(r=>r.json());
+    // Si Pi Browser disponible → Pi Payment (plus de DOCTYPE error)
+    if(window.Pi){
+      try{
+        await Pi.authenticate(['username','payments'],()=>{});
+        await Pi.createPayment({amount:100,memo:`NFT ${buyCurrentAzm}`,metadata:{artworkId:buyCurrentId,azmId:buyCurrentAzm,buyer,wallet}},{
+          onReadyForServerApproval: async (pid)=>{
+            await fetch('/api/pay/pi/approve',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({paymentId:pid})});
+          },
+          onReadyForServerCompletion: async (pid,txid)=>{
+            const r=await fetch('/api/pay/pi/complete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({paymentId:pid,txid,artworkId:buyCurrentId,buyer,wallet})}).then(r=>r.json());
+            msg.innerHTML=`<span class="text-green-600">✅ Tx ${txid.slice(0,12)}</span>`;
+            setTimeout(()=>{ closeBuyNFT(); alert(`✅ NFT LIVRÉ!\\n${r.azmId}\\n${txid}`); window.open(r.downloadUrl,'_blank'); loadGalerie(); },800);
+          },
+          onCancel: ()=>{ msg.innerText='❌ Annulé'; },
+          onError: (e)=>{ msg.innerText='❌ '+e; }
+        });
+        return;
+      }catch(e){ console.log('Pi fail, fallback USDX',e); }
+    }
+    // Fallback USDX (ton ancien endpoint)
+    const r=await fetch(`/api/nft/${buyCurrentId}/buy`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({buyer,wallet,prixUSDX:100})});
+    const text=await r.text();
+    let res;
+    try{ res=JSON.parse(text); }catch{ throw new Error('Serveur renvoie HTML - route /api/nft/:id/buy manquante dans server.js'); }
     if(res.error) throw new Error(res.error);
-    msg.innerHTML=`<span class="text-green-600 font-bold">✅ Reçu! Tx ${res.txHash}</span>`;
-    setTimeout(()=>{
-      closeBuyNFT();
-      alert(`✅ NFT LIVRÉ!\n\nTxHash: ${res.txHash}\nID: ${res.azmId}\nWallet: ${wallet}\n\nCertificat: ${res.verifyUrl}\nHD: ${res.downloadUrl}`);
-      showCertificat(buyCurrentId, res.recu.titre, buyer, 100, res.azmId);
-      window.open(res.downloadUrl,'_blank');
-      loadGalerie();
-    },800);
+    msg.innerHTML=`<span class="text-green-600">✅ ${res.txHash}</span>`;
+    setTimeout(()=>{ closeBuyNFT(); alert(`✅ NFT LIVRÉ!\\n${res.azmId}`); loadGalerie(); },800);
   }catch(e){ msg.innerText='❌ '+e.message; }finally{ btn.disabled=false; btn.innerText='Confirmer l\'achat - 100 USDX'; }
 }
+
 function verifierDirect(azmId){ if(!azmId) return; document.getElementById('inputAZM').value=azmId; go('verifier'); verifierAZM(); }
 async function loadExpo(){const ex=await fetch('/api/expositions/active').then(r=>r.json()).catch(()=>({}));if(!ex._id){document.getElementById('listExpoOeuvres').innerHTML='<p class="text-zinc-500 text-xs">Aucune expo</p>';return;}EXPO_ID=ex._id;document.getElementById('listExpoOeuvres').innerHTML=(ex.oeuvres||[]).map((a,i)=>`<div class="bg-zinc-900 p-3 rounded-xl flex gap-3 items-center"><b class="or">#${i+1}</b><img src="${a.images?.[0]||a.image||'https://picsum.photos/100'}" class="w-12 h-12 rounded"><div class="flex-1"><p class="text-sm font-bold">${a.titre}</p><p class="text-[10px] text-zinc-400">${a.votesCount||0} votes</p></div><button onclick="voterExpo('${a._id}')" class="bg-or text-black px-4 py-2 rounded-full text-[11px]">Voter</button></div>`).join('');}
 async function voterExpo(id){await fetch(`/api/artworks/${id}/vote`,{method:'POST'});loadExpo();}
