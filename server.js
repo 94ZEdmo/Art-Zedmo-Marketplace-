@@ -70,7 +70,86 @@ const nftSchema = new mongoose.Schema({
 },{strict:false});
 const NFT = mongoose.models.NFT || mongoose.model('NFT', nftSchema);
 
-// --- FIX SCREENSHOT: ROUTE MANQUANTE /api/nft/:id/buy ---
+// --- FIX #3 & #4 - SETTINGS PAIEMENTS avec tes adresses ---
+const settingsSchema = new mongoose.Schema({
+  _id:String,
+  momo:{type:String, default:'0196587303'},
+  moov:{type:String, default:'0196587303'},
+  usdt:{type:String, default:'TFXZSyJaC6mdCva8kAJBMMvKYhyhpzpHn2'},
+  pi:{type:String, default:'GAF62KXAV7IUM3HSHQ3TII6EFMIDSGII2EVEZXFTXGMH5D2EDPA6RVAM'},
+  updatedAt:{type:Date, default:Date.now}
+});
+const Settings = mongoose.models.Settings || mongoose.model('Settings', settingsSchema);
+
+app.get('/api/settings/paiements', async(req,res)=>{
+  let s = await Settings.findById('paiements');
+  if(!s) s = await Settings.create({_id:'paiements'});
+  res.json({momo:s.momo, moov:s.moov||s.momo, usdt:s.usdt, pi:s.pi});
+});
+app.post('/api/settings/paiements', async(req,res)=>{
+  const {momo, moov, usdt, pi} = req.body;
+  const s = await Settings.findOneAndUpdate({_id:'paiements'}, {momo, moov: moov||momo, usdt, pi, updatedAt:new Date()}, {upsert:true, new:true});
+  res.json({ok:true, settings:s});
+});
+
+// --- FIX #1 - ANNONCE ACTIVE pour accueil (si route manque) ---
+app.get('/api/annonces/active', async(req,res)=>{
+  try{
+    const Annonce = mongoose.models.Annonce;
+    if(!Annonce) return res.json([]);
+    const active = await Annonce.find({active:true}).sort({createdAt:-1}).limit(1);
+    if(active.length===0){
+      const last = await Annonce.find().sort({createdAt:-1}).limit(1);
+      return res.json(last);
+    }
+    res.json(active);
+  }catch(e){ res.json([]); }
+});
+
+// --- FIX #7 - SUPPRESSION NFT + OEUVRES ADMIN ---
+app.delete('/api/nft/:id', async (req,res)=>{
+  try{
+    const id = req.params.id;
+    if(mongoose.Types.ObjectId.isValid(id)) await NFT.findByIdAndDelete(id);
+    else await NFT.findOneAndDelete({azmId:id.toUpperCase()});
+    res.json({ok:true});
+  }catch(e){ res.status(500).json({error:e.message}); }
+});
+app.delete('/api/admin/nft/:id', async (req,res)=>{
+  try{
+    const id = req.params.id;
+    if(mongoose.Types.ObjectId.isValid(id)){
+      await NFT.findByIdAndDelete(id);
+      if(mongoose.models.Artwork) await mongoose.models.Artwork.findByIdAndDelete(id);
+    } else {
+      await NFT.findOneAndDelete({azmId:id.toUpperCase()});
+      if(mongoose.models.Artwork) await mongoose.models.Artwork.findOneAndDelete({azmId:id.toUpperCase()});
+    }
+    res.json({ok:true});
+  }catch(e){ res.status(500).json({error:e.message}); }
+});
+
+// --- FIX #4 & #5 - COMPTE ARTISTE / COLLECTIONNEUR ---
+app.get('/api/compte/solde', async(req,res)=>{
+  // exemple simple - tu pourras calculer depuis ventes
+  const total = await NFT.countDocuments({vendu:true});
+  res.json({solde: total*85}); // 85% artiste exemple
+});
+app.get('/api/compte/mes-achats', async(req,res)=>{
+  const {type} = req.query;
+  if(type==='nft'){
+    const nfts = await NFT.find({vendu:true}).sort({dateVente:-1}).limit(20);
+    return res.json(nfts);
+  }
+  // oeuvres FCFA - exemple
+  res.json([]);
+});
+app.get('/api/compte/nft-vendus', async(req,res)=>{
+  const vendus = await NFT.find({vendu:true}).sort({dateVente:-1}).limit(20);
+  res.json(vendus);
+});
+
+// --- ROUTE MANQUANTE /api/nft/:id/buy ---
 app.post('/api/nft/:id/buy', async (req,res)=>{
   try{
     const {buyer, wallet} = req.body;
@@ -98,7 +177,6 @@ app.post('/api/nft/:id/buy', async (req,res)=>{
   }catch(e){ console.log(e); res.status(500).json({error:e.message}); }
 });
 
-// --- PI PAYMENT REEL ---
 app.post('/api/pay/pi/approve', async (req,res)=>{
   try{
     const { paymentId } = req.body;
@@ -127,7 +205,6 @@ app.post('/api/pay/pi/complete', async (req,res)=>{
   }catch(e){ res.status(500).json({error:e.message}); }
 });
 
-// --- AUTRES ROUTES (verify, certificat, nft, download) ---
 app.get('/api/artworks/verify/:azmId', async (req,res)=>{ try{ const azmId=req.params.azmId.toUpperCase(); let a= mongoose.models.Artwork? await mongoose.models.Artwork.findOne({azmId}).populate('artiste'):null; if(!a){ const nft=await NFT.findOne({azmId}).populate('artiste'); if(nft) return res.json({...nft.toObject(), verified:true}); } if(!a) return res.status(404).json({error:'AZM non trouvé'}); res.json({...a.toObject(), verified:true}); }catch(e){res.status(500).json({error:e.message})} });
 app.get('/api/nft', async (req,res)=>{ res.json(await NFT.find().sort({createdAt:-1}).limit(100)); });
 app.get('/api/nft/:azmId/download', async (req,res)=>{ const nft=await NFT.findOne({azmId:req.params.azmId.toUpperCase()}); if(!nft) return res.status(404).send('Non trouvé'); if(req.query.key!==nft.txHash) return res.status(403).send('Clé invalide'); if(nft.imageUrl) return res.redirect(nft.imageUrl); res.json(nft); });
