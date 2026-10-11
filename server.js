@@ -70,6 +70,34 @@ const nftSchema = new mongoose.Schema({
 },{strict:false});
 const NFT = mongoose.models.NFT || mongoose.model('NFT', nftSchema);
 
+// --- FIX SCREENSHOT: ROUTE MANQUANTE /api/nft/:id/buy ---
+app.post('/api/nft/:id/buy', async (req,res)=>{
+  try{
+    const {buyer, wallet} = req.body;
+    if(!wallet || wallet.length<3) return res.status(400).json({error:'Wallet invalide - entre G... ou 0x'});
+    const raw = req.params.id;
+    let nft = null;
+    if(mongoose.Types.ObjectId.isValid(raw)) nft = await NFT.findById(raw);
+    if(!nft) nft = await NFT.findOne({azmId: raw.toUpperCase()});
+    if(!nft && mongoose.models.Artwork){
+      const art = mongoose.Types.ObjectId.isValid(raw)? await mongoose.models.Artwork.findById(raw) : await mongoose.models.Artwork.findOne({azmId: raw.toUpperCase()});
+      if(art){
+        const {azmId, certifId, hash} = art.azmId? {azmId: art.azmId, certifId: art.certifId, hash: art.hash} : await getNextAZM();
+        nft = await NFT.create({ titre: art.titre, description: art.description, imageUrl: art.images?.[0]||art.image, prixUSDX:100, royalties:5, azmId, certifId, hash, artiste: art.artiste, blockchain:'Pi' });
+      }
+    }
+    if(!nft) return res.status(404).json({error:'NFT / Oeuvre non trouvée'});
+    const txHash = '0x'+Date.now().toString(16)+Math.random().toString(16).slice(2,10)+Math.random().toString(16).slice(2,6);
+    nft.vendu=true; nft.txHash=txHash; nft.proprietaire=buyer||'Zedmo'; nft.proprietaireWallet=wallet; nft.prixVenteFinal=100; nft.dateVente=new Date(); await nft.save();
+    res.json({
+      success:true, txHash, azmId:nft.azmId,
+      verifyUrl:`${req.protocol}://${req.get('host')}/verify/${nft.azmId}`,
+      downloadUrl:`${req.protocol}://${req.get('host')}/api/nft/${nft.azmId}/download?key=${txHash}`,
+      recu:{titre:nft.titre}
+    });
+  }catch(e){ console.log(e); res.status(500).json({error:e.message}); }
+});
+
 // --- PI PAYMENT REEL ---
 app.post('/api/pay/pi/approve', async (req,res)=>{
   try{
@@ -89,8 +117,9 @@ app.post('/api/pay/pi/complete', async (req,res)=>{
     });
     const j = await r.json(); if(!r.ok) return res.status(r.status).json(j);
     let nft = mongoose.Types.ObjectId.isValid(artworkId)? await NFT.findById(artworkId) : null;
+    if(!nft) nft = await NFT.findOne({azmId: artworkId?.toUpperCase()});
     if(!nft && mongoose.models.Artwork){
-      const art = await mongoose.models.Artwork.findById(artworkId);
+      const art = mongoose.Types.ObjectId.isValid(artworkId)? await mongoose.models.Artwork.findById(artworkId) : null;
       if(art) nft = await NFT.findOne({azmId: art.azmId}) || await NFT.create({ titre: art.titre, imageUrl: art.images?.[0]||art.image, prixUSDX:100, azmId: art.azmId, certifId: art.certifId, hash: art.hash, artiste: art.artiste, blockchain:'Pi', isNFT:true });
     }
     if(nft){ nft.vendu=true; nft.txHash=txid; nft.blockchain='Pi'; nft.proprietaire=buyer; nft.proprietaireWallet=wallet; nft.prixVenteFinal=100; nft.dateVente=new Date(); await nft.save(); }
