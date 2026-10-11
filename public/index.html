@@ -7,6 +7,8 @@
 <script src="https://cdn.tailwindcss.com"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+<script src="https://sdk.minepi.com/pi-sdk.js"></script>
+<script>try{ Pi.init({ version: "2.0", sandbox: true }); console.log('Pi SDK Testnet OK'); }catch(e){console.log('Pi SDK hors Pi Browser') } </script>
 <style>
 :root{--or:#D4AF37;--noir:#0A0A0A;}
 body{background:var(--noir);color:white;font-family:'Inter',sans-serif;}
@@ -20,12 +22,12 @@ body{background:var(--noir);color:white;font-family:'Inter',sans-serif;}
 <body class="pb-24">
 <header class="p-4 flex justify-between items-center border-b border-zinc-800 sticky top-0 bg-black/90 backdrop-blur z-50">
   <div class="flex items-center gap-2"><div class="w-9 h-9 bg-or text-black font-black flex items-center justify-center rounded">AZ</div><span class="font-bold tracking-widest">ART-ZEDMO</span></div>
-  <span id="badgeAnnonce" class="text-[10px] bg-zinc-900 border border-or px-2 py-1 rounded-full or">EXPO OCT 2026 - LIVE</span>
+  <span id="badgeAnnonce" class="text-[10px] bg-zinc-900 border border-or px-2 py-1 rounded-full or">EXPO OCT 2026 - PI PAY LIVE</span>
 </header>
 <section id="accueil" class="tab">
   <div class="p-6 text-center mt-2">
     <h1 class="text-[32px] font-black leading-[1.1]">L'art africain<br><span class="or">sans frontière.</span></h1>
-    <p class="text-zinc-300 text-[13px] mt-4 leading-relaxed px-2">Bienvenue sur ART-ZEDMO, la première plateforme dédiée à l'art africain. 100% digital, 100% solidaire.</p>
+    <p class="text-zinc-300 text-[13px] mt-4 leading-relaxed px-2">Bienvenue sur ART-ZEDMO, la première plateforme dédiée à l'art africain. Paiement Pi Network branché Testnet GC4GS...NI2PC</p>
     <div class="flex gap-3 justify-center mt-6">
       <button onclick="go('galerie')" class="bg-or text-black px-6 py-3 rounded-full font-bold text-sm">Explorer la Galerie</button>
       <button id="btnExpoLive" onclick="go('expos')" class="border border-white px-6 py-3 rounded-full font-bold text-sm">Expo OCT 2026</button>
@@ -96,31 +98,25 @@ body{background:var(--noir);color:white;font-family:'Inter',sans-serif;}
   <div id="boxCreate" class="bg-white text-black rounded-t-[24px] mt-6 p-6 text-center"><h3 class="font-black">Expose ton art</h3><button onclick="openProfil()" class="w-full bg-black text-white py-3.5 rounded-full font-black mt-4">Créer profil Gratuit</button><p class="text-[10px] text-zinc-400 mt-2">Déjà compte? <span onclick="openLogin()" class="underline font-bold">Se connecter</span></p></div>
   <div id="boxPending" class="hidden bg-orange-100 text-black rounded-xl mt-6 p-6 text-center"><h3 class="font-black">⏳ En attente</h3><p class="text-xs">Profil <span id="pendingName"></span> en attente admin.</p></div>
 </section>
-
 <div id="modalProfil" class="fixed inset-0 bg-black/90 z-[100] hidden flex items-end justify-center"><div class="bg-white text-black w-full rounded-t-[24px] p-6"><div class="flex justify-between"><h3 class="font-black">Créer profil</h3><button onclick="closeProfil()" class="w-8 h-8 bg-zinc-100 rounded-full">✕</button></div><div class="mt-4 space-y-3"><input id="p-nom" placeholder="Nom complet *" class="w-full bg-zinc-100 rounded-xl px-4 py-3 text-sm border"><input id="p-artiste" placeholder="Nom d'artiste *" class="w-full bg-zinc-100 rounded-xl px-4 py-3 text-sm border"><input id="p-wa" placeholder="WhatsApp +229 *" class="w-full bg-zinc-100 rounded-xl px-4 py-3 text-sm border"><input id="p-email" type="email" placeholder="Email *" class="w-full bg-zinc-100 rounded-xl px-4 py-3 text-sm border"><input id="p-password" type="password" placeholder="Mot de passe *" class="w-full bg-zinc-100 rounded-xl px-4 py-3 text-sm border"><button onclick="creerProfil()" id="btnCreer" class="w-full bg-black text-white py-3.5 rounded-full font-bold">Envoyer</button><p id="msgProfil" class="text-center text-xs"></p></div></div></div>
 <div id="modalLogin" class="fixed inset-0 bg-black/90 z-[100] hidden flex items-end justify-center"><div class="bg-white text-black w-full rounded-t-[24px] p-6"><div class="flex justify-between"><h3 class="font-black">Connexion</h3><button onclick="closeLogin()" class="w-8 h-8 bg-zinc-100 rounded-full">✕</button></div><div class="mt-4 space-y-3"><input id="l-identifiant" placeholder="Email ou WhatsApp" class="w-full bg-zinc-100 rounded-xl px-4 py-3 text-sm border"><input id="l-password" type="password" placeholder="Mot de passe" class="w-full bg-zinc-100 rounded-xl px-4 py-3 text-sm border"><button onclick="login()" class="w-full bg-black text-white py-3.5 rounded-full font-bold">Se connecter</button><p id="msgLogin" class="text-center text-xs"></p></div></div></div>
 <div id="modalPublier" class="fixed inset-0 bg-black/90 z-[100] hidden flex items-end justify-center"><div class="bg-white text-black w-full rounded-t-[24px] p-6"><div class="flex justify-between"><h3 class="font-black">Publier</h3><button onclick="closePublier()" class="w-8 h-8 bg-zinc-100 rounded-full">✕</button></div><div class="mt-4 space-y-3"><input id="o-titre" placeholder="Titre" class="w-full bg-zinc-100 border rounded-xl px-4 py-3 text-sm"><input id="o-prix" type="number" placeholder="Prix FCFA" class="w-full bg-zinc-100 border rounded-xl px-4 py-3 text-sm"><input type="file" id="o-file" accept="image/*" class="hidden" onchange="previewOeuvreGalerie()"><div id="previewOeuvreGalerieBox" class="hidden"><img id="previewOeuvreGalerieImg" class="w-full h-32 object-cover rounded-xl mb-2"></div><button onclick="document.getElementById('o-file').click()" class="bg-black text-white px-4 py-2 rounded-full text-xs">Upload</button><button onclick="publierOeuvreGalerie()" id="btnPublierGalerie" class="w-full bg-black text-white py-3.5 rounded-full font-black">Publier</button><p id="msgOeuvreGalerie" class="text-center text-xs"></p></div></div></div>
 <div id="modalNFT" class="fixed inset-0 bg-black/90 z-[110] hidden flex items-end justify-center"><div class="bg-white text-black w-full rounded-t-[24px] p-6"><div class="flex justify-between"><h3 class="font-black">Créer un NFT</h3><button onclick="closeModalNFT()" class="w-8 h-8 bg-zinc-100 rounded-full">✕</button></div><div class="mt-4 space-y-3"><input id="nft-titre" placeholder="Titre NFT *" class="w-full bg-zinc-100 rounded-xl px-4 py-3 text-sm border"><textarea id="nft-desc" placeholder="Description" class="w-full bg-zinc-100 rounded-xl px-4 py-3 text-sm border h-20"></textarea><div class="grid grid-cols-2 gap-2"><input id="nft-prix" type="number" value="100" class="bg-zinc-100 rounded-xl px-4 py-3 text-sm border"><input id="nft-royalties" type="number" value="5" class="bg-zinc-100 rounded-xl px-4 py-3 text-sm border"></div><select id="nft-blockchain" class="w-full bg-zinc-100 rounded-xl px-4 py-3 text-sm border"><option value="Pi">Pi Network</option><option value="Polygon">Polygon</option></select><button onclick="creerNFT()" id="btnNFT" class="w-full bg-black text-white py-3.5 rounded-full font-black">Mint NFT</button><p id="msgNFT" class="text-center text-xs"></p></div></div></div>
 <div id="modalCertificat" class="fixed inset-0 bg-black/95 z-[120] hidden flex items-center justify-center p-4"><div class="certif-paper w-full max-w-[400px] rounded-xl p-6 relative"><button onclick="closeModalCertif()" class="absolute top-2 right-2 w-8 h-8 bg-zinc-100 rounded-full">✕</button><div id="certifContent"></div><div id="qrcode" class="flex justify-center mt-4"></div></div></div>
-
-<!-- FIX WALLET INVALIDE : NOUVEAU MODAL -->
 <div id="modalBuyNFT" class="fixed inset-0 bg-black/90 z-[130] hidden flex items-end justify-center">
   <div class="bg-white text-black w-full rounded-t-[24px] p-6">
-    <div class="flex justify-between items-center">
-      <h3 class="font-black text-sm">Acheter NFT en USDX</h3>
-      <button onclick="closeBuyNFT()" class="w-8 h-8 bg-zinc-100 rounded-full">✕</button>
-    </div>
+    <div class="flex justify-between items-center"><h3 class="font-black text-sm">Acheter NFT - 100 Pi Testnet</h3><button onclick="closeBuyNFT()" class="w-8 h-8 bg-zinc-100 rounded-full">✕</button></div>
     <p id="buyNFTTitle" class="text-xs text-zinc-600 mt-2 font-bold"></p>
     <div class="mt-4 space-y-3">
-      <input id="buy-wallet" placeholder="Wallet Pi / MetaMask (G... ou 0x... accepté)" class="w-full bg-zinc-100 border rounded-xl px-4 py-3 text-sm">
-      <input id="buy-name" placeholder="Nom pour le certificat" class="w-full bg-zinc-100 border rounded-xl px-4 py-3 text-sm">
-      <div class="bg-yellow-50 border border-yellow-300 p-3 rounded-xl text-[11px]">Paiement: 100 USDX / PiUSD<br>5% royalties → Artiste<br>Reçois TxHash + Certificat + Lien HD</div>
-      <button onclick="confirmBuyNFT()" id="btnConfirmBuy" class="w-full bg-black text-white py-3.5 rounded-full font-black text-sm">Confirmer l'achat - 100 USDX</button>
-      <p id="msgBuyNFT" class="text-center text-xs"></p>
+      <input id="buy-wallet" placeholder="Wallet Pi G... pour recevoir" class="w-full bg-zinc-100 border rounded-xl px-4 py-3 text-sm">
+      <input id="buy-name" placeholder="Nom certificat" class="w-full bg-zinc-100 border rounded-xl px-4 py-3 text-sm">
+      <div class="bg-yellow-50 border border-yellow-300 p-3 rounded-xl text-[11px]">Paiement: 100 Pi Test via Pi Browser<br>Wallet dev: GC4GS...NI2PC<br>5% royalties → Artiste</div>
+      <button onclick="confirmBuyNFT()" id="btnConfirmBuy" class="w-full bg-black text-white py-3.5 rounded-full font-black text-sm">Payer 100 Pi avec Pi Browser</button>
+      <p id="msgBuyNFT" class="text-center text-xs font-bold"></p>
+      <p class="text-[9px] text-center text-zinc-500">Ouvre art-zedmo-marketplace.onrender.com dans Pi Browser</p>
     </div>
   </div>
 </div>
-
 <nav class="fixed bottom-0 left-0 right-0 bg-black border-t border-zinc-800 flex justify-around py-2.5 z-50">
   <button onclick="go('accueil')" id="nav-accueil" class="tab-btn tab-active flex flex-col items-center text-[10px] gap-1"><i class="fa-solid fa-house text-[16px]"></i>Accueil</button>
   <button onclick="go('galerie')" id="nav-galerie" class="tab-btn flex flex-col items-center text-[10px] text-zinc-500 gap-1"><i class="fa-solid fa-images text-[16px]"></i>Galerie</button>
@@ -129,11 +125,10 @@ body{background:var(--noir);color:white;font-family:'Inter',sans-serif;}
   <button onclick="go('compte')" id="nav-compte" class="tab-btn flex flex-col items-center text-[10px] text-zinc-500 gap-1"><i class="fa-solid fa-user text-[16px]"></i>Compte</button>
   <button onclick="go('verifier')" id="nav-verifier" class="tab-btn flex flex-col items-center text-[10px] text-zinc-500 gap-1"><i class="fa-solid fa-qrcode text-[16px]"></i>Vérif</button>
 </nav>
-
 <script>
 let role='artiste', EXPO_ID=null, currentUser=JSON.parse(localStorage.getItem('AZ_USER')||'null');
 function go(id){document.querySelectorAll('.tab').forEach(s=>s.classList.add('hidden-tab'));document.getElementById(id).classList.remove('hidden-tab');document.querySelectorAll('.tab-btn').forEach(b=>{b.classList.remove('tab-active');b.classList.add('text-zinc-500')});const nav=document.getElementById('nav-'+id);if(nav){nav.classList.add('tab-active');nav.classList.remove('text-zinc-500');}if(id==='galerie')loadGalerie();if(id==='expos')loadExpo();if(id==='encheres')loadEncheres();checkUserStatus();window.scrollTo(0,0);}
-function setRole(r){role=r;document.getElementById('btnArt').className=r==='artiste'?'flex-1 bg-or text-black py-2.5 rounded-full':'flex-1 text-zinc-400 py-2.5';document.getElementById('btnCol').className=r==='acheteur'?'flex-1 bg-or text-black py-2.5 rounded-full':'flex-1 text-zinc-400 py-2.5';document.getElementById('blocArtisteDesc').classList.toggle('hidden',r!=='artiste');document.getElementById('blocStats').classList.toggle('hidden',r!=='artiste');document.getElementById('blocCollectionneurDesc').classList.toggle('hidden',r!=='acheteur');document.getElementById('blocCollectionneurContent').classList.toggle('hidden',r!=='acheteur');}
+function setRole(r){role=r;document.getElementById('btnArt').className=r==='artiste'?'flex-1 bg-or text-black py-2.5 rounded-full':'flex-1 text-zinc-400 py-2.5';document.getElementById('btnCol').className=r==='acheteur'?'flex-1 bg-or text-black py-2.5 rounded-full':'flex-1 text-zinc-400 py-2.5';document.getElementById('blocArtisteDesc').classList.toggle('hidden',r!=='artiste');document.getElementById('blocStats').classList.toggle('hidden',r!=='artiste');document.getElementById('blocCollectionneurDesc').classList.toggle('hidden',r!=='acheteur');}
 function openProfil(){document.getElementById('modalProfil').classList.remove('hidden')}function closeProfil(){document.getElementById('modalProfil').classList.add('hidden')}
 function openLogin(){document.getElementById('modalLogin').classList.remove('hidden')}function closeLogin(){document.getElementById('modalLogin').classList.add('hidden')}
 function openPublier(){document.getElementById('modalPublier').classList.remove('hidden')}function closePublier(){document.getElementById('modalPublier').classList.add('hidden')}
@@ -147,7 +142,6 @@ function checkUserStatus(){const boxCreate=document.getElementById('boxCreate');
 async function creerProfil(){const nom=document.getElementById('p-nom').value.trim(),nom_artiste=document.getElementById('p-artiste').value.trim(),whatsapp=document.getElementById('p-wa').value.trim(),email=document.getElementById('p-email').value.trim(),password=document.getElementById('p-password').value;if(!nom||!nom_artiste||!whatsapp||!email||!password)return document.getElementById('msgProfil').innerText='❌ Remplis tout';try{const res=await fetch('/api/auth/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({nom,nom_artiste,whatsapp,email,password,ville:'Abomey-Calavi'})}).then(r=>r.json());if(res.error)throw new Error(res.error);document.getElementById('msgProfil').innerText='✅ Envoyé!';localStorage.setItem('AZ_USER',JSON.stringify(res.user||res));currentUser=res.user||res;setTimeout(()=>{closeProfil();checkUserStatus();},1000);}catch(e){document.getElementById('msgProfil').innerText=e.message;}}
 async function login(){const identifiant=document.getElementById('l-identifiant').value.trim();const password=document.getElementById('l-password').value;try{const res=await fetch('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({identifiant,password})}).then(r=>r.json());if(res.error)throw new Error(res.error);localStorage.setItem('AZ_USER',JSON.stringify(res.user||res));currentUser=res.user||res;closeLogin();checkUserStatus();}catch(e){document.getElementById('msgLogin').innerText=e.message;}}
 async function loadMyStats(){if(!currentUser)return;try{const all=await fetch('/api/artworks?all=true').then(r=>r.json()).catch(()=>[]);const mine=all.filter(a=>(a.artiste?._id||a.artiste||'').toString()===currentUser._id.toString());document.getElementById('myOeuvres').innerText=mine.length+' en ligne';}catch(e){}}
-
 async function loadGalerie(){
   const arts = await fetch('/api/artworks').then(r=>r.json()).catch(()=>[]);
   const nfts = await fetch('/api/nft').then(r=>r.json()).catch(()=>[]);
@@ -158,35 +152,42 @@ async function loadGalerie(){
   document.getElementById('countG').innerText=`${unique.length} œuvres (${nfts.length} NFT)`;
   document.getElementById('gridGalerie').innerHTML=unique.map(a=>`<div class="bg-zinc-900 rounded-xl overflow-hidden flex flex-col border ${a.isNFT?'border-or/30':'border-zinc-800'}"><img src="${a.images?.[0]||a.image||a.imageUrl||'https://via.placeholder.com/300x300/111/D4AF37?text=ART-ZEDMO'}" class="h-32 w-full object-cover"><div class="p-2 flex-1"><p class="text-sm font-bold truncate">${a.titre} ${a.isNFT?'<span class="or text-[9px]">NFT</span>':''}</p><p class="or text-xs">${a.isNFT?`${a.prixUSDX||a.prix||100} USDX`:`${(a.prix||0).toLocaleString()} FCFA`} <span class='text-[8px] text-zinc-500'>${a.azmId||''}</span></p><p class="text-[10px] text-zinc-500 truncate">${a.artiste?.nom_artiste||a.artiste?.nom||''}</p></div><div class="p-2 space-y-1"><div class="grid grid-cols-2 gap-1"><button onclick="window.open('https://wa.me/${(a.artiste?.whatsapp||'').replace(/[^0-9]/g,'')}?text=Je veux acheter ${encodeURIComponent(a.titre)}','_blank')" class="bg-[#25D366] text-black py-2 rounded-full text-[10px] font-bold">FCFA</button><button onclick="acheterNFT('${a._id}','${a.azmId||''}','${(a.titre||'').replace(/'/g,'')}')" class="bg-or text-black py-2 rounded-full text-[10px] font-black">Acheter NFT</button></div><div class="grid grid-cols-2 gap-1"><button onclick="showCertificat('${a._id}','${(a.titre||'').replace(/'/g,'')}','${a.artiste?.nom_artiste||''}','${a.prix||0}','${a.azmId||''}')" class="bg-zinc-800 border border-zinc-700 py-1.5 rounded-full text-[9px]">Certificat</button><button onclick="verifierDirect('${a.azmId||''}')" class="bg-zinc-800 border border-zinc-700 py-1.5 rounded-full text-[9px]">Vérif QR</button></div></div></div>`).join('')||'<p class="text-zinc-500 text-center">0 oeuvre</p>';
 }
-
 let buyCurrentId=null, buyCurrentAzm='';
 function acheterNFT(id, azmId, titre){
-  buyCurrentId=id; buyCurrentAzm=azmId;
-  document.getElementById('buyNFTTitle').innerText = `"${titre}" • ${azmId||id} • 100 USDX`;
+  buyCurrentId=id; buyCurrentAzm=azmId||id;
+  document.getElementById('buyNFTTitle').innerText = `"${titre}" • ${buyCurrentAzm} • 100 Pi`;
   document.getElementById('buy-wallet').value='';
-  document.getElementById('buy-name').value='';
+  document.getElementById('buy-name').value=currentUser?.nom_artiste||'';
   document.getElementById('msgBuyNFT').innerText='';
   document.getElementById('modalBuyNFT').classList.remove('hidden');
 }
 async function confirmBuyNFT(){
   const wallet=document.getElementById('buy-wallet').value.trim();
-  const buyer=document.getElementById('buy-name').value.trim()||'Collectionneur AZ';
+  const buyer=document.getElementById('buy-name').value.trim()||'Collectionneur Pi';
   const msg=document.getElementById('msgBuyNFT');
-  if(wallet.length<3){ msg.innerText='❌ Entre ton wallet (G... ou 0x... ou Pi)'; return; }
   const btn=document.getElementById('btnConfirmBuy');
-  btn.disabled=true; btn.innerText='⏳ Mint...';
+  if(wallet.length<3){ msg.innerText='❌ Wallet Pi G... requis'; return; }
+  if(!window.Pi){ msg.innerText='❌ Ouvre dans Pi Browser, pas Chrome'; return; }
+  btn.disabled=true; btn.innerText='⏳ Paiement Pi...';
   try{
-    const res=await fetch(`/api/nft/${buyCurrentId}/buy`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({buyer, wallet, prixUSDX:100})}).then(r=>r.json());
-    if(res.error) throw new Error(res.error);
-    msg.innerHTML=`<span class="text-green-600 font-bold">✅ Reçu! Tx ${res.txHash}</span>`;
-    setTimeout(()=>{
-      closeBuyNFT();
-      alert(`✅ NFT LIVRÉ!\n\nTxHash: ${res.txHash}\nID: ${res.azmId}\nWallet: ${wallet}\n\nCertificat: ${res.verifyUrl}\nHD: ${res.downloadUrl}`);
-      showCertificat(buyCurrentId, res.recu.titre, buyer, 100, res.azmId);
-      window.open(res.downloadUrl,'_blank');
-      loadGalerie();
-    },800);
-  }catch(e){ msg.innerText='❌ '+e.message; }finally{ btn.disabled=false; btn.innerText='Confirmer l\'achat - 100 USDX'; }
+    const paymentData={ amount:100, memo:`NFT ${buyCurrentAzm} ART-ZEDMO`, metadata:{ artworkId:buyCurrentId, azmId:buyCurrentAzm, buyer, wallet } };
+    await window.Pi.createPayment(paymentData, {
+      onReadyForServerApproval: async (paymentId)=>{
+        msg.innerText='⏳ Approbation...';
+        const r=await fetch('/api/pay/pi/approve',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({paymentId})});
+        const j=await r.json(); if(!r.ok) throw new Error(JSON.stringify(j).error||'Approve fail');
+      },
+      onReadyForServerCompletion: async (paymentId, txid)=>{
+        msg.innerText=`⏳ Validation Tx ${txid.slice(0,8)}...`;
+        const r=await fetch('/api/pay/pi/complete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({paymentId, txid, artworkId:buyCurrentId, buyer, wallet})});
+        const j=await r.json(); if(j.error) throw new Error(j.error);
+        msg.innerHTML=`<span class="text-green-600">✅ Payé! Tx ${txid.slice(0,12)}</span>`;
+        setTimeout(()=>{ closeBuyNFT(); alert(`✅ NFT LIVRÉ PI!\n\nTx: ${txid}\nID: ${j.azmId}\n100 Pi reçus sur GC4GS...NI2PC\nHD: ${j.downloadUrl}`); window.open(j.downloadUrl,'_blank'); loadGalerie(); },800);
+      },
+      onCancel: ()=>{ msg.innerText='❌ Annulé'; btn.disabled=false; btn.innerText='Payer 100 Pi avec Pi Browser'; },
+      onError: (e)=>{ msg.innerText='❌ '+e; btn.disabled=false; btn.innerText='Payer 100 Pi avec Pi Browser'; }
+    });
+  }catch(e){ msg.innerText='❌ '+e.message; btn.disabled=false; btn.innerText='Payer 100 Pi avec Pi Browser'; }
 }
 function verifierDirect(azmId){ if(!azmId) return; document.getElementById('inputAZM').value=azmId; go('verifier'); verifierAZM(); }
 async function loadExpo(){const ex=await fetch('/api/expositions/active').then(r=>r.json()).catch(()=>({}));if(!ex._id){document.getElementById('listExpoOeuvres').innerHTML='<p class="text-zinc-500 text-xs">Aucune expo</p>';return;}EXPO_ID=ex._id;document.getElementById('listExpoOeuvres').innerHTML=(ex.oeuvres||[]).map((a,i)=>`<div class="bg-zinc-900 p-3 rounded-xl flex gap-3 items-center"><b class="or">#${i+1}</b><img src="${a.images?.[0]||a.image||'https://picsum.photos/100'}" class="w-12 h-12 rounded"><div class="flex-1"><p class="text-sm font-bold">${a.titre}</p><p class="text-[10px] text-zinc-400">${a.votesCount||0} votes</p></div><button onclick="voterExpo('${a._id}')" class="bg-or text-black px-4 py-2 rounded-full text-[11px]">Voter</button></div>`).join('');}
@@ -195,8 +196,8 @@ async function loadEncheres(){const en=await fetch('/api/encheres').then(r=>r.js
 async function encherir(id){const m=prompt('Montant?');if(!m)return;await fetch(`/api/encheres/${id}/encherir`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({montant:Number(m)})});loadEncheres();}
 function partager(){if(!currentUser)return alert('Connecte-toi');const lien=`${location.origin}/vote/${currentUser._id}`;document.getElementById('lienViral').innerText=lien;window.open(`https://wa.me/?text=Vote: ${lien}`,'_blank');}
 async function publierOeuvreGalerie(){const titre=document.getElementById('o-titre').value.trim();const prix=document.getElementById('o-prix').value;const file=document.getElementById('o-file');const msg=document.getElementById('msgOeuvreGalerie');if(!currentUser)return msg.innerText='Connecte-toi';if(!titre||!prix)return msg.innerText='Titre+Prix';if(!file.files[0])return msg.innerText='Image requise';try{const fd=new FormData();fd.append('image',file.files[0]);const up=await fetch('/api/upload',{method:'POST',body:fd}).then(r=>r.json());const imgUrl=up.url;const res=await fetch('/api/artworks',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({artiste:currentUser._id,titre,prix:Number(prix),images:[imgUrl]})}).then(r=>r.json());if(res.error)throw new Error(res.error);msg.innerText=`✅ ${res.azmId||res.artwork?.azmId} créé`;setTimeout(()=>{closePublier();loadGalerie();},1000);}catch(e){msg.innerText=e.message;}}
-function showCertificat(id,titre,artiste,prix,azmId){const certifId='AZC-'+(azmId?azmId.slice(4):id.slice(-6));document.getElementById('certifContent').innerHTML=`<h3 class="text-center font-black">ART-ZEDMO</h3><p class="text-center text-[10px]">CERTIFICAT</p><div class="mt-3 border-t border-b py-2 text-[11px]"><p><b>Œuvre:</b> ${titre}</p><p><b>Artiste:</b> ${artiste}</p><p><b>ID:</b> ${azmId}</p><p><b>Certificat:</b> ${certifId}</p><p><b>Prix:</b> ${prix} FCFA / 100 USDX</p></div>`;document.getElementById('modalCertificat').classList.remove('hidden');setTimeout(()=>{document.getElementById('qrcode').innerHTML='';new QRCode(document.getElementById('qrcode'),{text:location.origin+'/verify/'+azmId,width:120,height:120});},200);}
-async function verifierAZM(){const id=document.getElementById('inputAZM').value.trim().toUpperCase();const box=document.getElementById('resultVerif');if(!id)return box.innerHTML='Entre ID';box.innerHTML='Vérif...';try{const data=await fetch('/api/artworks/verify/'+id).then(r=>r.json());if(data.error)throw new Error(data.error);box.innerHTML=`<div class="bg-green-900/20 border border-green-600 rounded-xl p-4"><p class="font-black text-green-400">✅ ${data.titre} - Authentifié</p><p class="text-[11px] mt-2"><b>ID:</b> ${data.azmId}<br><b>Certificat:</b> ${data.certifId}<br><b>Tx:</b> ${data.txHash||'0x...'}<br><a href="/api/nft/${data.azmId}/download?key=${data.txHash}" class="or underline">Télécharger HD</a></p></div>`;}catch(e){box.innerHTML=`<p class="text-red-400 text-xs">❌ ${e.message}</p>`;}}
+function showCertificat(id,titre,artiste,prix,azmId){const certifId='AZC-'+(azmId?azmId.slice(4):id.slice(-6));document.getElementById('certifContent').innerHTML=`<h3 class="text-center font-black">ART-ZEDMO</h3><p class="text-center text-[10px]">CERTIFICAT</p><div class="mt-3 border-t border-b py-2 text-[11px]"><p><b>Œuvre:</b> ${titre}</p><p><b>Artiste:</b> ${artiste}</p><p><b>ID:</b> ${azmId}</p><p><b>Certificat:</b> ${certifId}</p><p><b>Prix:</b> ${prix} FCFA / 100 Pi</p></div>`;document.getElementById('modalCertificat').classList.remove('hidden');setTimeout(()=>{document.getElementById('qrcode').innerHTML='';new QRCode(document.getElementById('qrcode'),{text:location.origin+'/verify/'+azmId,width:120,height:120});},200);}
+async function verifierAZM(){const id=document.getElementById('inputAZM').value.trim().toUpperCase();const box=document.getElementById('resultVerif');if(!id)return box.innerHTML='Entre ID';box.innerHTML='Vérif...';try{const data=await fetch('/api/artworks/verify/'+id).then(r=>r.json());if(data.error)throw new Error(data.error);box.innerHTML=`<div class="bg-green-900/20 border border-green-600 rounded-xl p-4"><p class="font-black text-green-400">✅ ${data.titre} - Authentifié Pi</p><p class="text-[11px] mt-2"><b>ID:</b> ${data.azmId}<br><b>Tx:</b> ${data.txHash||'0x...'}<br><a href="/api/nft/${data.azmId}/download?key=${data.txHash}" class="or underline">Télécharger HD</a></p></div>`;}catch(e){box.innerHTML=`<p class="text-red-400 text-xs">❌ ${e.message}</p>`;}}
 async function creerNFT(){const titre=document.getElementById('nft-titre').value.trim();if(!titre)return document.getElementById('msgNFT').innerText='Titre requis';try{const res=await fetch('/api/nft/create',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({titre,description:document.getElementById('nft-desc').value,prixUSDX:Number(document.getElementById('nft-prix').value),royalties:Number(document.getElementById('nft-royalties').value),blockchain:document.getElementById('nft-blockchain').value,artiste:currentUser?._id})}).then(r=>r.json());if(res.error)throw new Error(res.error);document.getElementById('msgNFT').innerText=`✅ ${res.azmId} créé`;loadGalerie();setTimeout(()=>closeModalNFT(),1000);}catch(e){document.getElementById('msgNFT').innerText=e.message;}}
 checkUserStatus();
 </script>
