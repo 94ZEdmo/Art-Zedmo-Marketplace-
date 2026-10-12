@@ -1,28 +1,104 @@
 import mongoose from 'mongoose';
 
-const voteSchema = new mongoose.Schema({
-  user: { type: mongoose.Schema.Types.ObjectId, ref:'User' },
-  votant_whatsapp: String,
-  votant_ip: String,
-  artwork: { type: mongoose.Schema.Types.ObjectId, ref:'Artwork', required:true },
-  exposition: { type: mongoose.Schema.Types.ObjectId, ref:'Exposition' },
-  source_lien: String
-},{timestamps:true});
+const voteSchema = new mongoose.Schema(
+  {
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null
+    },
 
-// Anti-triche: 1 compte = 1 vote par oeuvre + 1 WhatsApp = 1 vote par oeuvre
-voteSchema.index({ user:1, artwork:1 }, { unique:true, sparse:true });
-voteSchema.index({ votant_whatsapp:1, artwork:1 }, { unique:true, sparse:true });
+    votant_whatsapp: {
+      type: String,
+      trim: true,
+      default: null,
+      maxlength: 30
+    },
 
-// Double boucle auto
-voteSchema.post('save', async function(doc){
-  try{
-    const Artwork = mongoose.model('Artwork');
-    const Exposition = mongoose.model('Exposition');
-    const User = mongoose.model('User');
-    const art = await Artwork.findByIdAndUpdate(doc.artwork, { $inc:{ votesCount:1 } }, { new:true });
-    if(doc.exposition) await Exposition.findByIdAndUpdate(doc.exposition, { $inc:{ totalVotes:1 } });
-    if(art && art.artiste) await User.findByIdAndUpdate(art.artiste, { $inc:{ totalVotesRecus:1 } });
-  }catch(e){ console.log("Erreur post vote", e.message); }
+    votant_ip: {
+      type: String,
+      default: null,
+      maxlength: 100
+    },
+
+    artwork: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Artwork',
+      required: true,
+      index: true
+    },
+
+    exposition: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Exposition',
+      default: null
+    },
+
+    source_lien: {
+      type: String,
+      trim: true,
+      maxlength: 1000,
+      default: ''
+    }
+  },
+  {
+    timestamps: true,
+    versionKey: false
+  }
+);
+
+/*
+ * ANTI-DOUBLON
+ *
+ * Un compte ne peut voter qu'une fois pour une même œuvre.
+ * Un numéro WhatsApp ne peut voter qu'une fois pour une même œuvre.
+ *
+ * Attention :
+ * Les index uniques empêchent les doublons lorsque la même valeur
+ * est fournie. Ils ne garantissent pas l'identité réelle du votant.
+ */
+
+// Un compte utilisateur = un vote par œuvre.
+voteSchema.index(
+  { user: 1, artwork: 1 },
+  {
+    unique: true,
+    partialFilterExpression: {
+      user: { $type: 'objectId' }
+    }
+  }
+);
+
+// Un numéro WhatsApp = un vote par œuvre.
+voteSchema.index(
+  { votant_whatsapp: 1, artwork: 1 },
+  {
+    unique: true,
+    partialFilterExpression: {
+      votant_whatsapp: { $type: 'string' }
+    }
+  }
+);
+
+// Accélère les recherches de votes par exposition.
+voteSchema.index({
+  exposition: 1,
+  createdAt: -1
 });
 
-export default mongoose.model('Vote', voteSchema);
+/*
+ * IMPORTANT :
+ *
+ * Aucun hook post('save') ici.
+ *
+ * Les compteurs votesCount, totalVotes et totalVotesRecus
+ * doivent être mis à jour par la logique de vote du serveur.
+ *
+ * Cela évite de compter deux fois le même vote.
+ */
+
+const Vote =
+  mongoose.models.Vote ||
+  mongoose.model('Vote', voteSchema);
+
+export default Vote;
