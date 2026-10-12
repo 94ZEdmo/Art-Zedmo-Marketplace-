@@ -6,6 +6,9 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
 import multer from 'multer';
+import crypto from 'crypto';
+import jwt from 'jsonwebtoken';
+
 import authRoutes from './routes/auth.js';
 import artworkRoutes from './routes/artworks.js';
 import expoRoutes from './routes/expositions.js';
@@ -14,36 +17,177 @@ import enchereRoutes from './routes/encheres.js';
 import annonceRoutes from './routes/annonces.js';
 
 dotenv.config();
+
 const app = express();
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-app.use(cors());
-app.use(express.json({limit:'10mb'}));
-app.use(express.urlencoded({extended:true}));
-
-const uploadDir = path.join(__dirname, 'public/uploads');
-if(!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, {recursive:true});
-
-// FIX IMAGE QUI DISPARAIT - toujours renvoyer URL absolue
-const storage = multer.diskStorage({
-  destination: (req,file,cb)=>cb(null, uploadDir),
-  filename: (req,file,cb)=>cb(null, Date.now()+'-'+file.originalname.replace(/\s/g,'_'))
-});
-const upload = multer({storage, limits:{fileSize:5*1024*1024}});
-app.post('/api/upload', upload.single('image'), (req,res)=>{
-  if(!req.file) return res.status(400).json({error:'Aucune image'});
-  const relativeUrl = `/uploads/${req.file.filename}`;
-  const fullUrl = `${req.protocol}://${req.get('host')}${relativeUrl}`;
-  // On sauve toujours fullUrl pour que l'image reste visible même après restart Render
-  res.json({success:true, url: fullUrl, image: fullUrl, fullUrl: fullUrl, imageUrl: fullUrl});
-});
-
-app.use(express.static(path.join(__dirname, 'public')));
-app.use('/uploads', express.static(uploadDir));
-
+const PORT = Number(process.env.PORT) || 10000;
 const MONGO_URL = process.env.MONGO_URI || process.env.MONGODB_URI;
-mongoose.connect(MONGO_URL).then(()=>console.log("✅ MongoDB CONNECTÉ")).catch(e=>console.log("❌ MONGO:", e.message));
+const JWT_SECRET = process.env.JWT_SECRET;
+
+// =====================================================
+// 1. CONFIGURATION ET VALIDATION
+// =====================================================
+
+if (!MONGO_URL) {
+  console.error('ERREUR : MONGO_URI ou MONGODB_URI est manquant.');
+  process.exit(1);
+}
+
+if (!JWT_SECRET || JWT_SECRET.length < 32) {
+  console.error(
+    'ERREUR : JWT_SECRET doit être configuré dans Render ' +
+    'avec une valeur secrète suffisamment longue.'
+  );
+  process.exit(1);
+}
+
+app.disable('x-powered-by');
+
+app.use(cors({
+  origin: process.env.FRONTEND_URL
+    ? process.env.FRONTEND_URL.split(',').map(v => v.trim())
+    : false,
+  credentials: true
+}));
+
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({
+  extended: true,
+  limit: '1mb'
+}));
+
+// =====================================================
+// 2. DOSSIER DES IMAGES
+// =====================================================
+
+const uploadDir = path.join(__dirname, 'public', 'uploads');
+
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
+
+// =====================================================
+// 3. AUTHENTIFICATION JWT
+// =====================================================
+
+function authenticateToken(req, res, next) {
+  const authorization = req.headers.authorization;
+
+  if (!authorization || !authorization.startsWith('Bearer ')) {
+    return res.status(401).json({
+      error: 'Authentification requise.'
+    });
+  }
+
+  const token = authorization.slice(7);
+
+  try {
+    req.user = jwt.verify(token, JWT_SECRET);
+    next();
+  } catch {
+    return res.status(401).json({
+      error: 'Jeton invalide ou expiré.'
+    });
+  }
+}
+
+function requireAdmin(req, res, next) {
+  if (!req.user || req.user.role !== 'admin') {
+    return res.status(403).json({
+      error: 'Accès réservé à l’administrateur.'
+    });
+  }
+
+  next();
+}
+
+// =====================================================
+// 4. TÉLÉVERSEMENT DES IMAGES
+// =====================================================
+
+const allowedMimeTypes = new Set([
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/gif'
+]);
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, uploadDir);
+  },
+
+  filename: (req, file, cb) => {
+    const extensionMap = {
+      'image/jpeg': '.jpg',
+      'image/png': '.png',
+      'image/webp': '.webp',
+      'image/gif': '.gif'
+    };
+
+    const filename =
+      `${Date.now()}-${crypto.randomUUID()}` +
+      extensionMap[file.mimetype];
+
+    cb(null, filename);
+  }
+});
+
+const upload = multer({
+  storage,
+
+  limits: {
+    fileSize: 5 * 1024 * 1024,
+    files: 1
+  },
+
+  fileFilter: (req, file, cb) => {
+    if (!allowedMimeTypes.has(file.mimetype)) {
+      return cb(new Error('Format d’image non autorisé.'));
+    }
+
+    cb(null, true);
+  }
+});
+
+app.post('/api/upload', authenticateToken, upload.single('image'), (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({
+      error: 'Aucune image reçue.'
+    });
+  }
+
+  const imageUrl = `/uploads/${req.file.filename}`;
+
+  res.status(201).json({
+    success: true,
+    url: imageUrl,
+    image: imageUrl,
+    imageUrl
+  });
+});
+
+// =====================================================
+// 5. FICHIERS PUBLICS
+// =====================================================
+
+app.use('/uploads', express.static(uploadDir, {
+  index: false,
+  dotfiles: 'deny',
+  maxAge: '1d'
+}));
+
+app.use(express.static(path.join(__dirname, 'public'), {
+  index: false,
+  dotfiles: 'deny'
+}));
+
+// =====================================================
+// 6. ROUTES PRINCIPALES
+// =====================================================
 
 app.use('/api/auth', authRoutes);
 app.use('/api/artworks', artworkRoutes);
@@ -52,178 +196,563 @@ app.use('/api/votes', voteRoutes);
 app.use('/api/encheres', enchereRoutes);
 app.use('/api/annonces', annonceRoutes);
 
-app.get('/api/health', (req,res)=>res.json({status:'LIVE', pi_wallet: process.env.PI_WALLET? 'OK' : 'MANQUE', pi_key: process.env.PI_API_KEY? 'OK' : 'MANQUE'}));
+// =====================================================
+// 7. MODÈLE NFT
+// =====================================================
 
-// --- COUNTER AZM ---
-const counterSchema = new mongoose.Schema({ _id:String, seq:{type:Number, default:0} });
-const Counter = mongoose.models.Counter || mongoose.model('Counter', counterSchema);
-async function getNextAZM(){
-  const year = new Date().getFullYear();
-  const c = await Counter.findOneAndUpdate({ _id:`AZM-${year}` }, { $inc:{seq:1} }, { upsert:true, returnDocument:'after' });
-  const azmId = `AZM-${year}-${String(c.seq).padStart(6,'0')}`;
-  return { azmId, certifId: `AZC-${azmId.slice(4)}`, hash: `SHA256-${Buffer.from(azmId).toString('base64').slice(0,16)}` };
-}
 const nftSchema = new mongoose.Schema({
-  titre:String, description:String, edition:{type:String, default:'1/1'},
-  prixUSDX:Number, royalties:{type:Number, default:5}, blockchain:{type:String, default:'Pi'},
-  categorie:String, artiste:{type:mongoose.Schema.Types.ObjectId, ref:'User'},
-  azmId:{type:String, unique:true}, certifId:String, hash:String, imageUrl:String,
-  proprietaire:String, proprietaireWallet:String, vendu:{type:Boolean, default:false},
-  prixVenteFinal:Number, txHash:String, dateVente:Date, artworkId:{type:mongoose.Schema.Types.ObjectId, ref:'Artwork'}, createdAt:{type:Date, default:Date.now}
-},{strict:false});
-const NFT = mongoose.models.NFT || mongoose.model('NFT', nftSchema);
+  titre: {
+    type: String,
+    required: true,
+    trim: true
+  },
+
+  description: String,
+
+  edition: {
+    type: String,
+    default: '1/1'
+  },
+
+  prixUSDX: {
+    type: Number,
+    min: 0
+  },
+
+  royalties: {
+    type: Number,
+    default: 5,
+    min: 0,
+    max: 100
+  },
+
+  blockchain: {
+    type: String,
+    default: 'Pi'
+  },
+
+  categorie: String,
+
+  artiste: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  },
+
+  azmId: {
+    type: String,
+    unique: true,
+    sparse: true
+  },
+
+  certifId: String,
+
+  hash: String,
+
+  imageUrl: String,
+
+  proprietaire: String,
+
+  proprietaireWallet: String,
+
+  vendu: {
+    type: Boolean,
+    default: false
+  },
+
+  prixVenteFinal: Number,
+
+  txHash: String,
+
+  dateVente: Date,
+
+  artworkId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Artwork'
+  },
+
+  createdAt: {
+    type: Date,
+    default: Date.now
+  }
+}, {
+  strict: false
+});
+
+const NFT =
+  mongoose.models.NFT ||
+  mongoose.model('NFT', nftSchema);
+
+// =====================================================
+// 8. COMPTEUR DES IDENTIFIANTS ART-ZEDMO
+// =====================================================
+
+const counterSchema = new mongoose.Schema({
+  _id: String,
+  seq: {
+    type: Number,
+    default: 0
+  }
+});
+
+const Counter =
+  mongoose.models.Counter ||
+  mongoose.model('Counter', counterSchema);
+
+async function getNextAZM() {
+  const year = new Date().getFullYear();
+
+  const counter = await Counter.findOneAndUpdate(
+    { _id: `AZM-${year}` },
+    { $inc: { seq: 1 } },
+    {
+      upsert: true,
+      returnDocument: 'after',
+      setDefaultsOnInsert: true
+    }
+  );
+
+  const azmId =
+    `AZM-${year}-${String(counter.seq).padStart(6, '0')}`;
+
+  const certifId = `AZC-${azmId.slice(4)}`;
+
+  // Véritable empreinte SHA-256 de l'identifiant.
+  // Elle identifie ici l'ID, pas le fichier image de l'œuvre.
+  const hash = crypto
+    .createHash('sha256')
+    .update(azmId)
+    .digest('hex');
+
+  return {
+    azmId,
+    certifId,
+    hash
+  };
+}
+
+// =====================================================
+// 9. CONFIGURATION DES PAIEMENTS
+// =====================================================
 
 const settingsSchema = new mongoose.Schema({
-  _id:String,
-  momo:{type:String, default:'0196587303'},
-  moov:{type:String, default:'0196587303'},
-  usdt:{type:String, default:'TFXZSyJaC6mdCva8kAJBMMvKYhyhpzpHn2'},
-  pi:{type:String, default:'GAF62KXAV7IUM3HSHQ3TII6EFMIDSGII2EVEZXFTXGMH5D2EDPA6RVAM'},
-  updatedAt:{type:Date, default:Date.now}
-});
-const Settings = mongoose.models.Settings || mongoose.model('Settings', settingsSchema);
+  _id: String,
 
-app.get('/api/settings/paiements', async(req,res)=>{
-  let s = await Settings.findById('paiements');
-  if(!s) s = await Settings.create({_id:'paiements'});
-  res.json({momo:s.momo, moov:s.moov||s.momo, usdt:s.usdt, pi:s.pi});
-});
-app.post('/api/settings/paiements', async(req,res)=>{
-  const {momo, moov, usdt, pi} = req.body;
-  const s = await Settings.findOneAndUpdate({_id:'paiements'}, {momo, moov: moov||momo, usdt, pi, updatedAt:new Date()}, {upsert:true, new:true});
-  res.json({ok:true, settings:s});
-});
+  momo: {
+    type: String,
+    default: ''
+  },
 
-app.get('/api/annonces/active', async(req,res)=>{
-  try{
-    const Annonce = mongoose.models.Annonce;
-    if(!Annonce) return res.json({texte:'Exposition en cours pour le 25 octobre 2026', active:true});
-    const active = await Annonce.find({active:true}).sort({createdAt:-1}).limit(1);
-    if(active.length===0){
-      const last = await Annonce.find().sort({createdAt:-1}).limit(1);
-      if(last.length===0) return res.json({texte:'Exposition en cours pour le 25 octobre 2026', active:true});
-      return res.json(last[0]||last);
-    }
-    res.json(active[0]||active);
-  }catch(e){ res.json({texte:'Exposition en cours pour le 25 octobre 2026', active:true}); }
-});
+  moov: {
+    type: String,
+    default: ''
+  },
 
-app.delete('/api/nft/:id', async (req,res)=>{
-  try{
-    const id = req.params.id;
-    if(mongoose.Types.ObjectId.isValid(id)) await NFT.findByIdAndDelete(id);
-    else await NFT.findOneAndDelete({azmId:id.toUpperCase()});
-    res.json({ok:true});
-  }catch(e){ res.status(500).json({error:e.message}); }
-});
-app.delete('/api/admin/nft/:id', async (req,res)=>{
-  try{
-    const id = req.params.id;
-    if(mongoose.Types.ObjectId.isValid(id)){
-      await NFT.findByIdAndDelete(id);
-      if(mongoose.models.Artwork) await mongoose.models.Artwork.findByIdAndDelete(id);
-    } else {
-      await NFT.findOneAndDelete({azmId:id.toUpperCase()});
-      if(mongoose.models.Artwork) await mongoose.models.Artwork.findOneAndDelete({azmId:id.toUpperCase()});
-    }
-    res.json({ok:true});
-  }catch(e){ res.status(500).json({error:e.message}); }
-});
+  usdt: {
+    type: String,
+    default: ''
+  },
 
-app.get('/api/compte/solde', async(req,res)=>{
-  const total = await NFT.countDocuments({vendu:true});
-  res.json({solde: total*85});
-});
-app.get('/api/compte/mes-achats', async(req,res)=>{
-  const {type} = req.query;
-  if(type==='nft'){
-    const nfts = await NFT.find({vendu:true}).sort({dateVente:-1}).limit(20);
-    return res.json(nfts);
+  pi: {
+    type: String,
+    default: ''
+  },
+
+  updatedAt: {
+    type: Date,
+    default: Date.now
   }
-  res.json([]);
-});
-app.get('/api/compte/nft-vendus', async(req,res)=>{
-  const vendus = await NFT.find({vendu:true}).sort({dateVente:-1}).limit(20);
-  res.json(vendus);
 });
 
-app.post('/api/nft/create', async (req,res)=>{
-  try{
-    const {titre, description, prixUSDX, royalties, blockchain, artiste, artworkId} = req.body;
-    if(!titre) return res.status(400).json({error:'Titre requis'});
-    const {azmId, certifId, hash} = await getNextAZM();
-    let imageUrl = '';
-    if(artworkId && mongoose.Types.ObjectId.isValid(artworkId) && mongoose.models.Artwork){
-      const art = await mongoose.models.Artwork.findById(artworkId);
-      if(art) imageUrl = art.images?.[0]||art.image||art.imageUrl||'';
-    }
-    const nft = await NFT.create({
-      titre, description, prixUSDX: Number(prixUSDX)||100, royalties: Number(royalties)||5,
-      blockchain: blockchain||'Pi', artiste, artworkId: artworkId||null,
-      azmId, certifId, hash, imageUrl, txHash:'TX-'+Date.now()
-    });
-    res.json(nft);
-  }catch(e){ res.status(500).json({error:e.message}); }
-});
+const Settings =
+  mongoose.models.Settings ||
+  mongoose.model('Settings', settingsSchema);
 
-app.post('/api/nft/:id/buy', async (req,res)=>{
-  try{
-    const {buyer, wallet} = req.body;
-    if(!wallet || wallet.length<3) return res.status(400).json({error:'Wallet invalide - entre G... ou 0x'});
-    const raw = req.params.id;
-    let nft = null;
-    if(mongoose.Types.ObjectId.isValid(raw)) nft = await NFT.findById(raw);
-    if(!nft) nft = await NFT.findOne({azmId: raw.toUpperCase()});
-    if(!nft && mongoose.models.Artwork){
-      const art = mongoose.Types.ObjectId.isValid(raw)? await mongoose.models.Artwork.findById(raw) : await mongoose.models.Artwork.findOne({azmId: raw.toUpperCase()});
-      if(art){
-        const {azmId, certifId, hash} = art.azmId? {azmId: art.azmId, certifId: art.certifId, hash: art.hash} : await getNextAZM();
-        nft = await NFT.create({ titre: art.titre, description: art.description, imageUrl: art.images?.[0]||art.image||art.imageUrl, prixUSDX:100, royalties:5, azmId, certifId, hash, artiste: art.artiste, blockchain:'Pi' });
-      }
+app.get('/api/settings/paiements', async (req, res, next) => {
+  try {
+    const settings = await Settings.findById('paiements').lean();
+
+    if (!settings) {
+      return res.json({
+        momo: '',
+        moov: '',
+        usdt: '',
+        pi: ''
+      });
     }
-    if(!nft) return res.status(404).json({error:'NFT / Oeuvre non trouvée'});
-    const txHash = '0x'+Date.now().toString(16)+Math.random().toString(16).slice(2,10)+Math.random().toString(16).slice(2,6);
-    nft.vendu=true; nft.txHash=txHash; nft.proprietaire=buyer||'Zedmo'; nft.proprietaireWallet=wallet; nft.prixVenteFinal=100; nft.dateVente=new Date(); await nft.save();
+
     res.json({
-      success:true, txHash, azmId:nft.azmId,
-      verifyUrl:`${req.protocol}://${req.get('host')}/verify/${nft.azmId}`,
-      downloadUrl:`${req.protocol}://${req.get('host')}/api/nft/${nft.azmId}/download?key=${txHash}`,
-      recu:{titre:nft.titre}
+      momo: settings.momo || '',
+      moov: settings.moov || '',
+      usdt: settings.usdt || '',
+      pi: settings.pi || ''
     });
-  }catch(e){ console.log(e); res.status(500).json({error:e.message}); }
+  } catch (error) {
+    next(error);
+  }
 });
 
-app.post('/api/pay/pi/approve', async (req,res)=>{
-  try{
-    const { paymentId } = req.body;
-    const r = await fetch(`https://api.minepi.com/v2/payments/${paymentId}/approve`,{ method:'POST', headers:{'Authorization': `Key ${process.env.PI_API_KEY}`} });
-    const j = await r.json(); if(!r.ok) return res.status(r.status).json(j);
-    res.json({approved:true});
-  }catch(e){ res.status(500).json({error:e.message}); }
-});
+app.post(
+  '/api/settings/paiements',
+  authenticateToken,
+  requireAdmin,
+  async (req, res, next) => {
+    try {
+      const { momo, moov, usdt, pi } = req.body;
 
-app.post('/api/pay/pi/complete', async (req,res)=>{
-  try{
-    const { paymentId, txid, artworkId, buyer, wallet } = req.body;
-    const r = await fetch(`https://api.minepi.com/v2/payments/${paymentId}/complete`,{
-      method:'POST', headers:{'Authorization': `Key ${process.env.PI_API_KEY}`, 'Content-Type':'application/json'},
-      body: JSON.stringify({txid})
-    });
-    const j = await r.json(); if(!r.ok) return res.status(r.status).json(j);
-    let nft = mongoose.Types.ObjectId.isValid(artworkId)? await NFT.findById(artworkId) : null;
-    if(!nft) nft = await NFT.findOne({azmId: artworkId?.toUpperCase()});
-    if(!nft && mongoose.models.Artwork){
-      const art = mongoose.Types.ObjectId.isValid(artworkId)? await mongoose.models.Artwork.findById(artworkId) : null;
-      if(art) nft = await NFT.findOne({azmId: art.azmId}) || await NFT.create({ titre: art.titre, imageUrl: art.images?.[0]||art.image||art.imageUrl, prixUSDX:100, azmId: art.azmId, certifId: art.certifId, hash: art.hash, artiste: art.artiste, blockchain:'Pi', isNFT:true });
+      const settings = await Settings.findOneAndUpdate(
+        { _id: 'paiements' },
+        {
+          $set: {
+            momo: momo || '',
+            moov: moov || '',
+            usdt: usdt || '',
+            pi: pi || '',
+            updatedAt: new Date()
+          }
+        },
+        {
+          upsert: true,
+          new: true,
+          runValidators: true
+        }
+      );
+
+      res.json({
+        success: true,
+        settings
+      });
+    } catch (error) {
+      next(error);
     }
-    if(nft){ nft.vendu=true; nft.txHash=txid; nft.blockchain='Pi'; nft.proprietaire=buyer; nft.proprietaireWallet=wallet; nft.prixVenteFinal=100; nft.dateVente=new Date(); await nft.save(); }
-    res.json({success:true, txHash:txid, azmId:nft?.azmId, verifyUrl:`${req.protocol}://${req.get('host')}/verify/${nft?.azmId}`, downloadUrl:`${req.protocol}://${req.get('host')}/api/nft/${nft?.azmId}/download?key=${txid}`});
-  }catch(e){ res.status(500).json({error:e.message}); }
+  }
+);
+
+// =====================================================
+// 10. ÉTAT DU SERVEUR
+// =====================================================
+
+app.get('/api/health', (req, res) => {
+  res.json({
+    status: mongoose.connection.readyState === 1
+      ? 'LIVE'
+      : 'DATABASE_DISCONNECTED',
+
+    database: mongoose.connection.readyState === 1
+      ? 'CONNECTED'
+      : 'DISCONNECTED',
+
+    pi_api_configured: Boolean(process.env.PI_API_KEY),
+    pi_wallet_configured: Boolean(process.env.PI_WALLET)
+  });
 });
 
-app.get('/api/artworks/verify/:azmId', async (req,res)=>{ try{ const azmId=req.params.azmId.toUpperCase(); let a= mongoose.models.Artwork? await mongoose.models.Artwork.findOne({azmId}).populate('artiste'):null; if(!a){ const nft=await NFT.findOne({azmId}).populate('artiste'); if(nft) return res.json({...nft.toObject(), verified:true}); } if(!a) return res.status(404).json({error:'AZM non trouvé'}); res.json({...a.toObject(), verified:true}); }catch(e){res.status(500).json({error:e.message})} });
-app.get('/api/nft', async (req,res)=>{ res.json(await NFT.find().sort({createdAt:-1}).limit(100)); });
-app.get('/api/nft/:azmId/download', async (req,res)=>{ const nft=await NFT.findOne({azmId:req.params.azmId.toUpperCase()}); if(!nft) return res.status(404).send('Non trouvé'); if(req.query.key!==nft.txHash) return res.status(403).send('Clé invalide'); if(nft.imageUrl) return res.redirect(nft.imageUrl); res.json(nft); });
-app.get(/^(?!\/api).*/, (req,res)=> res.sendFile(path.join(__dirname, 'public', 'index.html')));
-const PORT = process.env.PORT || 10000;
-app.listen(PORT, ()=>console.log(`🚀 LIVE + PI BRANCHE sur ${PORT} Wallet ${process.env.PI_WALLET}`));
+// =====================================================
+// 11. VÉRIFICATION D'UNE ŒUVRE
+// =====================================================
+
+app.get('/api/artworks/verify/:azmId', async (req, res, next) => {
+  try {
+    const azmId = String(req.params.azmId).toUpperCase();
+
+    let artwork = null;
+
+    if (mongoose.models.Artwork) {
+      artwork = await mongoose.models.Artwork
+        .findOne({ azmId })
+        .populate('artiste', 'nom nom_artiste ville');
+    }
+
+    if (artwork) {
+      return res.json({
+        ...artwork.toObject(),
+        verified: true,
+        verificationType: 'database_record'
+      });
+    }
+
+    const nft = await NFT.findOne({ azmId })
+      .populate('artiste', 'nom nom_artiste ville');
+
+    if (nft) {
+      return res.json({
+        ...nft.toObject(),
+        verified: true,
+        verificationType: 'database_record'
+      });
+    }
+
+    res.status(404).json({
+      error: 'Œuvre ou certificat introuvable.'
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// =====================================================
+// 12. CONSULTATION DES FICHES NFT
+// =====================================================
+
+app.get('/api/nft', async (req, res, next) => {
+  try {
+    const nfts = await NFT.find()
+      .sort({ createdAt: -1 })
+      .limit(100)
+      .lean();
+
+    res.json(nfts);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// =====================================================
+// 13. CRÉATION D'UNE FICHE NFT
+// =====================================================
+
+app.post(
+  '/api/nft/create',
+  authenticateToken,
+  requireAdmin,
+  async (req, res, next) => {
+    try {
+      const {
+        titre,
+        description,
+        prixUSDX,
+        royalties,
+        blockchain,
+        artiste,
+        artworkId
+      } = req.body;
+
+      if (!titre || !titre.trim()) {
+        return res.status(400).json({
+          error: 'Le titre est obligatoire.'
+        });
+      }
+
+      if (
+        prixUSDX !== undefined &&
+        (!Number.isFinite(Number(prixUSDX)) || Number(prixUSDX) < 0)
+      ) {
+        return res.status(400).json({
+          error: 'Prix invalide.'
+        });
+      }
+
+      const { azmId, certifId, hash } = await getNextAZM();
+
+      let imageUrl = '';
+
+      if (
+        artworkId &&
+        mongoose.Types.ObjectId.isValid(artworkId) &&
+        mongoose.models.Artwork
+      ) {
+        const artwork = await mongoose.models.Artwork.findById(artworkId);
+
+        if (!artwork) {
+          return res.status(404).json({
+            error: 'Œuvre introuvable.'
+          });
+        }
+
+        imageUrl =
+          artwork.images?.[0] ||
+          artwork.image ||
+          artwork.imageUrl ||
+          '';
+      }
+
+      const nft = await NFT.create({
+        titre: titre.trim(),
+        description,
+        prixUSDX: Number(prixUSDX ?? 0),
+        royalties: Number(royalties ?? 5),
+        blockchain: blockchain || 'Pi',
+        artiste,
+        artworkId: artworkId || undefined,
+        azmId,
+        certifId,
+        hash,
+        imageUrl,
+
+        // Une fiche en base ne constitue pas un mint blockchain.
+        txHash: undefined,
+        vendu: false
+      });
+
+      res.status(201).json({
+        success: true,
+        message: 'Fiche créée dans la base de données.',
+        blockchainMinted: false,
+        nft
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+// =====================================================
+// 14. SUPPRESSION ADMINISTRATIVE D'UNE FICHE NFT
+// =====================================================
+
+app.delete(
+  '/api/nft/:id',
+  authenticateToken,
+  requireAdmin,
+  async (req, res, next) => {
+    try {
+      const rawId = req.params.id;
+
+      const nft = mongoose.Types.ObjectId.isValid(rawId)
+        ? await NFT.findById(rawId)
+        : await NFT.findOne({ azmId: rawId.toUpperCase() });
+
+      if (!nft) {
+        return res.status(404).json({
+          error: 'Fiche NFT introuvable.'
+        });
+      }
+
+      if (nft.vendu) {
+        return res.status(409).json({
+          error:
+            'Cette fiche correspond à une vente enregistrée. ' +
+            'Elle ne peut pas être supprimée par cette route.'
+        });
+      }
+
+      await NFT.deleteOne({ _id: nft._id });
+
+      res.json({
+        success: true,
+        message: 'Fiche supprimée.'
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+// =====================================================
+// 15. ANCIEN ACHAT DIRECT DÉSACTIVÉ
+// =====================================================
+
+// L'ancienne route /api/nft/:id/buy fabriquait un txHash
+// et marquait la fiche comme vendue sans vérifier le paiement.
+//
+// Elle est volontairement désactivée jusqu'à ce que le système
+// de commandes et de confirmation de paiement soit sécurisé.
+
+app.post('/api/nft/:id/buy', (req, res) => {
+  res.status(410).json({
+    error: 'Achat direct temporairement désactivé.',
+    message:
+      'Le paiement doit être vérifié avant de confirmer la vente.'
+  });
+});
+
+// =====================================================
+// 16. ANCIENNES ROUTES DE SOLDE : DÉSACTIVÉES
+// =====================================================
+
+// L'ancien calcul total NFT vendu × 85 ne constitue pas
+// un solde réel. Nous le désactivons en attendant un registre
+// de transactions et une attribution fiable des recettes.
+
+app.get('/api/compte/solde', authenticateToken, (req, res) => {
+  res.status(501).json({
+    error: 'Le calcul du solde doit être relié aux transactions vérifiées.'
+  });
+});
+
+app.get('/api/compte/mes-achats', authenticateToken, (req, res) => {
+  res.status(501).json({
+    error: 'L’historique personnel nécessite un lien fiable avec les commandes.'
+  });
+});
+
+app.get('/api/compte/nft-vendus', authenticateToken, requireAdmin, async (req, res, next) => {
+  try {
+    const sold = await NFT.find({ vendu: true })
+      .sort({ dateVente: -1 })
+      .limit(100)
+      .lean();
+
+    res.json(sold);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// =====================================================
+// 17. ERREURS MULTER ET ERREURS GÉNÉRALES
+// =====================================================
+
+app.use((err, req, res, next) => {
+  console.error('Erreur API :', err.message);
+
+  if (err instanceof multer.MulterError) {
+    return res.status(400).json({
+      error: err.code === 'LIMIT_FILE_SIZE'
+        ? 'Image trop volumineuse : maximum 5 Mo.'
+        : 'Erreur lors du téléversement.'
+    });
+  }
+
+  if (err.message === 'Format d’image non autorisé.') {
+    return res.status(400).json({
+      error: err.message
+    });
+  }
+
+  res.status(err.status || 500).json({
+    error: process.env.NODE_ENV === 'production'
+      ? 'Une erreur serveur est survenue.'
+      : err.message
+  });
+});
+
+// =====================================================
+// 18. PAGE PRINCIPALE
+// =====================================================
+
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+// =====================================================
+// 19. ROUTES INCONNUES
+// =====================================================
+
+app.use((req, res) => {
+  res.status(404).json({
+    error: 'Route introuvable.'
+  });
+});
+
+// =====================================================
+// 20. CONNEXION MONGODB ET DÉMARRAGE
+// =====================================================
+
+async function startServer() {
+  try {
+    await mongoose.connect(MONGO_URL, {
+      serverSelectionTimeoutMS: 15000
+    });
+
+    console.log('MongoDB Atlas connecté.');
+
+    app.listen(PORT, '0.0.0.0', () => {
+      console.log(`ART-ZEDMO MARKETPLACE démarré sur le port ${PORT}.`);
+    });
+  } catch (error) {
+    console.error('Impossible de démarrer le serveur :', error.message);
+    process.exit(1);
+  }
+}
+
+startServer();
