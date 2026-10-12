@@ -1,6 +1,7 @@
 import express from 'express';
 import jwt from 'jsonwebtoken';
 import nodemailer from 'nodemailer';
+import mongoose from 'mongoose';
 import User from '../models/User.js';
 
 const router = express.Router();
@@ -13,12 +14,10 @@ const JWT_SECRET = process.env.JWT_SECRET;
 
 if (!JWT_SECRET || JWT_SECRET.length < 32) {
   throw new Error(
-    'JWT_SECRET doit être configuré dans Render ' +
-    'avec une valeur secrète d’au moins 32 caractères.'
+    'JWT_SECRET doit être configuré dans Render avec au moins 32 caractères.'
   );
 }
 
-// Le service e-mail reste facultatif pendant la configuration.
 const emailConfigured = Boolean(
   process.env.EMAIL_USER && process.env.EMAIL_PASS
 );
@@ -49,7 +48,16 @@ function authenticateToken(req, res, next) {
   const token = authorization.slice(7);
 
   try {
-    req.auth = jwt.verify(token, JWT_SECRET);
+    req.auth = jwt.verify(token, JWT_SECRET, {
+      algorithms: ['HS256']
+    });
+
+    if (!req.auth.id) {
+      return res.status(401).json({
+        error: 'Jeton invalide.'
+      });
+    }
+
     next();
   } catch {
     return res.status(401).json({
@@ -60,17 +68,17 @@ function authenticateToken(req, res, next) {
 
 // =====================================================
 // 3. AUTORISATION ADMINISTRATEUR
+// Vérifie le rôle et le statut dans MongoDB.
 // =====================================================
 
 async function requireAdmin(req, res, next) {
   try {
-    if (!req.auth?.id || req.auth.role !== 'admin') {
-      return res.status(403).json({
-        error: 'Accès réservé à l’administrateur.'
+    if (!mongoose.Types.ObjectId.isValid(req.auth.id)) {
+      return res.status(401).json({
+        error: 'Identifiant utilisateur invalide.'
       });
     }
 
-    // Vérifie que le compte existe toujours et est autorisé.
     const admin = await User.findById(req.auth.id)
       .select('_id role statut');
 
@@ -80,11 +88,12 @@ async function requireAdmin(req, res, next) {
       admin.statut !== 'valide'
     ) {
       return res.status(403).json({
-        error: 'Compte administrateur non autorisé.'
+        error: 'Accès réservé à un administrateur autorisé.'
       });
     }
 
     req.admin = admin;
+
     next();
   } catch (error) {
     next(error);
@@ -92,7 +101,7 @@ async function requireAdmin(req, res, next) {
 }
 
 // =====================================================
-// 4. FONCTIONS UTILITAIRES
+// 4. UTILITAIRES
 // =====================================================
 
 function escapeHtml(value = '') {
@@ -118,8 +127,13 @@ function publicUser(user) {
     email: user.email,
     role: user.role,
     ville: user.ville,
+    bio: user.bio,
+    avatar: user.avatar,
     statut: user.statut,
     estVerifie: user.estVerifie,
+    totalOeuvres: user.totalOeuvres,
+    totalVentes: user.totalVentes,
+    totalVotesRecus: user.totalVotesRecus,
     createdAt: user.createdAt
   };
 }
@@ -132,6 +146,7 @@ function createToken(user) {
     },
     JWT_SECRET,
     {
+      algorithm: 'HS256',
       expiresIn: user.role === 'admin' ? '8h' : '7d'
     }
   );
@@ -142,10 +157,12 @@ async function sendValidationEmail(user) {
     console.log(
       'E-mail non envoyé : configuration e-mail incomplète.'
     );
+
     return false;
   }
 
   const nomArtiste = escapeHtml(user.nom_artiste);
+
   const appUrl = (
     process.env.FRONTEND_URL ||
     'https://art-zedmo.onrender.com'
@@ -162,13 +179,11 @@ async function sendValidationEmail(user) {
           <h2>Félicitations ${nomArtiste} !</h2>
 
           <p>
-            Votre profil ART-ZEDMO a été validé
-            par notre équipe.
+            Votre profil ART-ZEDMO a été validé par notre équipe.
           </p>
 
           <p>
-            Vous pouvez maintenant vous connecter à votre compte
-            et accéder aux fonctionnalités autorisées.
+            Vous pouvez maintenant vous connecter à votre compte.
           </p>
 
           <p>
@@ -187,16 +202,13 @@ async function sendValidationEmail(user) {
             </a>
           </p>
 
-          <p>
-            L'équipe ART-ZEDMO MARKETPLACE
-          </p>
+          <p>L'équipe ART-ZEDMO MARKETPLACE</p>
         </div>
       `
     });
 
     return true;
   } catch (error) {
-    // Une panne de messagerie ne doit pas annuler la validation.
     console.error('Erreur e-mail :', error.message);
     return false;
   }
@@ -219,41 +231,55 @@ router.post('/register', async (req, res, next) => {
       role
     } = req.body;
 
-    const nomNettoye = String(nom || '').trim();
-    const artisteNettoye = String(nom_artiste || '').trim();
-    const whatsappNettoye = String(whatsapp || '').trim();
-    const emailNettoye = String(email || '').trim().toLowerCase();
-    const passwordNettoye = String(password || '');
+    if (
+      typeof nom !== 'string' ||
+      typeof nom_artiste !== 'string' ||
+      typeof whatsapp !== 'string' ||
+      typeof email !== 'string' ||
+      typeof password !== 'string'
+    ) {
+      return res.status(400).json({
+        error: 'Les informations d’inscription sont invalides.'
+      });
+    }
+
+    const nomNettoye = nom.trim();
+    const artisteNettoye = nom_artiste.trim();
+    const whatsappNettoye = whatsapp.trim();
+    const emailNettoye = email.trim().toLowerCase();
 
     if (
       !nomNettoye ||
       !artisteNettoye ||
       !whatsappNettoye ||
       !emailNettoye ||
-      !passwordNettoye
+      !password
     ) {
       return res.status(400).json({
         error:
-          'Nom complet, nom d’artiste, WhatsApp, e-mail ' +
-          'et mot de passe sont obligatoires.'
+          'Nom complet, nom d’artiste, WhatsApp, e-mail et mot de passe obligatoires.'
       });
     }
 
-    if (passwordNettoye.length < 10) {
+    if (nomNettoye.length > 100 || artisteNettoye.length > 100) {
       return res.status(400).json({
-        error: 'Le mot de passe doit contenir au moins 10 caractères.'
+        error: 'Les noms ne doivent pas dépasser 100 caractères.'
       });
     }
 
-    if (passwordNettoye.length > 128) {
+    if (whatsappNettoye.length < 6 || whatsappNettoye.length > 25) {
       return res.status(400).json({
-        error: 'Le mot de passe est trop long.'
+        error: 'Le numéro WhatsApp est invalide.'
       });
     }
 
-    if (
-      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailNettoye)
-    ) {
+    if (password.length < 10 || password.length > 128) {
+      return res.status(400).json({
+        error: 'Le mot de passe doit contenir entre 10 et 128 caractères.'
+      });
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailNettoye)) {
       return res.status(400).json({
         error: 'Adresse e-mail invalide.'
       });
@@ -264,7 +290,7 @@ router.post('/register', async (req, res, next) => {
         { whatsapp: whatsappNettoye },
         { email: emailNettoye }
       ]
-    });
+    }).select('_id');
 
     if (existe) {
       return res.status(409).json({
@@ -272,29 +298,32 @@ router.post('/register', async (req, res, next) => {
       });
     }
 
-    // Le navigateur ne peut jamais créer un administrateur.
+    // Une inscription publique ne peut jamais créer un administrateur.
     const roleAutorise = ['artiste', 'acheteur'].includes(role)
       ? role
       : 'artiste';
+
+    const villeNettoyee =
+      typeof ville === 'string' && ville.trim()
+        ? ville.trim().slice(0, 100)
+        : 'Abomey-Calavi';
 
     const user = await User.create({
       nom: nomNettoye,
       nom_artiste: artisteNettoye,
       whatsapp: whatsappNettoye,
       email: emailNettoye,
-      password: passwordNettoye,
-      ville: String(ville || 'Abomey-Calavi').trim(),
+      password,
+      ville: villeNettoyee,
       role: roleAutorise,
       statut: 'en_attente',
       estVerifie: false
     });
 
-    // Aucun jeton n'est délivré avant validation du compte.
     return res.status(201).json({
       success: true,
       message:
-        'Votre inscription a été enregistrée. ' +
-        'Votre compte doit être validé par un administrateur.',
+        'Inscription réussie. Votre compte attend la validation d’un administrateur.',
       user: publicUser(user)
     });
   } catch (error) {
@@ -317,24 +346,36 @@ router.post('/login', async (req, res, next) => {
   try {
     const { whatsapp, email, identifiant, password } = req.body;
 
-    const loginId = String(
-      identifiant || email || whatsapp || ''
-    ).trim();
-
-    if (!loginId || !password) {
+    if (typeof password !== 'string' || !password) {
       return res.status(400).json({
         error: 'Identifiant et mot de passe obligatoires.'
       });
     }
 
-    const loginEmail = loginId.toLowerCase();
+    const loginId = String(
+      identifiant || email || whatsapp || ''
+    ).trim();
 
+    if (!loginId || loginId.length > 254) {
+      return res.status(400).json({
+        error: 'Identifiant invalide.'
+      });
+    }
+
+    const conditions = [
+      { whatsapp: loginId }
+    ];
+
+    if (loginId.includes('@')) {
+      conditions.push({
+        email: loginId.toLowerCase()
+      });
+    }
+
+    // Le mot de passe est exclu par défaut dans le modèle User.
     const user = await User.findOne({
-      $or: [
-        { whatsapp: loginId },
-        { email: loginEmail }
-      ]
-    });
+      $or: conditions
+    }).select('+password');
 
     if (!user || !(await user.comparePassword(password))) {
       return res.status(401).json({
@@ -373,14 +414,19 @@ router.post('/login', async (req, res, next) => {
 });
 
 // =====================================================
-// 7. PROFIL DE L'UTILISATEUR CONNECTÉ
+// 7. PROFIL CONNECTÉ
 // GET /api/auth/me
 // =====================================================
 
 router.get('/me', authenticateToken, async (req, res, next) => {
   try {
-    const user = await User.findById(req.auth.id)
-      .select('-password');
+    if (!mongoose.Types.ObjectId.isValid(req.auth.id)) {
+      return res.status(401).json({
+        error: 'Identifiant utilisateur invalide.'
+      });
+    }
+
+    const user = await User.findById(req.auth.id);
 
     if (!user) {
       return res.status(404).json({
@@ -390,34 +436,50 @@ router.get('/me', authenticateToken, async (req, res, next) => {
 
     if (user.statut !== 'valide') {
       return res.status(403).json({
-        error: 'Compte non autorisé.'
+        error: 'Votre compte n’est plus autorisé.'
       });
     }
 
-    res.json(publicUser(user));
+    return res.json(publicUser(user));
   } catch (error) {
     next(error);
   }
 });
 
 // =====================================================
-// 8. COMPATIBILITÉ AVEC L'ANCIENNE ROUTE /me/:id
+// 8. PROFIL PAR IDENTIFIANT
 // GET /api/auth/me/:id
 // =====================================================
 
 router.get('/me/:id', authenticateToken, async (req, res, next) => {
   try {
     const requestedId = req.params.id;
-    const ownProfile = req.auth.id === requestedId;
 
-    if (!ownProfile && req.auth.role !== 'admin') {
-      return res.status(403).json({
-        error: 'Vous ne pouvez pas consulter ce profil.'
+    if (!mongoose.Types.ObjectId.isValid(requestedId)) {
+      return res.status(400).json({
+        error: 'Identifiant utilisateur invalide.'
       });
     }
 
-    const user = await User.findById(requestedId)
-      .select('-password');
+    const ownProfile = req.auth.id === requestedId;
+
+    // Vérification en base : un ancien rôle JWT ne suffit pas.
+    if (!ownProfile) {
+      const requester = await User.findById(req.auth.id)
+        .select('_id role statut');
+
+      if (
+        !requester ||
+        requester.role !== 'admin' ||
+        requester.statut !== 'valide'
+      ) {
+        return res.status(403).json({
+          error: 'Vous ne pouvez pas consulter ce profil.'
+        });
+      }
+    }
+
+    const user = await User.findById(requestedId);
 
     if (!user) {
       return res.status(404).json({
@@ -425,7 +487,13 @@ router.get('/me/:id', authenticateToken, async (req, res, next) => {
       });
     }
 
-    res.json(publicUser(user));
+    if (user.statut !== 'valide' && !ownProfile) {
+      return res.status(403).json({
+        error: 'Ce compte n’est pas autorisé.'
+      });
+    }
+
+    return res.json(publicUser(user));
   } catch (error) {
     next(error);
   }
@@ -440,12 +508,27 @@ router.get('/me/:id', authenticateToken, async (req, res, next) => {
 router.get('/', authenticateToken, requireAdmin, async (req, res, next) => {
   try {
     const users = await User.find()
-      .select('-password')
       .sort({ createdAt: -1 })
       .limit(100)
       .lean();
 
-    res.json(users);
+    return res.json(
+      users.map(user => ({
+        _id: user._id,
+        nom: user.nom,
+        nom_artiste: user.nom_artiste,
+        whatsapp: user.whatsapp,
+        email: user.email,
+        role: user.role,
+        ville: user.ville,
+        statut: user.statut,
+        estVerifie: user.estVerifie,
+        totalOeuvres: user.totalOeuvres,
+        totalVentes: user.totalVentes,
+        totalVotesRecus: user.totalVotesRecus,
+        createdAt: user.createdAt
+      }))
+    );
   } catch (error) {
     next(error);
   }
@@ -454,16 +537,27 @@ router.get('/', authenticateToken, requireAdmin, async (req, res, next) => {
 // =====================================================
 // 10. VALIDATION D'UN COMPTE
 // PUT /api/auth/:id/valider
-// ADMIN UNIQUEMENT
 // =====================================================
 
 async function validateUserHandler(req, res, next) {
   try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({
+        error: 'Identifiant utilisateur invalide.'
+      });
+    }
+
     const user = await User.findById(req.params.id);
 
     if (!user) {
       return res.status(404).json({
         error: 'Utilisateur introuvable.'
+      });
+    }
+
+    if (user.role === 'admin') {
+      return res.status(403).json({
+        error: 'Cette route ne permet pas de modifier le statut d’un administrateur.'
       });
     }
 
@@ -474,10 +568,11 @@ async function validateUserHandler(req, res, next) {
 
     const emailSent = await sendValidationEmail(user);
 
-    res.json({
+    return res.json({
       success: true,
-      user: publicUser(user),
-      emailSent
+      message: 'Compte validé.',
+      emailSent,
+      user: publicUser(user)
     });
   } catch (error) {
     next(error);
@@ -491,8 +586,7 @@ router.put(
   validateUserHandler
 );
 
-// Ancienne route conservée temporairement pour compatibilité.
-// Elle bénéficie des mêmes contrôles d'accès.
+// Ancienne route conservée pour compatibilité.
 router.put(
   '/users/:id/valider',
   authenticateToken,
@@ -503,7 +597,6 @@ router.put(
 // =====================================================
 // 11. REFUSER UN COMPTE
 // PUT /api/auth/:id/refuser
-// ADMIN UNIQUEMENT
 // =====================================================
 
 router.put(
@@ -512,6 +605,12 @@ router.put(
   requireAdmin,
   async (req, res, next) => {
     try {
+      if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+        return res.status(400).json({
+          error: 'Identifiant utilisateur invalide.'
+        });
+      }
+
       const user = await User.findById(req.params.id);
 
       if (!user) {
@@ -520,13 +619,20 @@ router.put(
         });
       }
 
+      if (user.role === 'admin') {
+        return res.status(403).json({
+          error: 'Impossible de refuser un compte administrateur depuis cette route.'
+        });
+      }
+
       user.statut = 'refuse';
       user.estVerifie = false;
 
       await user.save();
 
-      res.json({
+      return res.json({
         success: true,
+        message: 'Compte refusé.',
         user: publicUser(user)
       });
     } catch (error) {
@@ -538,86 +644,62 @@ router.put(
 // =====================================================
 // 12. SUPPRESSION D'UN COMPTE
 // DELETE /api/auth/:id
-// ADMIN UNIQUEMENT
 // =====================================================
+
+async function deleteUserHandler(req, res, next) {
+  try {
+    const requestedId = req.params.id;
+
+    if (!mongoose.Types.ObjectId.isValid(requestedId)) {
+      return res.status(400).json({
+        error: 'Identifiant utilisateur invalide.'
+      });
+    }
+
+    if (requestedId === req.auth.id) {
+      return res.status(400).json({
+        error: 'Vous ne pouvez pas supprimer votre propre compte administrateur.'
+      });
+    }
+
+    const user = await User.findById(requestedId);
+
+    if (!user) {
+      return res.status(404).json({
+        error: 'Utilisateur introuvable.'
+      });
+    }
+
+    if (user.role === 'admin') {
+      return res.status(403).json({
+        error: 'La suppression d’un administrateur est interdite par cette route.'
+      });
+    }
+
+    await User.deleteOne({ _id: user._id });
+
+    return res.json({
+      success: true,
+      message: 'Compte supprimé.'
+    });
+  } catch (error) {
+    next(error);
+  }
+}
 
 router.delete(
   '/:id',
   authenticateToken,
   requireAdmin,
-  async (req, res, next) => {
-    try {
-      if (req.params.id === req.auth.id) {
-        return res.status(400).json({
-          error: 'Vous ne pouvez pas supprimer votre propre compte administrateur.'
-        });
-      }
-
-      const user = await User.findById(req.params.id);
-
-      if (!user) {
-        return res.status(404).json({
-          error: 'Utilisateur introuvable.'
-        });
-      }
-
-      if (user.role === 'admin') {
-        return res.status(403).json({
-          error:
-            'La suppression d’un administrateur doit suivre une procédure dédiée.'
-        });
-      }
-
-      await User.deleteOne({ _id: user._id });
-
-      res.json({
-        success: true,
-        message: 'Compte supprimé.'
-      });
-    } catch (error) {
-      next(error);
-    }
-  }
+  deleteUserHandler
 );
 
-// Ancienne route conservée temporairement.
-// Elle doit elle aussi être protégée.
+// Ancienne route conservée pour compatibilité.
 router.delete(
   '/users/:id',
   authenticateToken,
   requireAdmin,
-  async (req, res, next) => {
-    try {
-      if (req.params.id === req.auth.id) {
-        return res.status(400).json({
-          error: 'Vous ne pouvez pas supprimer votre propre compte administrateur.'
-        });
-      }
-
-      const user = await User.findById(req.params.id);
-
-      if (!user) {
-        return res.status(404).json({
-          error: 'Utilisateur introuvable.'
-        });
-      }
-
-      if (user.role === 'admin') {
-        return res.status(403).json({
-          error: 'La suppression d’un administrateur est interdite par cette route.'
-        });
-      }
-
-      await User.deleteOne({ _id: user._id });
-
-      res.json({
-        success: true,
-        message: 'Compte supprimé.'
-      });
-    } catch (error) {
-      next(error);
-    }
-  }
+  deleteUserHandler
 );
 
 export default router;
