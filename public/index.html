@@ -1,1606 +1,2240 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="theme-color" content="#0A0A0A">
-<meta name="description" content="ART-ZEDMO MARKETPLACE : galerie, expositions et enchères d'art africain.">
-<title>ART-ZEDMO MARKETPLACE - L'art sans frontière</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0b0b0b">
+  <meta name="description" content="ART-ZEDMO MARKETPLACE : découvrez, exposez et collectionnez des œuvres d'art.">
+  <title>ART-ZEDMO MARKETPLACE</title>
 
-<script src="https://cdn.tailwindcss.com"></script>
-<link rel="stylesheet"
- href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
-<script src="https://sdk.minepi.com/pi-sdk.js"></script>
+  <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 
-<style>
-:root{
-  --or:#D4AF37;
-  --noir:#0A0A0A;
-}
-*{box-sizing:border-box}
-body{
-  background:var(--noir);
-  color:#fff;
-  font-family:Arial,Helvetica,sans-serif;
-}
-.or{color:var(--or)}
-.bg-or{background:var(--or)}
-.border-or{border-color:var(--or)}
-.tab-active{color:var(--or)!important;border-top:2px solid var(--or)}
-.hidden-tab{display:none!important}
-.eco-loop{
-  border:1px solid #292929;
-  background:linear-gradient(180deg,#141414,#0A0A0A);
-}
-.certif-paper{background:#fff;color:#111}
-input,textarea,select{max-width:100%}
-button{transition:opacity .2s}
-button:disabled{opacity:.45;cursor:not-allowed}
-.card{
-  background:#141414;
-  border:1px solid #292929;
-  border-radius:14px;
-  overflow:hidden;
-}
-.field{
-  width:100%;
-  background:#f4f4f5;
-  color:#111;
-  border:1px solid #ddd;
-  border-radius:12px;
-  padding:12px;
-  font-size:14px;
-}
-.modal{
-  position:fixed;
-  inset:0;
-  z-index:100;
-  background:rgba(0,0,0,.9);
-  display:flex;
-  align-items:flex-end;
-  justify-content:center;
-}
-.modal-panel{
-  background:#fff;
-  color:#111;
-  width:100%;
-  max-width:560px;
-  max-height:92vh;
-  overflow-y:auto;
-  padding:24px;
-  border-radius:24px 24px 0 0;
-}
-.status-msg{font-size:12px;margin-top:8px;white-space:pre-wrap}
-</style>
+  <style>
+    :root {
+      --bg: #090909;
+      --surface: #141414;
+      --surface2: #1d1d1d;
+      --gold: #d4af37;
+      --gold-light: #f5d76e;
+      --text: #f5f5f5;
+      --muted: #a8a8a8;
+      --border: #343434;
+      --success: #31c48d;
+      --danger: #ef4444;
+      --radius: 16px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Arial, Helvetica, sans-serif;
+      padding-bottom: 85px;
+    }
+
+    button, input, textarea, select {
+      font: inherit;
+    }
+
+    button {
+      cursor: pointer;
+    }
+
+    button:disabled {
+      opacity: .5;
+      cursor: not-allowed;
+    }
+
+    a {
+      color: var(--gold-light);
+      text-decoration: none;
+    }
+
+    img {
+      max-width: 100%;
+    }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 5%;
+      background: rgba(9, 9, 9, .96);
+      border-bottom: 1px solid var(--border);
+      backdrop-filter: blur(12px);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+    }
+
+    .brand-logo {
+      display: grid;
+      place-items: center;
+      width: 42px;
+      height: 42px;
+      flex-shrink: 0;
+      border: 2px solid var(--gold);
+      border-radius: 50%;
+      color: var(--gold);
+      font-weight: 900;
+    }
+
+    .brand-name {
+      color: var(--gold);
+      font-size: 15px;
+      font-weight: 900;
+      letter-spacing: .6px;
+    }
+
+    .brand-subtitle {
+      margin-top: 3px;
+      color: var(--muted);
+      font-size: 10px;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .icon-btn {
+      width: 38px;
+      height: 38px;
+      border: 1px solid var(--border);
+      border-radius: 50%;
+      color: var(--gold);
+      background: var(--surface);
+    }
+
+    .container {
+      width: min(1200px, 92%);
+      margin: auto;
+    }
+
+    .hero {
+      position: relative;
+      overflow: hidden;
+      margin-top: 22px;
+      padding: 45px 24px;
+      border: 1px solid #66521b;
+      border-radius: 22px;
+      background:
+        radial-gradient(circle at 90% 10%, #5c491b55, transparent 35%),
+        linear-gradient(140deg, #1d1a10, #111, #090909);
+    }
+
+    .hero h1 {
+      max-width: 700px;
+      margin: 0 0 15px;
+      font-size: clamp(30px, 5vw, 55px);
+      line-height: 1.12;
+    }
+
+    .gold {
+      color: var(--gold);
+    }
+
+    .hero p {
+      max-width: 650px;
+      color: #ccc;
+      line-height: 1.7;
+    }
+
+    .hero-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 24px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 12px 17px;
+      border: 1px solid var(--gold);
+      border-radius: 10px;
+      background: var(--gold);
+      color: #111;
+      font-weight: 700;
+    }
+
+    .btn:hover {
+      filter: brightness(1.1);
+    }
+
+    .btn-outline {
+      background: transparent;
+      color: var(--gold);
+    }
+
+    .btn-small {
+      padding: 9px 12px;
+      font-size: 13px;
+    }
+
+    .section {
+      margin-top: 38px;
+      scroll-margin-top: 85px;
+    }
+
+    .section-heading {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+
+    .section-heading h2 {
+      margin: 0;
+      font-size: 23px;
+    }
+
+    .section-heading h2 i {
+      margin-right: 8px;
+      color: var(--gold);
+    }
+
+    .muted {
+      color: var(--muted);
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-top: 22px;
+    }
+
+    .stat {
+      padding: 17px;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: var(--surface);
+    }
+
+    .stat strong {
+      display: block;
+      margin-bottom: 5px;
+      color: var(--gold);
+      font-size: 24px;
+    }
+
+    .stat span {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .notice {
+      margin-top: 20px;
+      padding: 15px;
+      border: 1px solid #6a551e;
+      border-radius: 12px;
+      background: #241e0e;
+      line-height: 1.5;
+    }
+
+    .notice.success {
+      border-color: #1c7655;
+      background: #10251d;
+    }
+
+    .notice.error {
+      border-color: #7e2929;
+      background: #2a1111;
+    }
+
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 18px;
+    }
+
+    .field {
+      width: 100%;
+      padding: 12px 13px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      outline: none;
+      background: #101010;
+      color: var(--text);
+    }
+
+    .field:focus {
+      border-color: var(--gold);
+    }
+
+    .toolbar .field {
+      flex: 1;
+      min-width: 180px;
+    }
+
+    textarea.field {
+      min-height: 100px;
+      resize: vertical;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 18px;
+    }
+
+    .card {
+      overflow: hidden;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface);
+    }
+
+    .art-image {
+      display: grid;
+      place-items: center;
+      width: 100%;
+      height: 235px;
+      background: #202020;
+      color: var(--gold);
+      object-fit: cover;
+    }
+
+    .art-image.placeholder {
+      font-size: 45px;
+    }
+
+    .card-body {
+      padding: 16px;
+    }
+
+    .card-body h3 {
+      margin: 0 0 8px;
+      overflow-wrap: anywhere;
+    }
+
+    .card-body p {
+      color: #c5c5c5;
+      font-size: 14px;
+      line-height: 1.55;
+      overflow-wrap: anywhere;
+    }
+
+    .card-meta {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 8px;
+      margin: 12px 0;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .price {
+      color: var(--gold-light);
+      font-size: 17px;
+      font-weight: 800;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 5px 8px;
+      border: 1px solid #65511e;
+      border-radius: 30px;
+      background: #2a220f;
+      color: var(--gold-light);
+      font-size: 11px;
+    }
+
+    .card-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 14px;
+    }
+
+    .card-actions .btn {
+      flex: 1;
+    }
+
+    .empty {
+      grid-column: 1 / -1;
+      padding: 28px 18px;
+      border: 1px dashed var(--border);
+      border-radius: 14px;
+      color: var(--muted);
+      text-align: center;
+      line-height: 1.6;
+    }
+
+    .ranking-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .ranking-item {
+      display: flex;
+      align-items: center;
+      gap: 13px;
+      padding: 14px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: var(--surface);
+    }
+
+    .rank-number {
+      display: grid;
+      place-items: center;
+      width: 36px;
+      height: 36px;
+      flex-shrink: 0;
+      border-radius: 50%;
+      background: #33290f;
+      color: var(--gold);
+      font-weight: 900;
+    }
+
+    .ranking-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .ranking-info strong {
+      display: block;
+      overflow-wrap: anywhere;
+    }
+
+    .ranking-info span {
+      display: block;
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .bottom-nav {
+      position: fixed;
+      right: 0;
+      bottom: 0;
+      left: 0;
+      z-index: 100;
+      display: flex;
+      justify-content: space-around;
+      padding: 9px 3px calc(9px + env(safe-area-inset-bottom));
+      border-top: 1px solid var(--border);
+      background: #101010f5;
+      backdrop-filter: blur(12px);
+    }
+
+    .nav-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 5px;
+      padding: 5px 7px;
+      border: 0;
+      background: transparent;
+      color: var(--muted);
+      font-size: 10px;
+    }
+
+    .nav-item i {
+      font-size: 18px;
+    }
+
+    .nav-item.active {
+      color: var(--gold);
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 13px;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+
+    .form-group label {
+      color: #ddd;
+      font-size: 13px;
+    }
+
+    .full-width {
+      grid-column: 1 / -1;
+    }
+
+    .panel {
+      padding: 20px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface);
+    }
+
+    .panel h3 {
+      margin-top: 0;
+    }
+
+    .account-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin: 15px 0;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .modal {
+      position: fixed;
+      inset: 0;
+      z-index: 500;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 15px;
+      background: #000c;
+    }
+
+    .modal.open {
+      display: flex;
+    }
+
+    .modal-content {
+      width: min(600px, 100%);
+      max-height: 90vh;
+      overflow-y: auto;
+      padding: 22px;
+      border: 1px solid var(--gold);
+      border-radius: 18px;
+      background: #111;
+    }
+
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .modal-header h2 {
+      margin: 0;
+      color: var(--gold);
+      font-size: 21px;
+    }
+
+    .close-btn {
+      width: 35px;
+      height: 35px;
+      border: 1px solid var(--border);
+      border-radius: 50%;
+      background: var(--surface2);
+      color: white;
+    }
+
+    .form-message {
+      margin-top: 12px;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .footer {
+      margin-top: 45px;
+      padding: 25px 10px;
+      border-top: 1px solid var(--border);
+      color: var(--muted);
+      text-align: center;
+      font-size: 12px;
+      line-height: 1.7;
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid #777;
+      border-top-color: var(--gold);
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    @media (max-width: 850px) {
+      .grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 550px) {
+      .topbar {
+        padding: 11px 4%;
+      }
+
+      .brand-name {
+        font-size: 12px;
+      }
+
+      .brand-subtitle {
+        font-size: 9px;
+      }
+
+      .hero {
+        padding: 30px 18px;
+      }
+
+      .stats {
+        gap: 8px;
+      }
+
+      .stat {
+        padding: 12px 8px;
+      }
+
+      .stat strong {
+        font-size: 19px;
+      }
+
+      .stat span {
+        font-size: 10px;
+      }
+
+      .grid {
+        grid-template-columns: 1fr;
+      }
+
+      .art-image {
+        height: 260px;
+      }
+
+      .form-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .full-width {
+        grid-column: auto;
+      }
+
+      .section-heading h2 {
+        font-size: 20px;
+      }
+    }
+  </style>
 </head>
 
-<body class="pb-24">
-
-<header class="p-4 flex justify-between items-center border-b border-zinc-800 sticky top-0 bg-black/95 z-50">
-  <div class="flex items-center gap-2">
-    <div class="w-9 h-9 bg-or text-black font-black flex items-center justify-center rounded">AZ</div>
-    <span class="font-bold tracking-widest">ART-ZEDMO</span>
-  </div>
-  <span id="badgeAnnonce"
-    class="hidden text-[10px] bg-zinc-900 border border-or px-2 py-1 rounded-full or">
-  </span>
-</header>
-
-<!-- ACCUEIL -->
-<section id="accueil" class="tab">
-  <div class="p-6 text-center mt-2">
-    <h1 class="text-[32px] font-black leading-tight">
-      L'art africain<br><span class="or">sans frontière.</span>
-    </h1>
-
-    <p class="text-zinc-300 text-sm mt-4 leading-relaxed">
-      Bienvenue sur ART-ZEDMO MARKETPLACE.
-      Découvrez les artistes, exposez vos créations et participez
-      à la valorisation de l'art africain.
-    </p>
-
-    <div class="flex flex-wrap gap-3 justify-center mt-6">
-      <button onclick="go('galerie')"
-        class="bg-or text-black px-6 py-3 rounded-full font-bold text-sm">
-        Explorer la galerie
-      </button>
-
-      <button onclick="go('expos')"
-        class="border border-white px-6 py-3 rounded-full font-bold text-sm">
-        Expositions
-      </button>
-    </div>
-  </div>
-
-  <div id="blocAnnonceAccueil" class="hidden m-4"></div>
-
-  <div class="m-4 p-4 eco-loop rounded-2xl">
-    <h2 class="text-center font-bold text-xs tracking-widest or mb-4">
-      L'ÉCOSYSTÈME ART-ZEDMO
-    </h2>
-
-    <div class="grid grid-cols-2 gap-3 text-[11px]">
-      <div class="border border-or/30 rounded-xl p-3">
-        <p class="or font-bold"><i class="fa-solid fa-palette"></i> ARTISTE</p>
-        <p class="mt-2 text-zinc-300">
-          Créer un compte, publier des œuvres et participer aux expositions.
-        </p>
+<body>
+  <header class="topbar">
+    <a href="#accueil" class="brand" aria-label="Accueil ART-ZEDMO">
+      <div class="brand-logo">AZ</div>
+      <div>
+        <div class="brand-name">ART-ZEDMO</div>
+        <div class="brand-subtitle">MARKETPLACE DES ARTS</div>
       </div>
+    </a>
 
-      <div class="border border-white/20 rounded-xl p-3">
-        <p class="font-bold"><i class="fa-solid fa-cart-shopping"></i> COLLECTIONNEUR</p>
-        <p class="mt-2 text-zinc-300">
-          Découvrir les créations et participer aux enchères disponibles.
-        </p>
-      </div>
-    </div>
-
-    <button onclick="go('verifier')"
-      class="w-full mt-4 bg-zinc-900 border border-or/30 py-3 rounded-full text-xs font-bold or">
-      <i class="fa-solid fa-qrcode"></i>
-      Vérifier une œuvre
-    </button>
-  </div>
-
-  <div class="mx-4 mb-5">
-    <h2 class="font-bold text-lg mb-3">Œuvres à découvrir</h2>
-    <div id="accueilOeuvres" class="grid grid-cols-2 gap-3">
-      <p class="text-zinc-500 text-xs">Chargement des œuvres...</p>
-    </div>
-  </div>
-</section>
-
-<!-- GALERIE -->
-<section id="galerie" class="tab hidden-tab p-4">
-  <div class="flex justify-between items-center gap-2">
-    <h2 class="font-black text-xl">Galerie <span id="countG" class="or text-sm"></span></h2>
-    <button onclick="loadGalerie()"
-      class="border border-zinc-700 px-3 py-2 rounded-full text-xs">
-      <i class="fa-solid fa-rotate"></i>
-    </button>
-  </div>
-
-  <input id="rechercheGalerie"
-    class="w-full mt-4 bg-zinc-900 border border-zinc-700 rounded-xl px-4 py-3 text-sm"
-    placeholder="Rechercher une œuvre ou un artiste..."
-    oninput="afficherGalerie()">
-
-  <div id="gridGalerie" class="grid grid-cols-2 gap-3 mt-4"></div>
-
-  <button onclick="openPublier()"
-    class="w-full mt-6 border border-dashed border-or/50 py-4 rounded-xl text-sm or font-bold">
-    <i class="fa-solid fa-plus"></i> Publier une œuvre
-  </button>
-</section>
-
-<!-- EXPOSITIONS -->
-<section id="expos" class="tab hidden-tab p-4">
-  <h2 class="font-black text-xl or">Expositions</h2>
-
-  <p class="text-zinc-400 text-xs mt-2">
-    Découvrez les expositions et les œuvres participantes.
-  </p>
-
-  <div class="flex gap-2 mt-4">
-    <button onclick="openMesOeuvresExpo()"
-      class="bg-white text-black px-4 py-2 rounded-full text-xs font-bold">
-      <i class="fa-solid fa-plus"></i> Proposer mon œuvre
-    </button>
-
-    <button onclick="loadExpo()"
-      class="border border-zinc-700 px-4 py-2 rounded-full text-xs">
-      Actualiser
-    </button>
-  </div>
-
-  <div id="mesOeuvresExpo" class="hidden mt-3 bg-zinc-900 p-3 rounded-xl text-xs"></div>
-  <div id="listExpoOeuvres" class="mt-4 space-y-3"></div>
-
-  <div id="expoMessage" class="status-msg"></div>
-</section>
-
-<!-- ENCHÈRES -->
-<section id="encheres" class="tab hidden-tab p-4">
-  <h2 class="font-black text-xl">Enchères</h2>
-  <p class="or text-sm mt-1">L'art prend de la valeur.</p>
-
-  <p class="text-xs text-zinc-400 mt-2">
-    Consultez les enchères actuellement disponibles.
-  </p>
-
-  <button onclick="loadEncheres()"
-    class="mt-4 border border-zinc-700 px-4 py-2 rounded-full text-xs">
-    Actualiser
-  </button>
-
-  <div id="listEncheres" class="mt-5 space-y-4"></div>
-</section>
-
-<!-- VÉRIFICATION -->
-<section id="verifier" class="tab hidden-tab p-4">
-  <h2 class="font-black text-xl">Vérifier une œuvre</h2>
-
-  <p class="text-xs text-zinc-400 mt-2">
-    Saisissez l'identifiant AZM de l'œuvre.
-  </p>
-
-  <div class="mt-4 flex gap-2">
-    <input id="inputAZM"
-      placeholder="Ex. : AZM-2026-000125"
-      class="flex-1 min-w-0 bg-zinc-900 border border-zinc-800 rounded-full px-4 py-3 text-sm uppercase">
-
-    <button onclick="verifierAZM()"
-      class="bg-or text-black px-5 rounded-full font-black text-sm">
-      Vérifier
-    </button>
-  </div>
-
-  <div id="resultVerif" class="mt-4"></div>
-</section>
-
-<!-- COMPTE -->
-<section id="compte" class="tab hidden-tab p-4 pb-32">
-  <h2 class="font-black text-xl">Mon compte AZ</h2>
-  <p class="or text-sm mt-1">Votre espace artiste et collectionneur.</p>
-
-  <div id="resumeCompte"
-    class="mt-4 bg-zinc-900 border border-zinc-800 p-4 rounded-xl">
-    <p id="compteNom" class="font-bold">Vous n'êtes pas connecté.</p>
-    <p id="compteStatut" class="text-xs text-zinc-400 mt-2"></p>
-  </div>
-
-  <div id="actionsNonConnecte" class="mt-4 space-y-3">
-    <button onclick="openProfil()"
-      class="w-full bg-or text-black py-3 rounded-full font-bold">
-      Créer un compte
-    </button>
-
-    <button onclick="openLogin()"
-      class="w-full border border-zinc-700 py-3 rounded-full font-bold">
-      Se connecter
-    </button>
-  </div>
-
-  <div id="actionsConnecte" class="hidden mt-4">
-    <div class="flex bg-zinc-900 rounded-full p-1 text-xs font-bold">
-      <button id="btnArt" onclick="setRole('artiste')"
-        class="flex-1 py-3 rounded-full">
-        Artiste
+    <div class="header-actions">
+      <button class="icon-btn" type="button"
+              aria-label="Actualiser" onclick="actualiserTout()">
+        <i class="fas fa-rotate"></i>
       </button>
 
-      <button id="btnCol" onclick="setRole('acheteur')"
-        class="flex-1 py-3 rounded-full">
-        Collectionneur
+      <button class="icon-btn" type="button"
+              aria-label="Mon compte" onclick="allerA('compte')">
+        <i class="fas fa-user"></i>
       </button>
     </div>
+  </header>
 
-    <div id="blocArtiste" class="mt-4">
-      <div class="grid grid-cols-2 gap-3">
-        <div class="card p-4">
-          <p class="text-xs text-zinc-400">Mes œuvres</p>
-          <p id="myOeuvres" class="or font-bold text-lg mt-2">0</p>
-        </div>
+  <main class="container">
+    <!-- ACCUEIL -->
+    <section id="accueil" class="hero">
+      <span class="badge">L'art, la culture et la création</span>
 
-        <div class="card p-4">
-          <p class="text-xs text-zinc-400">Statut</p>
-          <p id="myStatut" class="or font-bold text-sm mt-2">-</p>
-        </div>
-      </div>
+      <h1>
+        Découvrez l'art.<br>
+        <span class="gold">Soutenez les artistes.</span>
+      </h1>
 
-      <button onclick="openPublier()"
-        class="w-full mt-4 bg-or text-black py-3 rounded-full font-bold">
-        <i class="fa-solid fa-plus"></i> Publier une œuvre
-      </button>
-
-      <div id="mesOeuvresList" class="mt-4 space-y-2"></div>
-
-      <div class="mt-5 card p-4">
-        <h3 class="font-bold text-sm or">Enregistrements NFT</h3>
-        <p class="text-[11px] text-zinc-400 mt-2">
-          Cette section présente les données disponibles dans la base.
-          Un enregistrement ne prouve pas, à lui seul, qu'un NFT a été créé sur une blockchain.
-        </p>
-        <div id="mesNFTVendus" class="mt-3 text-xs text-zinc-400"></div>
-      </div>
-    </div>
-
-    <div id="blocCollectionneur" class="hidden mt-4 space-y-3">
-      <button onclick="go('galerie')"
-        class="w-full bg-or text-black py-3 rounded-full font-bold">
-        Explorer la galerie
-      </button>
-
-      <button onclick="go('encheres')"
-        class="w-full bg-zinc-800 py-3 rounded-full font-bold">
-        Explorer les enchères
-      </button>
-    </div>
-
-    <button onclick="logout()"
-      class="w-full mt-6 bg-red-600/20 border border-red-600 text-red-400 py-3 rounded-full font-bold">
-      Se déconnecter
-    </button>
-  </div>
-</section>
-
-<!-- MODAL INSCRIPTION -->
-<div id="modalProfil" class="modal hidden">
-  <div class="modal-panel">
-    <div class="flex justify-between items-center">
-      <h3 class="font-black text-lg">Créer un compte</h3>
-      <button onclick="closeModal('modalProfil')"
-        class="w-9 h-9 bg-zinc-100 rounded-full">✕</button>
-    </div>
-
-    <p class="text-xs text-zinc-500 mt-2">
-      Votre demande sera soumise aux règles de validation de la plateforme.
-    </p>
-
-    <div class="mt-4 space-y-3">
-      <input id="p-nom" class="field" placeholder="Nom complet *">
-      <input id="p-artiste" class="field" placeholder="Nom d'artiste (si applicable)">
-      <input id="p-wa" class="field" placeholder="WhatsApp avec indicatif">
-      <input id="p-email" class="field" type="email" placeholder="Email *">
-      <input id="p-password" class="field" type="password" placeholder="Mot de passe *">
-
-      <select id="p-role" class="field">
-        <option value="artiste">Je suis artiste</option>
-        <option value="acheteur">Je suis collectionneur</option>
-      </select>
-
-      <button id="btnCreer" onclick="creerProfil()"
-        class="w-full bg-black text-white py-3 rounded-full font-bold">
-        Envoyer ma demande
-      </button>
-
-      <p id="msgProfil" class="status-msg"></p>
-
-      <p class="text-xs text-center">
-        Déjà inscrit ?
-        <button onclick="closeModal('modalProfil');openLogin()"
-          class="underline font-bold">Se connecter</button>
+      <p>
+        ART-ZEDMO MARKETPLACE est un espace destiné à la découverte,
+        à l'exposition et à la valorisation des œuvres d'art.
+        Découvrez les créations, participez aux expositions et votez
+        pour vos œuvres préférées.
       </p>
-    </div>
-  </div>
-</div>
 
-<!-- MODAL CONNEXION -->
-<div id="modalLogin" class="modal hidden">
-  <div class="modal-panel">
-    <div class="flex justify-between items-center">
-      <h3 class="font-black text-lg">Connexion</h3>
-      <button onclick="closeModal('modalLogin')"
-        class="w-9 h-9 bg-zinc-100 rounded-full">✕</button>
-    </div>
+      <div class="hero-buttons">
+        <button class="btn" onclick="allerA('galerie')">
+          <i class="fas fa-images"></i> Explorer la galerie
+        </button>
 
-    <div class="mt-4 space-y-3">
-      <input id="l-identifiant" class="field" placeholder="Email ou WhatsApp">
-      <input id="l-password" class="field" type="password" placeholder="Mot de passe">
-
-      <button id="btnLogin" onclick="login()"
-        class="w-full bg-black text-white py-3 rounded-full font-bold">
-        Se connecter
-      </button>
-
-      <p id="msgLogin" class="status-msg"></p>
-    </div>
-  </div>
-</div>
-
-<!-- MODAL PUBLICATION -->
-<div id="modalPublier" class="modal hidden">
-  <div class="modal-panel">
-    <div class="flex justify-between items-center">
-      <h3 class="font-black text-lg">Publier une œuvre</h3>
-      <button onclick="closeModal('modalPublier')"
-        class="w-9 h-9 bg-zinc-100 rounded-full">✕</button>
-    </div>
-
-    <p class="text-xs text-zinc-500 mt-2">
-      L'œuvre sera soumise au processus de validation.
-    </p>
-
-    <div class="mt-4 space-y-3">
-      <input id="o-titre" class="field" placeholder="Titre de l'œuvre *">
-
-      <textarea id="o-description" class="field"
-        placeholder="Description de l'œuvre" rows="4"></textarea>
-
-      <input id="o-prix" type="number" min="0" class="field"
-        placeholder="Prix indicatif en FCFA *">
-
-      <input id="o-categorie" class="field"
-        placeholder="Catégorie artistique">
-
-      <label class="block text-xs font-bold">Image de l'œuvre *</label>
-      <input type="file" id="o-file" accept="image/*"
-        class="w-full text-xs">
-
-      <div id="previewOeuvreGalerieBox" class="hidden">
-        <img id="previewOeuvreGalerieImg"
-          class="w-full h-48 object-cover rounded-xl">
-      </div>
-
-      <button id="btnPublierGalerie" onclick="publierOeuvreGalerie()"
-        class="w-full bg-black text-white py-3 rounded-full font-bold">
-        Publier l'œuvre
-      </button>
-
-      <p id="msgOeuvreGalerie" class="status-msg"></p>
-    </div>
-  </div>
-</div>
-
-<!-- CERTIFICAT -->
-<div id="modalCertificat"
-  class="fixed inset-0 bg-black/95 z-[120] hidden items-center justify-center p-4">
-  <div class="certif-paper w-full max-w-[400px] rounded-xl p-6 relative">
-    <button onclick="closeModal('modalCertificat')"
-      class="absolute top-2 right-2 w-8 h-8 bg-zinc-100 rounded-full">✕</button>
-
-    <div id="certifContent"></div>
-    <div id="qrcode" class="flex justify-center mt-4"></div>
-  </div>
-</div>
-
-<!-- NAVIGATION -->
-<nav class="fixed bottom-0 left-0 right-0 bg-black border-t border-zinc-800 flex justify-around py-2.5 z-50">
-  <button onclick="go('accueil')" id="nav-accueil"
-    class="tab-btn tab-active flex flex-col items-center text-[10px] gap-1">
-    <i class="fa-solid fa-house text-base"></i>Accueil
-  </button>
-
-  <button onclick="go('galerie')" id="nav-galerie"
-    class="tab-btn flex flex-col items-center text-[10px] text-zinc-500 gap-1">
-    <i class="fa-solid fa-images text-base"></i>Galerie
-  </button>
-
-  <button onclick="go('expos')" id="nav-expos"
-    class="tab-btn flex flex-col items-center text-[10px] text-zinc-500 gap-1">
-    <i class="fa-solid fa-landmark text-base"></i>Expos
-  </button>
-
-  <button onclick="go('encheres')" id="nav-encheres"
-    class="tab-btn flex flex-col items-center text-[10px] text-zinc-500 gap-1">
-    <i class="fa-solid fa-gavel text-base"></i>Enchères
-  </button>
-
-  <button onclick="go('compte')" id="nav-compte"
-    class="tab-btn flex flex-col items-center text-[10px] text-zinc-500 gap-1">
-    <i class="fa-solid fa-user text-base"></i>Compte
-  </button>
-
-  <button onclick="go('verifier')" id="nav-verifier"
-    class="tab-btn flex flex-col items-center text-[10px] text-zinc-500 gap-1">
-    <i class="fa-solid fa-qrcode text-base"></i>Vérif.
-  </button>
-</nav>
-
-<script>
-'use strict';
-
-/* =========================================================
-   ART-ZEDMO MARKETPLACE
-   API utilisée sur le même serveur que cette page.
-   ========================================================= */
-
-const API = '';
-const TOKEN_KEY = 'AZ_TOKEN';
-const USER_KEY = 'AZ_USER';
-const ROLE_KEY = 'AZ_ROLE';
-
-let currentUser = readStorage(USER_KEY);
-let token = localStorage.getItem(TOKEN_KEY) || '';
-let role = localStorage.getItem(ROLE_KEY) || 'artiste';
-let EXPO_ID = null;
-let galleryItems = [];
-let expoItems = [];
-
-function readStorage(key) {
-  try {
-    return JSON.parse(localStorage.getItem(key) || 'null');
-  } catch {
-    return null;
-  }
-}
-
-function escapeHTML(value) {
-  return String(value ?? '').replace(/[&<>"']/g, ch => ({
-    '&':'&amp;',
-    '<':'&lt;',
-    '>':'&gt;',
-    '"':'&quot;',
-    "'":'&#39;'
-  }[ch]));
-}
-
-function formatFCFA(value) {
-  const n = Number(value);
-  if (!Number.isFinite(n)) return 'Prix non précisé';
-  return n.toLocaleString('fr-FR') + ' FCFA';
-}
-
-function getId(value) {
-  if (!value) return '';
-  if (typeof value === 'object') return String(value._id || value.id || '');
-  return String(value);
-}
-
-function getArtistId(art) {
-  return getId(art?.artiste);
-}
-
-function getImage(art) {
-  let img = '';
-
-  if (Array.isArray(art?.images) && art.images.length) {
-    img = art.images[0];
-  }
-
-  img = img || art?.image || art?.imageUrl || art?.fullUrl || '';
-
-  if (img && img.startsWith('/')) {
-    return location.origin + img;
-  }
-
-  return img || '';
-}
-
-function imageHTML(art, extra='') {
-  const img = getImage(art);
-  const fallback = 'data:image/svg+xml,' + encodeURIComponent(
-    '<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300">' +
-    '<rect width="100%" height="100%" fill="#171717"/>' +
-    '<text x="50%" y="50%" fill="#D4AF37" font-size="22" text-anchor="middle">ART-ZEDMO</text>' +
-    '</svg>'
-  );
-
-  return `<img class="${extra}" src="${escapeHTML(img || fallback)}"
-    alt="${escapeHTML(art?.titre || 'Œuvre ART-ZEDMO')}"
-    onerror="this.onerror=null;this.src='${fallback}'">`;
-}
-
-function setMessage(id, message, error=false) {
-  const el = document.getElementById(id);
-  if (!el) return;
-  el.textContent = message || '';
-  el.className = 'status-msg ' + (error ? 'text-red-400' : 'text-green-600');
-}
-
-async function api(path, options={}) {
-  const headers = new Headers(options.headers || {});
-
-  if (token) {
-    headers.set('Authorization', 'Bearer ' + token);
-  }
-
-  if (options.body && !(options.body instanceof FormData) &&
-      !headers.has('Content-Type')) {
-    headers.set('Content-Type', 'application/json');
-  }
-
-  const response = await fetch(API + path, {
-    ...options,
-    headers
-  });
-
-  const text = await response.text();
-  let data = {};
-
-  try {
-    data = text ? JSON.parse(text) : {};
-  } catch {
-    data = {message:text};
-  }
-
-  if (response.status === 401) {
-    // On ne déconnecte pas automatiquement à chaque erreur publique.
-    // Les appels protégés afficheront la réponse du serveur.
-  }
-
-  if (!response.ok) {
-    throw new Error(
-      data.error || data.message ||
-      `Erreur HTTP ${response.status}`
-    );
-  }
-
-  return data;
-}
-
-function saveSession(user, jwt) {
-  currentUser = user || null;
-  token = jwt || '';
-
-  if (currentUser) {
-    localStorage.setItem(USER_KEY, JSON.stringify(currentUser));
-  } else {
-    localStorage.removeItem(USER_KEY);
-  }
-
-  if (token) {
-    localStorage.setItem(TOKEN_KEY, token);
-  } else {
-    localStorage.removeItem(TOKEN_KEY);
-  }
-
-  renderAccount();
-}
-
-function logout() {
-  saveSession(null, '');
-  go('compte');
-}
-
-function closeModal(id) {
-  const el = document.getElementById(id);
-  if (!el) return;
-  el.classList.add('hidden');
-  el.classList.remove('flex');
-}
-
-function openModal(id) {
-  const el = document.getElementById(id);
-  if (!el) return;
-  el.classList.remove('hidden');
-  if (el.classList.contains('modal') ||
-      id === 'modalCertificat') {
-    el.classList.add('flex');
-  }
-}
-
-function openProfil() {
-  openModal('modalProfil');
-}
-
-function openLogin() {
-  openModal('modalLogin');
-}
-
-function openPublier() {
-  if (!currentUser) {
-    alert('Connecte-toi ou crée un compte avant de publier.');
-    openLogin();
-    return;
-  }
-
-  if (!token) {
-    alert('Ta session ne contient pas de jeton. Reconnecte-toi.');
-    openLogin();
-    return;
-  }
-
-  if (currentUser.statut !== 'valide') {
-    alert('Ton compte doit être validé avant de publier.');
-    go('compte');
-    return;
-  }
-
-  openModal('modalPublier');
-}
-
-function go(id) {
-  document.querySelectorAll('.tab').forEach(el =>
-    el.classList.add('hidden-tab')
-  );
-
-  const section = document.getElementById(id);
-  if (section) section.classList.remove('hidden-tab');
-
-  document.querySelectorAll('.tab-btn').forEach(btn => {
-    btn.classList.remove('tab-active');
-    btn.classList.add('text-zinc-500');
-  });
-
-  const nav = document.getElementById('nav-' + id);
-  if (nav) {
-    nav.classList.add('tab-active');
-    nav.classList.remove('text-zinc-500');
-  }
-
-  if (id === 'accueil') loadAccueil();
-  if (id === 'galerie') loadGalerie();
-  if (id === 'expos') loadExpo();
-  if (id === 'encheres') loadEncheres();
-  if (id === 'compte') loadCompteData();
-
-  window.scrollTo({top:0,behavior:'smooth'});
-}
-
-function setRole(r) {
-  role = r;
-  localStorage.setItem(ROLE_KEY, r);
-
-  document.getElementById('btnArt').className =
-    r === 'artiste'
-      ? 'flex-1 bg-or text-black py-3 rounded-full'
-      : 'flex-1 text-zinc-400 py-3 rounded-full';
-
-  document.getElementById('btnCol').className =
-    r === 'acheteur'
-      ? 'flex-1 bg-or text-black py-3 rounded-full'
-      : 'flex-1 text-zinc-400 py-3 rounded-full';
-
-  document.getElementById('blocArtiste').classList.toggle(
-    'hidden', r !== 'artiste'
-  );
-
-  document.getElementById('blocCollectionneur').classList.toggle(
-    'hidden', r !== 'acheteur'
-  );
-}
-
-/* =========================
-   COMPTE / INSCRIPTION
-   ========================= */
-
-function renderAccount() {
-  const connected = !!currentUser;
-
-  document.getElementById('actionsNonConnecte')
-    .classList.toggle('hidden', connected);
-
-  document.getElementById('actionsConnecte')
-    .classList.toggle('hidden', !connected);
-
-  document.getElementById('compteNom').textContent =
-    connected
-      ? (currentUser.nom_artiste || currentUser.nom || currentUser.email || 'Mon compte')
-      : 'Vous n’êtes pas connecté.';
-
-  document.getElementById('compteStatut').textContent =
-    connected
-      ? `Statut : ${currentUser.statut || 'inconnu'} · Rôle : ${currentUser.role || role}`
-      : 'Connectez-vous pour accéder à votre espace.';
-
-  document.getElementById('myStatut').textContent =
-    currentUser?.statut || '-';
-
-  setRole(role);
-}
-
-async function creerProfil() {
-  const nom = document.getElementById('p-nom').value.trim();
-  const nom_artiste = document.getElementById('p-artiste').value.trim();
-  const whatsapp = document.getElementById('p-wa').value.trim();
-  const email = document.getElementById('p-email').value.trim();
-  const password = document.getElementById('p-password').value;
-  const selectedRole = document.getElementById('p-role').value;
-  const btn = document.getElementById('btnCreer');
-
-  if (!nom || !email || !password) {
-    setMessage('msgProfil', 'Remplis le nom, l’email et le mot de passe.', true);
-    return;
-  }
-
-  if (password.length < 6) {
-    setMessage('msgProfil', 'Utilise un mot de passe d’au moins 6 caractères.', true);
-    return;
-  }
-
-  btn.disabled = true;
-  setMessage('msgProfil', 'Envoi de la demande...');
-
-  try {
-    /*
-      Le backend doit accepter ces champs sur /api/auth/register.
-      Le rôle administrateur ne doit jamais être demandé par le public.
-    */
-    const result = await api('/api/auth/register', {
-      method:'POST',
-      body:JSON.stringify({
-        nom,
-        nom_artiste,
-        whatsapp,
-        email,
-        password,
-        role:selectedRole
-      })
-    });
-
-    const user = result.user || result.utilisateur || null;
-    const jwt = result.token || '';
-
-    if (user) {
-      saveSession(user, jwt);
-    }
-
-    setMessage(
-      'msgProfil',
-      result.message ||
-      'Demande envoyée. Connecte-toi si nécessaire et vérifie le statut de ton compte.'
-    );
-
-    setTimeout(() => {
-      closeModal('modalProfil');
-      renderAccount();
-    }, 1200);
-
-  } catch (err) {
-    setMessage('msgProfil', err.message, true);
-  } finally {
-    btn.disabled = false;
-  }
-}
-
-async function login() {
-  const identifiant = document.getElementById('l-identifiant').value.trim();
-  const password = document.getElementById('l-password').value;
-  const btn = document.getElementById('btnLogin');
-
-  if (!identifiant || !password) {
-    setMessage('msgLogin', 'Entre ton identifiant et ton mot de passe.', true);
-    return;
-  }
-
-  btn.disabled = true;
-  setMessage('msgLogin', 'Connexion en cours...');
-
-  try {
-    const result = await api('/api/auth/login', {
-      method:'POST',
-      body:JSON.stringify({identifiant,password})
-    });
-
-    if (!result.user || !result.token) {
-      throw new Error('Le serveur n’a pas renvoyé de compte et de jeton de session.');
-    }
-
-    saveSession(result.user, result.token);
-    closeModal('modalLogin');
-    await loadCompteData();
-    go('compte');
-
-  } catch (err) {
-    setMessage('msgLogin', err.message, true);
-  } finally {
-    btn.disabled = false;
-  }
-}
-
-/* =========================
-   ANNONCES
-   ========================= */
-
-async function loadAnnonceLive() {
-  try {
-    const data = await api('/api/annonces');
-    const annonces = Array.isArray(data) ? data : [];
-    const a = annonces.find(x => x.active !== false) || annonces[0];
-
-    const badge = document.getElementById('badgeAnnonce');
-    const bloc = document.getElementById('blocAnnonceAccueil');
-
-    if (!a) {
-      badge.classList.add('hidden');
-      bloc.classList.add('hidden');
-      return;
-    }
-
-    const titre = a.titre || 'Annonce ART-ZEDMO';
-    const message = a.message || '';
-
-    badge.textContent = titre;
-    badge.classList.remove('hidden');
-
-    bloc.innerHTML = `
-      <div class="bg-[#D4AF37]/10 border border-or rounded-xl p-4">
-        <p class="or font-bold text-sm">${escapeHTML(titre)}</p>
-        <p class="text-xs text-zinc-200 mt-2">${escapeHTML(message)}</p>
-      </div>`;
-    bloc.classList.remove('hidden');
-
-  } catch (err) {
-    console.warn('Chargement des annonces impossible:', err.message);
-  }
-}
-
-/* =========================
-   GALERIE
-   ========================= */
-
-async function getArtworkList() {
-  const result = await api('/api/artworks');
-  return Array.isArray(result) ? result : (result.artworks || []);
-}
-
-async function getNFTList() {
-  const result = await api('/api/nft');
-  return Array.isArray(result) ? result : (result.nfts || []);
-}
-
-async function loadGalerie() {
-  const grid = document.getElementById('gridGalerie');
-  grid.innerHTML = '<p class="text-zinc-500 text-xs">Chargement...</p>';
-
-  try {
-    const [artworks, nfts] = await Promise.all([
-      getArtworkList(),
-      getNFTList().catch(() => [])
-    ]);
-
-    // La galerie publique reçoit uniquement les œuvres visibles
-    // renvoyées par le backend.
-    const merged = [
-      ...artworks.map(a => ({...a, isNFT:false})),
-      ...nfts.map(n => ({...n, isNFT:true}))
-    ];
-
-    const seen = new Set();
-    galleryItems = merged.filter(a => {
-      const key = String(a._id || a.azmId || '');
-      if (!key || seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    });
-
-    afficherGalerie();
-
-  } catch (err) {
-    grid.innerHTML = `<p class="text-red-400 text-xs">${escapeHTML(err.message)}</p>`;
-  }
-}
-
-function afficherGalerie() {
-  const grid = document.getElementById('gridGalerie');
-  const search = (document.getElementById('rechercheGalerie')?.value || '')
-    .toLowerCase().trim();
-
-  const filtered = galleryItems.filter(a => {
-    const title = String(a.titre || '').toLowerCase();
-    const artist = String(a.artiste?.nom_artiste || a.artiste?.nom || '').toLowerCase();
-    return title.includes(search) || artist.includes(search);
-  });
-
-  document.getElementById('countG').textContent =
-    `(${filtered.length})`;
-
-  if (!filtered.length) {
-    grid.innerHTML = '<p class="text-zinc-500 text-xs col-span-2">Aucune œuvre disponible.</p>';
-    return;
-  }
-
-  grid.innerHTML = filtered.map(a => {
-    const id = getId(a);
-    const titre = a.titre || 'Œuvre sans titre';
-    const artiste = a.artiste?.nom_artiste || a.artiste?.nom || 'Artiste';
-    const mine = currentUser && getArtistId(a) === getId(currentUser);
-    const image = getImage(a);
-
-    let action = '';
-
-    if (a.isNFT) {
-      action = `
-        <p class="text-[10px] text-zinc-400 mt-2">
-          Enregistrement NFT : vérifie le statut blockchain avant tout achat.
-        </p>`;
-    } else if (mine) {
-      action = `
-        <button onclick="go('compte')"
-          class="w-full mt-2 bg-zinc-800 py-2 rounded-full text-[10px]">
-          Gérer mon œuvre
-        </button>`;
-    } else {
-      action = `
-        <button onclick="contacterArtiste('${escapeHTML(id)}')"
-          class="w-full mt-2 bg-or text-black py-2 rounded-full text-[10px] font-bold">
-          Contacter l'artiste
-        </button>`;
-    }
-
-    return `
-      <article class="card ${a.isNFT ? 'border-or/30' : ''}">
-        ${imageHTML(a,'w-full h-36 object-cover bg-black')}
-        <div class="p-3">
-          <p class="font-bold text-sm break-words">${escapeHTML(titre)}</p>
-          <p class="text-[10px] text-zinc-400 mt-1">${escapeHTML(artiste)}</p>
-          <p class="or text-xs font-bold mt-2">${escapeHTML(formatFCFA(a.prix))}</p>
-          <p class="text-[9px] text-zinc-500 mt-1">${escapeHTML(a.azmId || '')}</p>
-          ${action}
-          <button onclick="showCertificat('${escapeHTML(id)}')"
-            class="w-full mt-2 bg-zinc-800 py-2 rounded-full text-[10px]">
-            Consulter la fiche
-          </button>
-        </div>
-      </article>`;
-  }).join('');
-}
-
-function contacterArtiste(id) {
-  const art = galleryItems.find(a => getId(a) === id);
-  if (!art) return;
-
-  alert(
-    'Œuvre : ' + (art.titre || 'Sans titre') +
-    '\nPrix indicatif : ' + formatFCFA(art.prix) +
-    '\n\nLa plateforme ne confirme pas encore automatiquement une vente. ' +
-    'Contacte l’artiste pour convenir des modalités.'
-  );
-}
-
-/* =========================
-   PUBLICATION D'UNE ŒUVRE
-   ========================= */
-
-document.getElementById('o-file').addEventListener('change', function() {
-  const file = this.files?.[0];
-  if (!file) return;
-
-  if (!file.type.startsWith('image/')) {
-    setMessage('msgOeuvreGalerie', 'Choisis un fichier image.', true);
-    this.value = '';
-    return;
-  }
-
-  const preview = document.getElementById('previewOeuvreGalerieBox');
-  const img = document.getElementById('previewOeuvreGalerieImg');
-  img.src = URL.createObjectURL(file);
-  preview.classList.remove('hidden');
-});
-
-async function publierOeuvreGalerie() {
-  const titre = document.getElementById('o-titre').value.trim();
-  const description = document.getElementById('o-description').value.trim();
-  const prix = Number(document.getElementById('o-prix').value);
-  const categorie = document.getElementById('o-categorie').value.trim();
-  const file = document.getElementById('o-file').files[0];
-  const btn = document.getElementById('btnPublierGalerie');
-
-  if (!currentUser || !token) {
-    setMessage('msgOeuvreGalerie', 'Connecte-toi avant de publier.', true);
-    return;
-  }
-
-  if (currentUser.statut !== 'valide') {
-    setMessage('msgOeuvreGalerie', 'Ton compte doit être validé par l’administration.', true);
-    return;
-  }
-
-  if (!titre || !Number.isFinite(prix) || prix <= 0 || !file) {
-    setMessage('msgOeuvreGalerie', 'Le titre, un prix positif et une image sont obligatoires.', true);
-    return;
-  }
-
-  if (file.size > 8 * 1024 * 1024) {
-    setMessage('msgOeuvreGalerie', 'L’image dépasse 8 Mo. Choisis un fichier plus léger.', true);
-    return;
-  }
-
-  btn.disabled = true;
-  setMessage('msgOeuvreGalerie', 'Téléversement de l’image...');
-
-  try {
-    const form = new FormData();
-    form.append('image', file);
-
-    // /api/upload exige un JWT.
-    const upload = await api('/api/upload', {
-      method:'POST',
-      body:form
-    });
-
-    const imageUrl = upload.url || upload.fullUrl || upload.image;
-
-    if (!imageUrl) {
-      throw new Error('Le serveur n’a pas renvoyé l’adresse de l’image.');
-    }
-
-    setMessage('msgOeuvreGalerie', 'Enregistrement de l’œuvre...');
-
-    const result = await api('/api/artworks', {
-      method:'POST',
-      body:JSON.stringify({
-        titre,
-        description,
-        prix,
-        categorie,
-        artiste:getId(currentUser),
-        images:[imageUrl],
-        image:imageUrl
-      })
-    });
-
-    setMessage(
-      'msgOeuvreGalerie',
-      result.message ||
-      'Œuvre envoyée. Elle doit être validée avant d’apparaître dans la galerie.'
-    );
-
-    document.getElementById('o-titre').value = '';
-    document.getElementById('o-description').value = '';
-    document.getElementById('o-prix').value = '';
-    document.getElementById('o-categorie').value = '';
-    document.getElementById('o-file').value = '';
-    document.getElementById('previewOeuvreGalerieBox').classList.add('hidden');
-
-    await loadCompteData();
-
-    setTimeout(() => {
-      closeModal('modalPublier');
-      go('compte');
-    }, 1500);
-
-  } catch (err) {
-    setMessage('msgOeuvreGalerie', err.message, true);
-  } finally {
-    btn.disabled = false;
-  }
-}
-
-/* =========================
-   COMPTE ET ŒUVRES DE L'ARTISTE
-   ========================= */
-
-async function loadCompteData() {
-  renderAccount();
-
-  if (!currentUser) return;
-
-  try {
-    const artworks = await getArtworkList();
-    const mine = artworks.filter(a =>
-      getArtistId(a) === getId(currentUser)
-    );
-
-    document.getElementById('myOeuvres').textContent = mine.length;
-
-    document.getElementById('mesOeuvresList').innerHTML =
-      mine.map(a => `
-        <div class="bg-zinc-900 border border-zinc-800 p-3 rounded-xl flex gap-3 items-center">
-          ${imageHTML(a,'w-12 h-12 rounded-lg object-cover')}
-          <div class="flex-1 min-w-0">
-            <p class="font-bold text-xs break-words">${escapeHTML(a.titre || 'Sans titre')}</p>
-            <p class="text-[10px] text-zinc-400 mt-1">
-              ${escapeHTML(formatFCFA(a.prix))}
-            </p>
-            <p class="text-[10px] or mt-1">
-              Statut : ${escapeHTML(a.statut || 'non précisé')}
-            </p>
-          </div>
-        </div>
-      `).join('') || '<p class="text-xs text-zinc-500">Aucune œuvre visible pour le moment.</p>';
-
-  } catch (err) {
-    document.getElementById('mesOeuvresList').innerHTML =
-      `<p class="text-red-400 text-xs">${escapeHTML(err.message)}</p>`;
-  }
-
-  loadNFTRecords();
-}
-
-async function loadNFTRecords() {
-  const box = document.getElementById('mesNFTVendus');
-
-  try {
-    const nfts = await getNFTList();
-
-    if (!nfts.length) {
-      box.textContent = 'Aucun enregistrement NFT disponible.';
-      return;
-    }
-
-    box.innerHTML = nfts.map(n => `
-      <div class="bg-black border border-zinc-800 p-3 rounded-xl mb-2">
-        <p class="font-bold text-xs">${escapeHTML(n.titre || 'NFT sans titre')}</p>
-        <p class="text-[10px] text-zinc-400 mt-1">
-          ID : ${escapeHTML(n.azmId || n._id || '')}
-        </p>
-        <p class="text-[10px] text-yellow-400 mt-1">
-          Statut blockchain : ${n.blockchainMinted === true ? 'Indiqué comme créé' : 'Non confirmé comme créé'}
-        </p>
-      </div>
-    `).join('');
-
-  } catch (err) {
-    box.textContent = 'Impossible de charger les enregistrements NFT.';
-  }
-}
-
-/* =========================
-   EXPOSITIONS
-   ========================= */
-
-async function loadExpo() {
-  const list = document.getElementById('listExpoOeuvres');
-  const message = document.getElementById('expoMessage');
-
-  list.innerHTML = '<p class="text-zinc-500 text-xs">Chargement...</p>';
-  message.textContent = '';
-
-  try {
-    const result = await api('/api/expositions/active');
-
-    if (!result || !result._id) {
-      EXPO_ID = null;
-      expoItems = [];
-      list.innerHTML = `
-        <div class="card p-4">
-          <p class="font-bold">Aucune exposition active</p>
-          <p class="text-xs text-zinc-400 mt-2">
-            Reviens plus tard pour découvrir les prochaines expositions.
-          </p>
-        </div>`;
-      return;
-    }
-
-    EXPO_ID = result._id;
-    expoItems = Array.isArray(result.oeuvres) ? result.oeuvres : [];
-
-    list.innerHTML = `
-      <div class="card p-4 mb-3">
-        <h3 class="font-bold or">${escapeHTML(result.titre || 'Exposition')}</h3>
-        <p class="text-xs text-zinc-300 mt-2">${escapeHTML(result.description || '')}</p>
-        <p class="text-[10px] text-zinc-500 mt-2">
-          ${escapeHTML(result.lieu || '')}
-        </p>
-      </div>
-    ` + (expoItems.map((a,i) => `
-      <div class="card p-3 flex gap-3 items-center">
-        <span class="or font-bold">#${i+1}</span>
-        ${imageHTML(a,'w-14 h-14 rounded-lg object-cover')}
-        <div class="flex-1 min-w-0">
-          <p class="font-bold text-sm">${escapeHTML(a.titre || 'Œuvre')}</p>
-          <p class="text-[10px] text-zinc-400 mt-1">
-            ${escapeHTML(a.artiste?.nom_artiste || a.artiste?.nom || '')}
-          </p>
-          <p class="text-[10px] text-zinc-400 mt-1">
-            Votes : ${Number(a.votesCount || a.votes || 0)}
-          </p>
-        </div>
-      </div>
-    `).join('') || '<p class="text-xs text-zinc-500">Aucune œuvre dans cette exposition.</p>');
-
-  } catch (err) {
-    list.innerHTML = `<p class="text-red-400 text-xs">${escapeHTML(err.message)}</p>`;
-  }
-}
-
-async function openMesOeuvresExpo() {
-  const box = document.getElementById('mesOeuvresExpo');
-
-  if (!box.classList.contains('hidden')) {
-    box.classList.add('hidden');
-    return;
-  }
-
-  box.classList.remove('hidden');
-
-  if (!currentUser || !token) {
-    box.textContent = 'Connecte-toi pour consulter tes œuvres.';
-    return;
-  }
-
-  if (currentUser.statut !== 'valide') {
-    box.textContent = 'Ton compte doit être validé avant de proposer une œuvre.';
-    return;
-  }
-
-  box.textContent = 'Chargement des œuvres...';
-
-  try {
-    const artworks = await getArtworkList();
-    const mine = artworks.filter(a =>
-      getArtistId(a) === getId(currentUser) &&
-      ['validee','en_expo'].includes(a.statut)
-    );
-
-    if (!mine.length) {
-      box.textContent = 'Aucune œuvre éligible. Une œuvre doit être validée.';
-      return;
-    }
-
-    box.innerHTML = mine.map(a => `
-      <div class="flex gap-2 items-center bg-black border border-zinc-800 p-2 rounded-xl mb-2">
-        ${imageHTML(a,'w-12 h-12 rounded-lg object-cover')}
-        <div class="flex-1 min-w-0">
-          <p class="font-bold text-xs">${escapeHTML(a.titre || '')}</p>
-          <p class="text-[10px] text-zinc-400">${escapeHTML(a.statut || '')}</p>
-        </div>
-        <button onclick="amenerOeuvreExpo('${escapeHTML(getId(a))}')"
-          class="bg-or text-black px-3 py-2 rounded-full text-[10px] font-bold">
-          Proposer
+        <button class="btn btn-outline" onclick="ouvrirModal('inscriptionModal')">
+          <i class="fas fa-palette"></i> Devenir artiste
         </button>
       </div>
-    `).join('');
 
-  } catch (err) {
-    box.textContent = err.message;
-  }
-}
+      <div id="annoncePrincipale"></div>
 
-async function amenerOeuvreExpo(artId) {
-  if (!token) {
-    alert('Reconnecte-toi.');
-    return;
-  }
+      <div class="stats">
+        <div class="stat">
+          <strong id="statOeuvres">—</strong>
+          <span>Œuvres publiques</span>
+        </div>
 
-  if (!EXPO_ID) {
-    await loadExpo();
-  }
+        <div class="stat">
+          <strong id="statExpositions">—</strong>
+          <span>Expositions</span>
+        </div>
 
-  if (!EXPO_ID) {
-    alert('Aucune exposition active disponible.');
-    return;
-  }
+        <div class="stat">
+          <strong id="statEncheres">—</strong>
+          <span>Enchères actives</span>
+        </div>
+      </div>
+    </section>
 
-  try {
-    const result = await api(
-      `/api/expositions/${encodeURIComponent(EXPO_ID)}/add-artwork`,
-      {
-        method:'POST',
-        body:JSON.stringify({artworkId:artId})
-      }
-    );
+    <!-- GALERIE -->
+    <section id="galerie" class="section">
+      <div class="section-heading">
+        <h2><i class="fas fa-images"></i> Galerie des œuvres</h2>
 
-    alert(result.message || 'Demande traitée.');
-    document.getElementById('mesOeuvresExpo').classList.add('hidden');
-    await loadExpo();
+        <button class="btn btn-outline btn-small"
+                onclick="chargerGalerie()">
+          <i class="fas fa-rotate"></i> Actualiser
+        </button>
+      </div>
 
-  } catch (err) {
-    alert('Impossible de proposer cette œuvre : ' + err.message);
-  }
-}
+      <div class="toolbar">
+        <input id="rechercheGalerie" class="field"
+               type="search"
+               placeholder="Rechercher une œuvre ou un artiste..."
+               oninput="afficherGalerieFiltre()">
 
-/* =========================
-   ENCHÈRES
-   ========================= */
+        <select id="filtreGalerie" class="field"
+                onchange="afficherGalerieFiltre()">
+          <option value="">Toutes les catégories</option>
+          <option value="peinture">Peinture</option>
+          <option value="sculpture">Sculpture</option>
+          <option value="dessin">Dessin</option>
+          <option value="photographie">Photographie</option>
+          <option value="artisanat">Artisanat</option>
+          <option value="autre">Autre</option>
+        </select>
+      </div>
 
-async function loadEncheres() {
-  const box = document.getElementById('listEncheres');
-  box.innerHTML = '<p class="text-zinc-500 text-xs">Chargement...</p>';
+      <div id="galerieOeuvres" class="grid">
+        <div class="empty">
+          <span class="spinner"></span>
+          <p>Chargement de la galerie...</p>
+        </div>
+      </div>
+    </section>
 
-  try {
-    const result = await api('/api/encheres');
-    const auctions = Array.isArray(result) ? result : (result.encheres || []);
+    <!-- EXPOSITIONS -->
+    <section id="expositions" class="section">
+      <div class="section-heading">
+        <h2><i class="fas fa-landmark"></i> Expositions</h2>
 
-    if (!auctions.length) {
-      box.innerHTML = '<p class="text-zinc-500 text-xs">Aucune enchère active.</p>';
-      return;
-    }
+        <button class="btn btn-outline btn-small"
+                onclick="chargerExpositions()">
+          <i class="fas fa-rotate"></i> Actualiser
+        </button>
+      </div>
 
-    box.innerHTML = auctions.map(e => {
-      const art = e.artwork || {};
-      const current = e.enchereActuelle || e.prixActuel || e.prixDepart || 0;
-      const end = e.dateFin
-        ? new Date(e.dateFin).toLocaleString('fr-FR')
-        : 'Date non précisée';
+      <div id="expositionActive" class="panel">
+        <p class="muted">Chargement des expositions...</p>
+      </div>
 
-      return `
-        <div class="card p-4">
-          ${imageHTML(art,'w-full h-40 object-cover rounded-xl')}
-          <h3 class="font-bold mt-3">${escapeHTML(art.titre || 'Œuvre en enchère')}</h3>
-          <p class="or font-bold mt-2">${escapeHTML(formatFCFA(current))}</p>
-          <p class="text-[10px] text-zinc-400 mt-2">Fin : ${escapeHTML(end)}</p>
-          <button onclick="encherir('${escapeHTML(getId(e))}')"
-            class="w-full mt-3 bg-or text-black py-3 rounded-full text-xs font-bold">
-            Enchérir
-          </button>
-        </div>`;
-    }).join('');
+      <div class="section-heading" style="margin-top:25px">
+        <h2><i class="fas fa-trophy"></i> Classement des œuvres</h2>
+      </div>
 
-  } catch (err) {
-    box.innerHTML = `<p class="text-red-400 text-xs">${escapeHTML(err.message)}</p>`;
-  }
-}
+      <div class="toolbar">
+        <select id="selectClassement" class="field"
+                aria-label="Choisir une exposition"
+                onchange="chargerClassementSelectionne()">
+          <option value="">Sélectionner une exposition</option>
+        </select>
 
-async function encherir(id) {
-  if (!currentUser || !token) {
-    alert('Connecte-toi pour enchérir.');
-    openLogin();
-    return;
-  }
+        <button class="btn btn-small"
+                onclick="chargerClassementSelectionne()">
+          Voir le classement
+        </button>
+      </div>
 
-  if (currentUser.statut !== 'valide') {
-    alert('Ton compte doit être validé pour enchérir.');
-    return;
-  }
+      <div id="classementExposition" class="ranking-list">
+        <div class="empty">
+          Choisissez une exposition pour afficher les œuvres les plus votées.
+        </div>
+      </div>
+    </section>
 
-  const value = prompt('Saisis ton montant d’enchère en FCFA :');
-  if (value === null) return;
+    <!-- ENCHERES -->
+    <section id="encheres" class="section">
+      <div class="section-heading">
+        <h2><i class="fas fa-gavel"></i> Enchères</h2>
 
-  const montant = Number(value);
+        <button class="btn btn-outline btn-small"
+                onclick="chargerEncheres()">
+          <i class="fas fa-rotate"></i> Actualiser
+        </button>
+      </div>
 
-  if (!Number.isFinite(montant) || montant <= 0) {
-    alert('Montant invalide.');
-    return;
-  }
+      <div id="listeEncheres" class="grid">
+        <div class="empty">Chargement des enchères...</div>
+      </div>
 
-  try {
-    const result = await api(
-      `/api/encheres/${encodeURIComponent(id)}/encherir`,
-      {
-        method:'POST',
-        body:JSON.stringify({montant})
-      }
-    );
+      <div class="notice">
+        <strong>Information :</strong> les enchères dépendent des règles
+        et des validations de ton serveur. Le montant proposé n'est pas
+        un paiement. Vérifie toujours les conditions avant de participer.
+      </div>
+    </section>
 
-    alert(result.message || 'Enchère envoyée.');
-    await loadEncheres();
+    <!-- VERIFICATION -->
+    <section id="verification" class="section">
+      <div class="section-heading">
+        <h2><i class="fas fa-certificate"></i> Vérifier une œuvre</h2>
+      </div>
 
-  } catch (err) {
-    alert('Enchère impossible : ' + err.message);
-  }
-}
-
-/* =========================
-   FICHE ET CERTIFICAT
-   ========================= */
-
-function showCertificat(id) {
-  const art = galleryItems.find(a => getId(a) === id);
-
-  if (!art) {
-    alert('Œuvre introuvable dans la galerie.');
-    return;
-  }
-
-  const title = art.titre || 'Œuvre sans titre';
-  const azmId = art.azmId || art._id || '';
-  const artist = art.artiste?.nom_artiste || art.artiste?.nom || 'Non précisé';
-
-  document.getElementById('certifContent').innerHTML = `
-    <h3 class="text-center font-black text-xl">ART-ZEDMO</h3>
-    <p class="text-center text-xs mt-1">FICHE D'IDENTIFICATION D'ŒUVRE</p>
-    <div class="border-t border-b mt-4 py-3 text-xs space-y-2">
-      <p><b>Œuvre :</b> ${escapeHTML(title)}</p>
-      <p><b>Artiste :</b> ${escapeHTML(artist)}</p>
-      <p><b>Identifiant :</b> ${escapeHTML(azmId)}</p>
-      <p><b>Prix indicatif :</b> ${escapeHTML(formatFCFA(art.prix))}</p>
-      <p><b>Statut :</b> ${escapeHTML(art.statut || 'Non précisé')}</p>
-    </div>
-    <p class="text-[10px] text-zinc-500 mt-3">
-      Cette fiche est un récapitulatif de la base de données.
-      Elle ne constitue pas, à elle seule, une preuve d'authenticité indépendante
-      ni une preuve de création d'un NFT sur blockchain.
-    </p>`;
-
-  openModal('modalCertificat');
-
-  const qr = document.getElementById('qrcode');
-  qr.innerHTML = '';
-
-  if (window.QRCode && azmId) {
-    new QRCode(qr, {
-      text:location.origin + '/?verify=' + encodeURIComponent(azmId),
-      width:120,
-      height:120
-    });
-  }
-}
-
-async function verifierAZM() {
-  const id = document.getElementById('inputAZM').value.trim();
-  const box = document.getElementById('resultVerif');
-
-  if (!id) {
-    box.textContent = 'Entre un identifiant AZM.';
-    return;
-  }
-
-  box.innerHTML = '<p class="text-xs text-zinc-400">Vérification...</p>';
-
-  try {
-    // Recherche dans les œuvres publiques retournées par le backend.
-    const arts = await getArtworkList();
-    const art = arts.find(a =>
-      String(a.azmId || '').toLowerCase() === id.toLowerCase() ||
-      String(a._id || '').toLowerCase() === id.toLowerCase()
-    );
-
-    if (!art) {
-      box.innerHTML = `
-        <div class="bg-red-900/20 border border-red-700 rounded-xl p-4">
-          <p class="font-bold text-red-400">Œuvre non trouvée</p>
-          <p class="text-xs text-zinc-300 mt-2">
-            Aucun résultat correspondant dans les œuvres publiques disponibles.
-          </p>
-        </div>`;
-      return;
-    }
-
-    box.innerHTML = `
-      <div class="bg-green-900/20 border border-green-700 rounded-xl p-4">
-        <p class="font-bold text-green-400">Œuvre trouvée dans la base</p>
-        <p class="text-sm mt-2">${escapeHTML(art.titre || '')}</p>
-        <p class="text-xs mt-2">Identifiant : ${escapeHTML(art.azmId || art._id || '')}</p>
-        <p class="text-xs mt-1">Statut : ${escapeHTML(art.statut || 'Non précisé')}</p>
-        <p class="text-xs mt-1">Prix indicatif : ${escapeHTML(formatFCFA(art.prix))}</p>
-        <p class="text-[10px] text-zinc-400 mt-3">
-          Ce résultat confirme seulement la présence de l'œuvre dans la base de données.
+      <div class="panel">
+        <p class="muted">
+          Saisissez l'identifiant d'une œuvre pour consulter son nombre
+          de votes. Cette fonction ne remplace pas une vérification
+          complète de certificat ou de propriété.
         </p>
-      </div>`;
 
-  } catch (err) {
-    box.innerHTML = `<p class="text-red-400 text-xs">${escapeHTML(err.message)}</p>`;
-  }
-}
+        <div class="toolbar">
+          <input id="verificationArtworkId" class="field"
+                 placeholder="Identifiant MongoDB de l'œuvre">
 
-/* =========================
-   PAGE D'ACCUEIL
-   ========================= */
-
-async function loadAccueil() {
-  loadAnnonceLive();
-
-  try {
-    const arts = await getArtworkList();
-    const box = document.getElementById('accueilOeuvres');
-
-    box.innerHTML = arts.slice(0,4).map(a => `
-      <article class="card">
-        ${imageHTML(a,'w-full h-28 object-cover')}
-        <div class="p-3">
-          <p class="text-xs font-bold">${escapeHTML(a.titre || 'Œuvre')}</p>
-          <p class="or text-[10px] mt-2">${escapeHTML(formatFCFA(a.prix))}</p>
-          <button onclick="go('galerie')"
-            class="w-full mt-2 bg-zinc-800 py-2 rounded-full text-[10px]">
-            Voir la galerie
+          <button class="btn"
+                  onclick="verifierOeuvre()">
+            <i class="fas fa-magnifying-glass"></i> Vérifier
           </button>
         </div>
-      </article>
-    `).join('') || '<p class="text-zinc-500 text-xs">Les premières œuvres seront bientôt disponibles.</p>';
 
-  } catch (err) {
-    document.getElementById('accueilOeuvres').innerHTML =
-      '<p class="text-zinc-500 text-xs">La galerie sera disponible dès que le serveur répondra.</p>';
-  }
-}
+        <div id="verificationResultat" aria-live="polite"></div>
+      </div>
+    </section>
 
-/* =========================
-   DÉMARRAGE
-   ========================= */
+    <!-- COMPTE -->
+    <section id="compte" class="section">
+      <div class="section-heading">
+        <h2><i class="fas fa-user-circle"></i> Mon compte</h2>
+      </div>
 
-async function restoreSession() {
-  if (!token) {
-    renderAccount();
-    return;
-  }
+      <div id="compteConnecte" class="panel hidden">
+        <h3 id="bienvenueUtilisateur">Bienvenue</h3>
+        <p id="infosUtilisateur" class="muted"></p>
 
-  try {
-    // Vérifie le jeton et récupère les informations actuelles du compte.
-    const result = await api('/api/auth/me');
-    const user = result.user || result;
+        <div class="account-actions">
+          <button class="btn" onclick="ouvrirModal('oeuvreModal')">
+            <i class="fas fa-plus"></i> Publier une œuvre
+          </button>
 
-    if (user && user._id) {
-      currentUser = user;
-      localStorage.setItem(USER_KEY, JSON.stringify(user));
+          <button class="btn btn-outline" onclick="chargerMesInfos()">
+            <i class="fas fa-rotate"></i> Actualiser
+          </button>
+
+          <button class="btn btn-outline" onclick="seDeconnecter()">
+            <i class="fas fa-right-from-bracket"></i> Déconnexion
+          </button>
+        </div>
+
+        <div class="notice">
+          Les œuvres envoyées sont soumises aux règles de validation
+          du serveur. Leur publication publique n'est pas automatique.
+        </div>
+      </div>
+
+      <div id="compteDeconnecte" class="panel">
+        <h3>Rejoignez ART-ZEDMO</h3>
+        <p class="muted">
+          Connectez-vous pour gérer votre compte et soumettre vos œuvres.
+        </p>
+
+        <div class="account-actions">
+          <button class="btn" onclick="ouvrirModal('connexionModal')">
+            <i class="fas fa-right-to-bracket"></i> Connexion
+          </button>
+
+          <button class="btn btn-outline"
+                  onclick="ouvrirModal('inscriptionModal')">
+            <i class="fas fa-user-plus"></i> Inscription
+          </button>
+        </div>
+      </div>
+
+      <div class="section-heading" style="margin-top:25px">
+        <h2><i class="fas fa-palette"></i> Soumettre une œuvre</h2>
+      </div>
+
+      <div class="panel">
+        <p class="muted">
+          Tu peux te connecter avant de remplir le formulaire.
+          La publication nécessite une authentification valide.
+        </p>
+
+        <button class="btn" onclick="demarrerPublication()">
+          <i class="fas fa-upload"></i> Publier une œuvre
+        </button>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <strong class="gold">ART-ZEDMO MARKETPLACE</strong><br>
+    Plateforme de découverte et de valorisation des œuvres d'art.<br>
+    <span>Les paiements et les opérations blockchain doivent être activés
+    séparément côté serveur.</span>
+  </footer>
+
+  <!-- NAVIGATION MOBILE -->
+  <nav class="bottom-nav" aria-label="Navigation principale">
+    <button class="nav-item active" data-target="accueil"
+            onclick="allerA('accueil')">
+      <i class="fas fa-house"></i><span>Accueil</span>
+    </button>
+
+    <button class="nav-item" data-target="galerie"
+            onclick="allerA('galerie')">
+      <i class="fas fa-images"></i><span>Galerie</span>
+    </button>
+
+    <button class="nav-item" data-target="expositions"
+            onclick="allerA('expositions')">
+      <i class="fas fa-landmark"></i><span>Expos</span>
+    </button>
+
+    <button class="nav-item" data-target="encheres"
+            onclick="allerA('encheres')">
+      <i class="fas fa-gavel"></i><span>Enchères</span>
+    </button>
+
+    <button class="nav-item" data-target="compte"
+            onclick="allerA('compte')">
+      <i class="fas fa-user"></i><span>Compte</span>
+    </button>
+  </nav>
+
+  <!-- MODAL INSCRIPTION -->
+  <div class="modal" id="inscriptionModal" role="dialog"
+       aria-modal="true" aria-labelledby="titreInscription">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="titreInscription">Créer un compte</h2>
+        <button class="close-btn" onclick="fermerModal('inscriptionModal')"
+                aria-label="Fermer">&times;</button>
+      </div>
+
+      <form id="formInscription">
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="insNom">Nom complet *</label>
+            <input class="field" id="insNom" name="nom"
+                   required maxlength="100">
+          </div>
+
+          <div class="form-group">
+            <label for="insArtiste">Nom d'artiste</label>
+            <input class="field" id="insArtiste" name="nom_artiste"
+                   maxlength="100">
+          </div>
+
+          <div class="form-group">
+            <label for="insWhatsapp">WhatsApp *</label>
+            <input class="field" id="insWhatsapp" name="whatsapp"
+                   type="tel" required maxlength="30">
+          </div>
+
+          <div class="form-group">
+            <label for="insEmail">E-mail</label>
+            <input class="field" id="insEmail" name="email"
+                   type="email" maxlength="150">
+          </div>
+
+          <div class="form-group">
+            <label for="insVille">Ville</label>
+            <input class="field" id="insVille" name="ville"
+                   maxlength="100">
+          </div>
+
+          <div class="form-group">
+            <label for="insRole">Type de compte</label>
+            <select class="field" id="insRole" name="role">
+              <option value="artiste">Artiste</option>
+              <option value="acheteur">Collectionneur / acheteur</option>
+            </select>
+          </div>
+
+          <div class="form-group full-width">
+            <label for="insPassword">Mot de passe *</label>
+            <input class="field" id="insPassword" name="password"
+                   type="password" required minlength="8"
+                   autocomplete="new-password">
+          </div>
+        </div>
+
+        <button class="btn" type="submit"
+                style="width:100%;margin-top:18px">
+          Créer mon compte
+        </button>
+
+        <div id="inscriptionMessage" class="form-message"
+             aria-live="polite"></div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL CONNEXION -->
+  <div class="modal" id="connexionModal" role="dialog"
+       aria-modal="true" aria-labelledby="titreConnexion">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="titreConnexion">Connexion</h2>
+        <button class="close-btn" onclick="fermerModal('connexionModal')"
+                aria-label="Fermer">&times;</button>
+      </div>
+
+      <form id="formConnexion">
+        <div class="form-group">
+          <label for="loginIdentifiant">Identifiant, e-mail ou numéro</label>
+          <input class="field" id="loginIdentifiant"
+                 name="identifiant" required autocomplete="username">
+        </div>
+
+        <div class="form-group" style="margin-top:14px">
+          <label for="loginPassword">Mot de passe</label>
+          <input class="field" id="loginPassword" name="password"
+                 type="password" required autocomplete="current-password">
+        </div>
+
+        <button class="btn" type="submit"
+                style="width:100%;margin-top:18px">
+          Se connecter
+        </button>
+
+        <div id="connexionMessage" class="form-message"
+             aria-live="polite"></div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL PUBLICATION -->
+  <div class="modal" id="oeuvreModal" role="dialog"
+       aria-modal="true" aria-labelledby="titreOeuvre">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="titreOeuvre">Publier une œuvre</h2>
+        <button class="close-btn" onclick="fermerModal('oeuvreModal')"
+                aria-label="Fermer">&times;</button>
+      </div>
+
+      <form id="formOeuvre">
+        <div class="form-grid">
+          <div class="form-group full-width">
+            <label for="oeuvreTitre">Titre de l'œuvre *</label>
+            <input class="field" id="oeuvreTitre"
+                   name="titre" required maxlength="150">
+          </div>
+
+          <div class="form-group">
+            <label for="oeuvreCategorie">Catégorie *</label>
+            <select class="field" id="oeuvreCategorie"
+                    name="categorie" required>
+              <option value="peinture">Peinture</option>
+              <option value="sculpture">Sculpture</option>
+              <option value="dessin">Dessin</option>
+              <option value="photographie">Photographie</option>
+              <option value="artisanat">Artisanat</option>
+              <option value="autre">Autre</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="oeuvrePrix">Prix demandé (FCFA)</label>
+            <input class="field" id="oeuvrePrix" name="prix"
+                   type="number" min="0" step="1" value="0">
+          </div>
+
+          <div class="form-group full-width">
+            <label for="oeuvreDescription">Description *</label>
+            <textarea class="field" id="oeuvreDescription"
+                      name="description" required maxlength="5000"></textarea>
+          </div>
+
+          <div class="form-group full-width">
+            <label for="oeuvreImage">Image de l'œuvre</label>
+            <input class="field" id="oeuvreImage" name="image"
+                   type="file" accept="image/*">
+            <small class="muted">
+              L'envoi d'image nécessite la route authentifiée
+              POST /api/upload. Sans cette route, la soumission
+              pourra être refusée.
+            </small>
+          </div>
+        </div>
+
+        <button class="btn" type="submit"
+                style="width:100%;margin-top:18px">
+          <i class="fas fa-paper-plane"></i> Envoyer l'œuvre
+        </button>
+
+        <div id="oeuvreMessage" class="form-message"
+             aria-live="polite"></div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    'use strict';
+
+    // =========================================================
+    // ART-ZEDMO MARKETPLACE
+    // API relative : le serveur Express sert le dossier public/.
+    // =========================================================
+
+    const API_BASE = '/api';
+
+    let currentUser = lireJSON('AZ_USER', null);
+    let artworks = [];
+    let expositions = [];
+    let encheres = [];
+    let annonces = [];
+
+    function lireJSON(cle, valeurParDefaut) {
+      try {
+        const contenu = localStorage.getItem(cle);
+        return contenu ? JSON.parse(contenu) : valeurParDefaut;
+      } catch {
+        return valeurParDefaut;
+      }
     }
 
-  } catch (err) {
-    // Une session invalide est effacée ; l'utilisateur peut se reconnecter.
-    if (/401|403|token|authentification|autorisation/i.test(err.message)) {
-      saveSession(null, '');
+    function getToken() {
+      return localStorage.getItem('AZ_TOKEN') || '';
     }
-  }
 
-  renderAccount();
-}
-
-(async function init() {
-  try {
-    if (window.Pi) {
-      // Mode sandbox : à configurer selon le mode de déploiement Pi utilisé.
-      window.Pi.init({version:'2.0', sandbox:true});
+    function escapeHTML(valeur) {
+      return String(valeur ?? '').replace(/[&<>"']/g, caractere => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+      })[caractere]);
     }
-  } catch (err) {
-    console.warn('Initialisation Pi indisponible :', err);
-  }
 
-  const params = new URLSearchParams(location.search);
-  const verify = params.get('verify');
+    function nombre(valeur) {
+      const n = Number(valeur);
+      return Number.isFinite(n)
+        ? n.toLocaleString('fr-FR')
+        : '0';
+    }
 
-  if (verify) {
-    document.getElementById('inputAZM').value = verify;
-    go('verifier');
-    await verifierAZM();
-  } else {
-    renderAccount();
-    await restoreSession();
-    await loadAccueil();
-  }
-})();
-</script>
+    function prixFCFA(valeur) {
+      const n = Number(valeur);
+      if (!Number.isFinite(n) || n <= 0) {
+        return 'Prix à convenir';
+      }
 
+      return nombre(n) + ' FCFA';
+    }
+
+    function afficherMessage(elementId, message, type = '') {
+      const element = document.getElementById(elementId);
+      if (!element) return;
+
+      element.className = 'form-message ' + type;
+      element.textContent = message;
+    }
+
+    async function apiFetch(path, options = {}) {
+      const headers = new Headers(options.headers || {});
+      const token = getToken();
+
+      if (token) {
+        headers.set('Authorization', 'Bearer ' + token);
+      }
+
+      const response = await fetch(API_BASE + path, {
+        ...options,
+        headers
+      });
+
+      let data = {};
+
+      try {
+        data = await response.json();
+      } catch {
+        data = {};
+      }
+
+      if (response.status === 401) {
+        localStorage.removeItem('AZ_TOKEN');
+        localStorage.removeItem('AZ_USER');
+        currentUser = null;
+        mettreAJourCompte();
+      }
+
+      if (!response.ok) {
+        const erreur = new Error(
+          data.error ||
+          data.message ||
+          `Erreur serveur (${response.status})`
+        );
+
+        erreur.status = response.status;
+        erreur.data = data;
+        throw erreur;
+      }
+
+      return data;
+    }
+
+    function ouvrirModal(id) {
+      const modal = document.getElementById(id);
+      if (modal) modal.classList.add('open');
+    }
+
+    function fermerModal(id) {
+      const modal = document.getElementById(id);
+      if (modal) modal.classList.remove('open');
+    }
+
+    document.querySelectorAll('.modal').forEach(modal => {
+      modal.addEventListener('click', event => {
+        if (event.target === modal) {
+          modal.classList.remove('open');
+        }
+      });
+    });
+
+    document.addEventListener('keydown', event => {
+      if (event.key === 'Escape') {
+        document.querySelectorAll('.modal.open').forEach(modal => {
+          modal.classList.remove('open');
+        });
+      }
+    });
+
+    function allerA(id) {
+      const section = document.getElementById(id);
+      if (!section) return;
+
+      section.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start'
+      });
+
+      document.querySelectorAll('.nav-item').forEach(button => {
+        button.classList.toggle(
+          'active',
+          button.dataset.target === id
+        );
+      });
+    }
+
+    // =========================================================
+    // COMPTE / AUTHENTIFICATION
+    // =========================================================
+
+    function mettreAJourCompte() {
+      const connecte = Boolean(getToken() && currentUser);
+
+      document.getElementById('compteConnecte')
+        .classList.toggle('hidden', !connecte);
+
+      document.getElementById('compteDeconnecte')
+        .classList.toggle('hidden', connecte);
+
+      if (connecte) {
+        const nom =
+          currentUser.nom_artiste ||
+          currentUser.nom ||
+          currentUser.identifiant ||
+          'Utilisateur';
+
+        document.getElementById('bienvenueUtilisateur')
+          .textContent = 'Bienvenue, ' + nom;
+
+        document.getElementById('infosUtilisateur')
+          .textContent =
+            'Rôle : ' + (currentUser.role || 'utilisateur') +
+            ' · Statut : ' + (currentUser.statut || 'à vérifier');
+      }
+    }
+
+    document.getElementById('formInscription')
+      .addEventListener('submit', async event => {
+        event.preventDefault();
+
+        const form = event.currentTarget;
+        const bouton = form.querySelector('button[type="submit"]');
+        bouton.disabled = true;
+
+        afficherMessage('inscriptionMessage', 'Création du compte...');
+
+        const donnees = {
+          nom: form.nom.value.trim(),
+          nom_artiste: form.nom_artiste.value.trim(),
+          whatsapp: form.whatsapp.value.trim(),
+          email: form.email.value.trim(),
+          ville: form.ville.value.trim(),
+          role: form.role.value,
+          password: form.password.value
+        };
+
+        try {
+          const resultat = await apiFetch('/auth/register', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(donnees)
+          });
+
+          afficherMessage(
+            'inscriptionMessage',
+            resultat.message ||
+              'Compte créé. Suivez les instructions du serveur pour son activation.',
+            'success'
+          );
+
+          form.reset();
+
+        } catch (error) {
+          afficherMessage(
+            'inscriptionMessage',
+            error.message || "Échec de l'inscription.",
+            'error'
+          );
+        } finally {
+          bouton.disabled = false;
+        }
+      });
+
+    document.getElementById('formConnexion')
+      .addEventListener('submit', async event => {
+        event.preventDefault();
+
+        const form = event.currentTarget;
+        const bouton = form.querySelector('button[type="submit"]');
+        bouton.disabled = true;
+
+        afficherMessage('connexionMessage', 'Connexion en cours...');
+
+        try {
+          const resultat = await apiFetch('/auth/login', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              identifiant: form.identifiant.value.trim(),
+              password: form.password.value
+            })
+          });
+
+          if (!resultat.token || !resultat.user) {
+            throw new Error(
+              "Réponse du serveur incomplète : jeton ou utilisateur absent."
+            );
+          }
+
+          localStorage.setItem('AZ_TOKEN', resultat.token);
+          localStorage.setItem(
+            'AZ_USER',
+            JSON.stringify(resultat.user)
+          );
+
+          currentUser = resultat.user;
+          mettreAJourCompte();
+
+          afficherMessage(
+            'connexionMessage',
+            'Connexion réussie.',
+            'success'
+          );
+
+          form.reset();
+
+          setTimeout(() => {
+            fermerModal('connexionModal');
+            allerA('compte');
+          }, 700);
+
+        } catch (error) {
+          afficherMessage(
+            'connexionMessage',
+            error.message || 'Connexion impossible.',
+            'error'
+          );
+        } finally {
+          bouton.disabled = false;
+        }
+      });
+
+    async function chargerMesInfos() {
+      if (!getToken()) {
+        ouvrirModal('connexionModal');
+        return;
+      }
+
+      try {
+        const resultat = await apiFetch('/auth/me');
+        const utilisateur = resultat.user || resultat;
+
+        currentUser = utilisateur;
+
+        localStorage.setItem(
+          'AZ_USER',
+          JSON.stringify(utilisateur)
+        );
+
+        mettreAJourCompte();
+
+        alert('Informations du compte actualisées.');
+
+      } catch (error) {
+        alert(
+          'Impossible de charger le compte : ' + error.message
+        );
+      }
+    }
+
+    function seDeconnecter() {
+      localStorage.removeItem('AZ_TOKEN');
+      localStorage.removeItem('AZ_USER');
+
+      currentUser = null;
+      mettreAJourCompte();
+
+      alert('Vous êtes déconnecté.');
+    }
+
+    function demarrerPublication() {
+      if (!getToken()) {
+        alert('Connectez-vous avant de soumettre une œuvre.');
+        ouvrirModal('connexionModal');
+        return;
+      }
+
+      ouvrirModal('oeuvreModal');
+    }
+
+    // =========================================================
+    // GALERIE
+    // GET /api/artworks retourne un objet contenant artworks[].
+    // =========================================================
+
+    async function chargerGalerie() {
+      const conteneur = document.getElementById('galerieOeuvres');
+
+      conteneur.innerHTML =
+        '<div class="empty"><span class="spinner"></span><p>Chargement...</p></div>';
+
+      try {
+        const resultat = await apiFetch('/artworks');
+
+        artworks = Array.isArray(resultat)
+          ? resultat
+          : Array.isArray(resultat.artworks)
+            ? resultat.artworks
+            : [];
+
+        afficherGalerieFiltre();
+
+        document.getElementById('statOeuvres').textContent =
+          nombre(artworks.length);
+
+      } catch (error) {
+        conteneur.textContent =
+          'Impossible de charger la galerie : ' + error.message;
+      }
+    }
+
+    function obtenirImage(oeuvre) {
+      if (typeof oeuvre.image === 'string' && oeuvre.image.trim()) {
+        return oeuvre.image;
+      }
+
+      if (Array.isArray(oeuvre.images) && oeuvre.images.length) {
+        const premiere = oeuvre.images[0];
+
+        if (typeof premiere === 'string') return premiere;
+
+        if (premiere && typeof premiere.url === 'string') {
+          return premiere.url;
+        }
+      }
+
+      return '';
+    }
+
+    function afficherGalerieFiltre() {
+      const conteneur = document.getElementById('galerieOeuvres');
+
+      const recherche = document.getElementById('rechercheGalerie')
+        .value.trim().toLowerCase();
+
+      const categorie = document.getElementById('filtreGalerie')
+        .value.toLowerCase();
+
+      const filtres = artworks.filter(oeuvre => {
+        const texte = [
+          oeuvre.titre,
+          oeuvre.description,
+          oeuvre.categorie,
+          oeuvre.ville,
+          oeuvre.artiste?.nom,
+          oeuvre.artiste?.nom_artiste
+        ].join(' ').toLowerCase();
+
+        const categorieOeuvre =
+          String(oeuvre.categorie || '').toLowerCase();
+
+        return texte.includes(recherche) &&
+          (!categorie || categorieOeuvre === categorie);
+      });
+
+      if (!filtres.length) {
+        conteneur.innerHTML = '';
+
+        const vide = document.createElement('div');
+        vide.className = 'empty';
+        vide.textContent = artworks.length
+          ? 'Aucune œuvre ne correspond à votre recherche.'
+          : 'Aucune œuvre publique disponible pour le moment.';
+
+        conteneur.appendChild(vide);
+        return;
+      }
+
+      conteneur.innerHTML = filtres.map(oeuvre => {
+        const id = String(oeuvre._id || oeuvre.id || '');
+        const titre = escapeHTML(oeuvre.titre || 'Œuvre sans titre');
+        const description = escapeHTML(
+          oeuvre.description || 'Aucune description.'
+        );
+
+        const artiste = escapeHTML(
+          oeuvre.artiste?.nom_artiste ||
+          oeuvre.artiste?.nom ||
+          'Artiste'
+        );
+
+        const categorieTexte = escapeHTML(
+          oeuvre.categorie || 'Art'
+        );
+
+        const prix = prixFCFA(oeuvre.prix);
+        const image = obtenirImage(oeuvre);
+        const imageHTML = image
+          ? `<img class="art-image"
+                  src="${escapeHTML(image)}"
+                  alt="${titre}"
+                  loading="lazy"
+                  onerror="this.outerHTML='<div class=&quot;art-image placeholder&quot;><i class=&quot;fas fa-palette&quot;></i></div>'">`
+          : `<div class="art-image placeholder"><i class="fas fa-palette"></i></div>`;
+
+        const votes = Number(oeuvre.votesCount) || 0;
+
+        return `
+          <article class="card">
+            ${imageHTML}
+            <div class="card-body">
+              <span class="badge">${categorieTexte}</span>
+              <h3 style="margin-top:10px">${titre}</h3>
+              <p>${description}</p>
+
+              <div class="card-meta">
+                <span><i class="fas fa-user"></i> ${artiste}</span>
+                <span><i class="fas fa-heart"></i> ${nombre(votes)} vote(s)</span>
+              </div>
+
+              <div class="price">${escapeHTML(prix)}</div>
+
+              <div class="card-actions">
+                <button class="btn btn-small"
+                        onclick="voterPourOeuvre('${escapeHTML(id)}')"
+                        ${id ? '' : 'disabled'}>
+                  <i class="fas fa-heart"></i> Voter
+                </button>
+
+                <button class="btn btn-outline btn-small"
+                        onclick="consulterVotes('${escapeHTML(id)}')"
+                        ${id ? '' : 'disabled'}>
+                  <i class="fas fa-chart-bar"></i> Votes
+                </button>
+              </div>
+
+              <div id="votes-detail-${escapeHTML(id)}"
+                   class="muted"
+                   style="margin-top:10px;font-size:12px"
+                   aria-live="polite"></div>
+            </div>
+          </article>
+        `;
+      }).join('');
+    }
+
+    // =========================================================
+    // VOTES
+    // POST /api/votes
+    // GET /api/votes/artwork/:artworkId
+    // GET /api/votes/top/:expoId
+    // =========================================================
+
+    async function voterPourOeuvre(artworkId, expositionId = null) {
+      if (!artworkId) {
+        alert("L'identifiant de l'œuvre est manquant.");
+        return;
+      }
+
+      const confirmation = confirm(
+        'Confirmez-vous votre vote pour cette œuvre ?'
+      );
+
+      if (!confirmation) return;
+
+      try {
+        const donnees = { artworkId };
+
+        if (expositionId) {
+          donnees.expositionId = expositionId;
+        }
+
+        const resultat = await apiFetch('/votes', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(donnees)
+        });
+
+        alert(
+          (resultat.message || 'Vote enregistré.') +
+          '\nTotal : ' +
+          nombre(resultat.total_votes_oeuvre)
+        );
+
+        const oeuvre = artworks.find(
+          item => String(item._id || item.id) === String(artworkId)
+        );
+
+        if (oeuvre) {
+          oeuvre.votesCount = resultat.total_votes_oeuvre;
+        }
+
+        afficherGalerieFiltre();
+
+      } catch (error) {
+        if (error.status === 409) {
+          alert('Tu as déjà voté pour cette œuvre.');
+        } else {
+          alert(
+            error.message ||
+            "Le vote n'a pas pu être enregistré."
+          );
+        }
+      }
+    }
+
+    async function consulterVotes(artworkId) {
+      try {
+        const resultat = await apiFetch(
+          '/votes/artwork/' + encodeURIComponent(artworkId)
+        );
+
+        const zone = document.getElementById(
+          'votes-detail-' + artworkId
+        );
+
+        if (zone) {
+          zone.textContent =
+            'Total actuel : ' + nombre(resultat.total_votes) + ' vote(s).';
+        }
+
+      } catch (error) {
+        alert(
+          'Impossible de consulter les votes : ' + error.message
+        );
+      }
+    }
+
+    async function chargerClassement(expositionId) {
+      const conteneur = document.getElementById('classementExposition');
+
+      if (!expositionId) {
+        conteneur.textContent =
+          'Sélectionnez une exposition pour afficher le classement.';
+        return;
+      }
+
+      conteneur.textContent = 'Chargement du classement...';
+
+      try {
+        const resultat = await apiFetch(
+          '/votes/top/' + encodeURIComponent(expositionId)
+        );
+
+        const classement = Array.isArray(resultat.classement)
+          ? resultat.classement
+          : [];
+
+        conteneur.replaceChildren();
+
+        if (!classement.length) {
+          conteneur.textContent =
+            'Aucune œuvre à classer pour cette exposition.';
+          return;
+        }
+
+        classement.forEach((oeuvre, index) => {
+          const ligne = document.createElement('div');
+          ligne.className = 'ranking-item';
+
+          const rang = document.createElement('div');
+          rang.className = 'rank-number';
+          rang.textContent = String(index + 1);
+
+          const info = document.createElement('div');
+          info.className = 'ranking-info';
+
+          const titre = document.createElement('strong');
+          titre.textContent = oeuvre.titre || 'Œuvre sans titre';
+
+          const artiste = document.createElement('span');
+          artiste.textContent =
+            'Artiste : ' +
+            (
+              oeuvre.artiste?.nom_artiste ||
+              oeuvre.artiste?.nom ||
+              'Non renseigné'
+            );
+
+          info.append(titre, artiste);
+
+          const total = document.createElement('strong');
+          total.className = 'gold';
+          total.textContent =
+            nombre(oeuvre.votesCount) + ' vote(s)';
+
+          ligne.append(rang, info, total);
+          conteneur.appendChild(ligne);
+        });
+
+      } catch (error) {
+        conteneur.textContent =
+          'Erreur de chargement du classement : ' + error.message;
+      }
+    }
+
+    function chargerClassementSelectionne() {
+      const id = document.getElementById('selectClassement').value;
+      chargerClassement(id);
+    }
+
+    // =========================================================
+    // EXPOSITIONS
+    // GET /api/expositions
+    // GET /api/expositions/active
+    // =========================================================
+
+    async function chargerExpositions() {
+      const conteneur = document.getElementById('expositionActive');
+      const select = document.getElementById('selectClassement');
+
+      conteneur.textContent = 'Chargement des expositions...';
+
+      try {
+        const resultat = await apiFetch('/expositions');
+
+        expositions = Array.isArray(resultat)
+          ? resultat
+          : Array.isArray(resultat.expositions)
+            ? resultat.expositions
+            : [];
+
+        document.getElementById('statExpositions').textContent =
+          nombre(expositions.length);
+
+        select.replaceChildren();
+
+        const optionDefaut = document.createElement('option');
+        optionDefaut.value = '';
+        optionDefaut.textContent = 'Sélectionner une exposition';
+        select.appendChild(optionDefaut);
+
+        expositions.forEach(exposition => {
+          const option = document.createElement('option');
+          option.value = exposition._id || '';
+          option.textContent =
+            exposition.titre || exposition.nom || 'Exposition';
+
+          select.appendChild(option);
+        });
+
+        afficherExpositionActive();
+
+      } catch (error) {
+        conteneur.textContent =
+          'Impossible de charger les expositions : ' + error.message;
+      }
+    }
+
+    async function afficherExpositionActive() {
+      const conteneur = document.getElementById('expositionActive');
+
+      try {
+        const active = await apiFetch('/expositions/active');
+
+        const exposition = active.exposition ||
+          active.expo ||
+          (active._id ? active : null);
+
+        if (!exposition) {
+          conteneur.replaceChildren();
+
+          const titre = document.createElement('h3');
+          titre.textContent = 'Aucune exposition active';
+
+          const description = document.createElement('p');
+          description.className = 'muted';
+          description.textContent =
+            active.message ||
+            'Une nouvelle exposition sera annoncée ici.';
+
+          conteneur.append(titre, description);
+          return;
+        }
+
+        conteneur.replaceChildren();
+
+        const titre = document.createElement('h3');
+        titre.textContent =
+          exposition.titre || exposition.nom || 'Exposition en cours';
+
+        const description = document.createElement('p');
+        description.textContent =
+          exposition.description || 'Découvrez les œuvres de cette exposition.';
+
+        const statut = document.createElement('span');
+        statut.className = 'badge';
+        statut.textContent = exposition.statut || 'Active';
+
+        const actions = document.createElement('div');
+        actions.className = 'account-actions';
+
+        const classement = document.createElement('button');
+        classement.className = 'btn';
+        classement.textContent = 'Voir le classement';
+
+        classement.addEventListener('click', () => {
+          const id = exposition._id;
+
+          if (id) {
+            document.getElementById('selectClassement').value = id;
+            chargerClassement(id);
+
+            document.getElementById('classementExposition')
+              .scrollIntoView({ behavior: 'smooth' });
+          }
+        });
+
+        actions.appendChild(classement);
+        conteneur.append(titre, description, statut, actions);
+
+      } catch (error) {
+        conteneur.textContent =
+          'Aucune exposition active disponible : ' + error.message;
+      }
+    }
+
+    // =========================================================
+    // ENCHERES
+    // GET /api/encheres
+    // POST /api/encheres/:id/encherir
+    // =========================================================
+
+    async function chargerEncheres() {
+      const conteneur = document.getElementById('listeEncheres');
+
+      conteneur.textContent = 'Chargement des enchères...';
+
+      try {
+        const resultat = await apiFetch('/encheres');
+
+        encheres = Array.isArray(resultat)
+          ? resultat
+          : Array.isArray(resultat.encheres)
+            ? resultat.encheres
+            : [];
+
+        document.getElementById('statEncheres').textContent =
+          nombre(encheres.length);
+
+        if (!encheres.length) {
+          conteneur.innerHTML =
+            '<div class="empty">Aucune enchère active pour le moment.</div>';
+          return;
+        }
+
+        conteneur.innerHTML = encheres.map(enchere => {
+          const id = String(enchere._id || '');
+          const oeuvre = enchere.artwork || {};
+          const titre = escapeHTML(oeuvre.titre || 'Œuvre en enchère');
+
+          const montant = Number(
+            enchere.montantActuel ??
+            enchere.prixActuel ??
+            enchere.prixDepart ??
+            enchere.montant ??
+            0
+          );
+
+          const artiste = escapeHTML(
+            oeuvre.artiste?.nom_artiste ||
+            oeuvre.artiste?.nom ||
+            'Artiste'
+          );
+
+          return `
+            <article class="card">
+              <div class="art-image placeholder">
+                <i class="fas fa-gavel"></i>
+              </div>
+
+              <div class="card-body">
+                <span class="badge">Enchère active</span>
+                <h3 style="margin-top:10px">${titre}</h3>
+                <p>Artiste : ${artiste}</p>
+
+                <div class="price">
+                  ${montant > 0 ? escapeHTML(prixFCFA(montant)) : 'Montant à vérifier'}
+                </div>
+
+                <div class="card-actions">
+                  <button class="btn btn-small"
+                          onclick="proposerEnchere('${escapeHTML(id)}', ${Number.isFinite(montant) ? montant : 0})">
+                    <i class="fas fa-arrow-up"></i> Enchérir
+                  </button>
+                </div>
+              </div>
+            </article>
+          `;
+        }).join('');
+
+      } catch (error) {
+        conteneur.textContent =
+          'Impossible de charger les enchères : ' + error.message;
+      }
+    }
+
+    async function proposerEnchere(enchereId, montantActuel) {
+      if (!getToken()) {
+        alert('Connectez-vous avant de participer à une enchère.');
+        ouvrirModal('connexionModal');
+        return;
+      }
+
+      const proposition = prompt(
+        'Saisissez votre proposition en FCFA. ' +
+        'Montant actuel : ' + nombre(montantActuel),
+        String(Math.max(0, montantActuel + 1))
+      );
+
+      if (proposition === null) return;
+
+      const montant = Number(proposition);
+
+      if (!Number.isFinite(montant) || montant <= montantActuel) {
+        alert(
+          'Le montant doit être supérieur au montant actuel affiché.'
+        );
+        return;
+      }
+
+      if (!confirm(
+        'Confirmer votre proposition de ' +
+        nombre(montant) + ' FCFA ?'
+      )) {
+        return;
+      }
+
+      try {
+        const resultat = await apiFetch(
+          '/encheres/' + encodeURIComponent(enchereId) + '/encherir',
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ montant })
+          }
+        );
+
+        alert(resultat.message || 'Proposition envoyée au serveur.');
+        await chargerEncheres();
+
+      } catch (error) {
+        alert(
+          'Proposition refusée : ' + error.message
+        );
+      }
+    }
+
+    // =========================================================
+    // PUBLICATION D'UNE OEUVRE
+    // POST /api/artworks exige un JWT.
+    // =========================================================
+
+    document.getElementById('formOeuvre')
+      .addEventListener('submit', async event => {
+        event.preventDefault();
+
+        if (!getToken()) {
+          afficherMessage(
+            'oeuvreMessage',
+            'Connectez-vous avant de publier une œuvre.',
+            'error'
+          );
+          return;
+        }
+
+        const form = event.currentTarget;
+        const bouton = form.querySelector('button[type="submit"]');
+
+        bouton.disabled = true;
+
+        afficherMessage('oeuvreMessage', 'Envoi en cours...');
+
+        try {
+          const fichier = form.image.files[0];
+          let imageURL = '';
+
+          if (fichier) {
+            if (!fichier.type.startsWith('image/')) {
+              throw new Error('Veuillez sélectionner un fichier image.');
+            }
+
+            const formulaireImage = new FormData();
+            formulaireImage.append('image', fichier);
+
+            const resultatUpload = await apiFetch('/upload', {
+              method: 'POST',
+              body: formulaireImage
+            });
+
+            imageURL =
+              resultatUpload.url ||
+              resultatUpload.image ||
+              resultatUpload.path ||
+              resultatUpload.file?.url ||
+              '';
+
+            if (!imageURL) {
+              throw new Error(
+                "Le serveur n'a pas retourné l'adresse de l'image. " +
+                "Vérifiez la réponse de /api/upload."
+              );
+            }
+          }
+
+          const donnees = {
+            titre: form.titre.value.trim(),
+            categorie: form.categorie.value,
+            prix: Number(form.prix.value || 0),
+            description: form.description.value.trim()
+          };
+
+          if (imageURL) {
+            donnees.image = imageURL;
+            donnees.images = [imageURL];
+          }
+
+          const resultat = await apiFetch('/artworks', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(donnees)
+          });
+
+          afficherMessage(
+            'oeuvreMessage',
+            resultat.message ||
+              'Œuvre envoyée. Elle peut nécessiter une validation administrative.',
+            'success'
+          );
+
+          form.reset();
+          await chargerGalerie();
+
+        } catch (error) {
+          afficherMessage(
+            'oeuvreMessage',
+            error.message || "Impossible d'envoyer l'œuvre.",
+            'error'
+          );
+        } finally {
+          bouton.disabled = false;
+        }
+      });
+
+    // =========================================================
+    // VERIFICATION SIMPLE
+    // =========================================================
+
+    async function verifierOeuvre() {
+      const id = document.getElementById('verificationArtworkId')
+        .value.trim();
+
+      const zone = document.getElementById('verificationResultat');
+
+      if (!id) {
+        zone.textContent = 'Veuillez saisir un identifiant.';
+        return;
+      }
+
+      zone.textContent = 'Recherche en cours...';
+
+      try {
+        const resultat = await apiFetch(
+          '/votes/artwork/' + encodeURIComponent(id)
+        );
+
+        zone.replaceChildren();
+
+        const titre = document.createElement('h3');
+        titre.textContent = resultat.titre || 'Œuvre';
+
+        const identifiant = document.createElement('p');
+        identifiant.textContent =
+          'Identifiant : ' + (resultat.artworkId || id);
+
+        const votes = document.createElement('p');
+        votes.textContent =
+          'Nombre de votes : ' + nombre(resultat.total_votes);
+
+        zone.append(titre, identifiant, votes);
+
+      } catch (error) {
+        zone.textContent =
+          'Vérification impossible : ' + error.message;
+      }
+    }
+
+    // =========================================================
+    // ANNONCES
+    // GET /api/annonces retourne un tableau.
+    // =========================================================
+
+    async function chargerAnnonces() {
+      const zone = document.getElementById('annoncePrincipale');
+
+      try {
+        const resultat = await apiFetch('/annonces');
+
+        annonces = Array.isArray(resultat)
+          ? resultat
+          : Array.isArray(resultat.annonces)
+            ? resultat.annonces
+            : [];
+
+        if (!annonces.length) {
+          zone.replaceChildren();
+          return;
+        }
+
+        const annonce = annonces[0];
+
+        zone.replaceChildren();
+
+        const bloc = document.createElement('div');
+        bloc.className = 'notice';
+
+        const titre = document.createElement('strong');
+        titre.textContent = annonce.titre || 'Annonce';
+
+        const message = document.createElement('p');
+        message.textContent = annonce.message || '';
+
+        bloc.append(titre, message);
+        zone.appendChild(bloc);
+
+      } catch (error) {
+        console.warn('Chargement des annonces :', error.message);
+        zone.replaceChildren();
+      }
+    }
+
+    // =========================================================
+    // CHARGEMENT INITIAL
+    // =========================================================
+
+    async function actualiserTout() {
+      await Promise.allSettled([
+        chargerGalerie(),
+        chargerExpositions(),
+        chargerEncheres(),
+        chargerAnnonces()
+      ]);
+    }
+
+    async function initialiser() {
+      mettreAJourCompte();
+
+      await actualiserTout();
+
+      // Si un jeton existe, vérifier qu'il est toujours valide.
+      if (getToken()) {
+        try {
+          const resultat = await apiFetch('/auth/me');
+          currentUser = resultat.user || resultat;
+
+          localStorage.setItem(
+            'AZ_USER',
+            JSON.stringify(currentUser)
+          );
+
+          mettreAJourCompte();
+        } catch (error) {
+          console.warn(
+            'Session à vérifier :',
+            error.message
+          );
+        }
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', initialiser);
+  </script>
 </body>
 </html>
