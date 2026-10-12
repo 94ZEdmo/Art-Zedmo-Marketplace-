@@ -1,172 +1,1799 @@
-<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Admin ZEDMO</title><script src="https://cdn.tailwindcss.com"></script></head>
-<body class="bg-[#F9F7F2]"><nav class="bg-black text-white p-3 flex justify-between"><span class="font-bold">⚙️ ADMIN ZEDMO - Backend Live</span><div class="flex gap-3"><a href="/api/health" target="_blank" class="text-xs bg-white text-black px-3 py-1 rounded-full">Health</a><a href="/" class="underline text-sm">Voir site</a></div></nav>
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex,nofollow">
 
-<div class="max-w-6xl mx-auto p-4 space-y-6">
-<div class="grid grid-cols-2 md:grid-cols-7 gap-3">
-<div class="bg-white border p-4 rounded-[16px]"><div class="text-xs opacity-60">Artistes en attente</div><div id="statArtisteAtt" class="font-bold text-2xl text-orange-600">0</div></div>
-<div class="bg-white border-2 border-green-500 p-4 rounded-[16px]"><div class="text-xs opacity-60">Artistes validés</div><div id="statArtisteVal" class="font-bold text-2xl text-green-600">0</div></div>
-<div class="bg-white border p-4 rounded-[16px]"><div class="text-xs opacity-60">Oeuvres en attente</div><div id="statAttente" class="font-bold text-2xl">0</div></div>
-<div class="bg-white border p-4 rounded-[16px]"><div class="text-xs opacity-60">Validées (oeuvres)</div><div id="statValide" class="font-bold text-2xl">0</div></div>
-<div class="bg-white border p-4 rounded-[16px]"><div class="text-xs opacity-60">Total votes</div><div id="statVotes" class="font-bold text-2xl">0</div></div>
-<div class="bg-white border p-4 rounded-[16px]"><div class="text-xs opacity-60">En enchère</div><div id="statEnchere" class="font-bold text-2xl">0</div></div>
-<div class="bg-black text-white border border-yellow-500 p-4 rounded-[16px]"><div class="text-xs opacity-60">NFT Total</div><div id="statNFT" class="font-bold text-2xl text-yellow-400">0</div></div>
-</div>
+  <title>Administration | ART-ZEDMO MARKETPLACE</title>
 
-<div class="bg-white border rounded-[20px] p-6">
-<h3 class="font-bold mb-3">📢 Panneau Annonces LIVE</h3>
-<div class="flex gap-2"><input id="annonceInput" placeholder="Ex: EXPO NOV 2026 - Femme Africaine - LIVE" class="flex-1 border rounded-full px-4 py-2.5 text-sm"><button onclick="publierAnnonce()" class="bg-black text-white px-6 rounded-full text-sm">Publier LIVE</button></div>
-<div id="listAnnonces" class="mt-4 space-y-2"></div>
-</div>
+  <script src="https://cdn.tailwindcss.com"></script>
 
-<div class="bg-white border-2 border-orange-300 rounded-[20px] p-6">
-<h3 class="font-bold mb-3">👤 Artistes à valider</h3>
-<div id="artistesAttenteList" class="space-y-3">Chargement artistes...</div>
-</div>
+  <style>
+    :root {
+      --bg: #080b12;
+      --panel: #111827;
+      --line: #263244;
+      --accent: #00d4aa;
+      --text: #e5e7eb;
+      --muted: #9ca3af;
+    }
 
-<div class="bg-white border-2 border-green-200 rounded-[20px] p-6">
-<h3 class="font-bold mb-3">✅ Artistes validés</h3>
-<div id="artistesValidesList" class="space-y-2 text-sm"></div>
-</div>
+    * {
+      box-sizing: border-box;
+    }
 
-<div class="bg-black text-white border-2 border-yellow-500 rounded-[20px] p-6">
-<h3 class="font-bold mb-3">➕ Créer une Exposition (Admin)</h3>
-<p id="expoActiveInfo" class="text-[11px] opacity-60 mb-3">Aucune expo active</p>
-<div class="grid md:grid-cols-3 gap-3">
-<input id="expoTitre" placeholder="Titre ex: Exposition le 5 octobre 2026" class="bg-zinc-900 border border-zinc-700 rounded-xl px-4 py-2.5 text-sm">
-<input id="expoDebut" type="date" class="bg-zinc-900 border border-zinc-700 rounded-xl px-4 py-2.5 text-sm">
-<input id="expoFin" type="date" class="bg-zinc-900 border border-zinc-700 rounded-xl px-4 py-2.5 text-sm">
-</div>
-<button onclick="creerExpoAdmin()" id="btnCreerExpo" class="w-full md:w-auto bg-[#D4AF37] text-black px-6 py-2.5 rounded-full text-sm font-bold mt-3">Créer l'Exposition</button>
-<p id="msgExpoAdmin" class="text-xs mt-2"></p>
-</div>
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Arial, Helvetica, sans-serif;
+    }
 
-<div class="bg-white border rounded-[20px] p-6">
-<h3 class="font-bold mb-3">🎨 Œuvres à valider - &lt;24h</h3>
-<div id="attenteList" class="space-y-3">Chargement...</div>
-</div>
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+    }
 
-<!-- GALERIE VALIDEE AVEC SUPPRESSION -->
-<div class="bg-white border rounded-[20px] p-6">
-<h3 class="font-bold mb-3">✅ Galerie validée + Expo OCT 2026</h3>
-<div class="flex flex-wrap gap-2 mb-4 items-center">
-  <button onclick="loadAdmin('populaire')" class="border px-3 py-1.5 rounded-full text-xs">Tri Populaire</button>
-  <button onclick="passerEnExpo()" class="bg-black text-white px-4 py-1.5 rounded-full text-xs">+ Expo</button>
-  <div class="flex gap-2 items-center bg-yellow-50 border border-yellow-300 px-3 py-1.5 rounded-full">
-    <span class="text-[10px] font-bold">Fin LIVE:</span>
-    <input id="enchDateFinAdmin" type="datetime-local" class="text-xs bg-white border rounded-full px-2 py-1">
+    .field {
+      width: 100%;
+      padding: 12px;
+      background: #080d16;
+      color: white;
+      border: 1px solid #344256;
+      border-radius: 10px;
+      outline: none;
+    }
+
+    .field:focus {
+      border-color: var(--accent);
+    }
+
+    .btn {
+      padding: 9px 13px;
+      border-radius: 9px;
+      font-weight: bold;
+      cursor: pointer;
+      border: 1px solid #344256;
+      transition: .2s;
+    }
+
+    .btn:disabled {
+      opacity: .5;
+      cursor: not-allowed;
+    }
+
+    .primary {
+      background: var(--accent);
+      color: #03251d;
+      border-color: var(--accent);
+    }
+
+    .secondary {
+      background: #1c2738;
+      color: white;
+    }
+
+    .success {
+      background: #12372d;
+      color: #bbf7d0;
+      border-color: #166534;
+    }
+
+    .danger {
+      background: #451a1a;
+      color: #fecaca;
+      border-color: #7f1d1d;
+    }
+
+    .muted {
+      color: var(--muted);
+    }
+
+    .stat {
+      padding: 16px;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: linear-gradient(135deg, #141d2c, #0d121d);
+    }
+
+    .stat strong {
+      display: block;
+      margin-top: 6px;
+      font-size: 26px;
+      color: white;
+    }
+
+    .card {
+      padding: 13px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #0c121d;
+      overflow-wrap: anywhere;
+    }
+
+    .section-title {
+      font-size: 19px;
+      font-weight: bold;
+      margin-bottom: 16px;
+    }
+
+    .thumb {
+      width: 75px;
+      height: 75px;
+      object-fit: cover;
+      border-radius: 9px;
+      background: #1f2937;
+      flex-shrink: 0;
+    }
+
+    .notice {
+      display: none;
+      padding: 12px;
+      border-radius: 10px;
+      margin-bottom: 15px;
+    }
+
+    .notice.show {
+      display: block;
+    }
+
+    .notice.ok {
+      background: #12372d;
+      color: #bbf7d0;
+    }
+
+    .notice.error {
+      background: #451a1a;
+      color: #fecaca;
+    }
+
+    .notice.info {
+      background: #172554;
+      color: #bfdbfe;
+    }
+
+    .tag {
+      display: inline-block;
+      padding: 3px 8px;
+      border: 1px solid #344256;
+      border-radius: 20px;
+      font-size: 12px;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .loading {
+      opacity: .65;
+      pointer-events: none;
+    }
+
+    @media (max-width: 640px) {
+      .thumb {
+        width: 58px;
+        height: 58px;
+      }
+
+      .btn {
+        font-size: 12px;
+        padding: 8px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+<header class="sticky top-0 z-20 border-b border-slate-800 bg-slate-950">
+  <div class="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center gap-3">
+
+    <div>
+      <h1 class="font-black text-lg">
+        ART-ZEDMO
+        <span style="color:var(--accent)">MARKETPLACE</span>
+      </h1>
+
+      <p class="text-xs muted">Administration de la plateforme</p>
+    </div>
+
+    <div class="flex items-center gap-2">
+      <span id="sessionLabel" class="text-xs muted hidden sm:inline">
+        Non connecté
+      </span>
+
+      <button
+        id="logoutBtn"
+        class="btn secondary hidden"
+        type="button"
+        onclick="logout()">
+        Déconnexion
+      </button>
+    </div>
+
   </div>
-  <button onclick="calculerTop()" class="bg-[#D4AF37] text-black px-4 py-1.5 rounded-full text-xs font-bold">Top10 → Enchère x2</button>
-</div>
-<div id="valideList" class="grid md:grid-cols-3 gap-3"></div>
-</div>
+</header>
 
-<!-- NOUVEAU BLOC NFT AVEC SUPPRESSION - FIX #7 -->
-<div class="bg-black text-white border-2 border-[#D4AF37] rounded-[20px] p-6">
-<h3 class="font-bold mb-3">🪙 NFT Galerie - Suppression admin</h3>
-<p class="text-[11px] opacity-60 mb-3">Tous les NFT mintés sur Pi / Polygon - tu peux supprimer définitivement</p>
-<div id="nftAdminList" class="grid md:grid-cols-3 gap-3"></div>
-</div>
+<main class="max-w-7xl mx-auto px-4 py-6">
 
-<div class="bg-white border rounded-[20px] p-6">
-<h3 class="font-bold mb-3">🔥 Enchères en cours - LIVE décompte</h3>
-<div id="enchereList" class="space-y-2"></div>
-</div>
-</div>
+  <div id="globalNotice" class="notice" role="status" aria-live="polite"></div>
+
+  <!-- CONNEXION -->
+
+  <section id="loginPanel" class="panel max-w-lg mx-auto p-6 mt-8">
+
+    <h2 class="text-2xl font-black mb-2">
+      Connexion administrateur
+    </h2>
+
+    <p class="muted text-sm mb-5">
+      Connectez-vous avec votre compte administrateur ART-ZEDMO.
+    </p>
+
+    <form id="loginForm" class="space-y-4">
+
+      <div>
+        <label class="block text-sm mb-2" for="loginIdentifier">
+          E-mail ou numéro WhatsApp
+        </label>
+
+        <input
+          id="loginIdentifier"
+          class="field"
+          autocomplete="username"
+          required>
+      </div>
+
+      <div>
+        <label class="block text-sm mb-2" for="loginPassword">
+          Mot de passe
+        </label>
+
+        <input
+          id="loginPassword"
+          class="field"
+          type="password"
+          autocomplete="current-password"
+          required>
+      </div>
+
+      <button class="btn primary w-full" type="submit">
+        Se connecter
+      </button>
+
+    </form>
+
+    <p class="muted text-xs mt-4">
+      Votre compte doit avoir le rôle administrateur et être autorisé
+      par le serveur.
+    </p>
+
+  </section>
+
+  <!-- TABLEAU DE BORD -->
+
+  <section id="dashboard" class="hidden">
+
+    <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-6">
+
+      <div>
+        <h2 class="text-3xl font-black">
+          Tableau de bord
+        </h2>
+
+        <p class="muted text-sm mt-1">
+          Gestion des artistes, œuvres, expositions et enchères.
+        </p>
+      </div>
+
+      <button
+        class="btn secondary"
+        type="button"
+        onclick="loadAdmin()">
+        Actualiser
+      </button>
+
+    </div>
+
+    <!-- STATISTIQUES -->
+
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+
+      <div class="stat">
+        <span class="muted text-sm">Artistes en attente</span>
+        <strong id="statArtistsPending">0</strong>
+      </div>
+
+      <div class="stat">
+        <span class="muted text-sm">Œuvres en attente</span>
+        <strong id="statArtPending">0</strong>
+      </div>
+
+      <div class="stat">
+        <span class="muted text-sm">Votes enregistrés</span>
+        <strong id="statVotes">0</strong>
+      </div>
+
+      <div class="stat">
+        <span class="muted text-sm">Enchères en cours</span>
+        <strong id="statAuctions">0</strong>
+      </div>
+
+    </div>
+
+    <div class="grid grid-cols-2 gap-3 mb-6">
+
+      <div class="stat">
+        <span class="muted text-sm">Artistes validés</span>
+        <strong id="statArtistsApproved">0</strong>
+      </div>
+
+      <div class="stat">
+        <span class="muted text-sm">Fiches NFT en base</span>
+        <strong id="statNFT">0</strong>
+        <p class="muted text-xs mt-2">
+          Une fiche en base ne signifie pas qu'un NFT a été créé sur une blockchain.
+        </p>
+      </div>
+
+    </div>
+
+    <!-- ANNONCES -->
+
+    <section class="panel p-4 sm:p-5 mb-6">
+
+      <h3 class="section-title">
+        📢 Annonces et LIVE
+      </h3>
+
+      <form id="announcementForm" class="grid sm:grid-cols-2 gap-3">
+
+        <input
+          id="announcementTitle"
+          class="field"
+          maxlength="140"
+          placeholder="Titre de l'annonce"
+          required>
+
+        <select id="announcementType" class="field">
+          <option value="expo">Exposition</option>
+          <option value="info">Information</option>
+          <option value="enchere">Enchère</option>
+          <option value="urgent">Urgent</option>
+        </select>
+
+        <textarea
+          id="announcementMessage"
+          class="field sm:col-span-2"
+          maxlength="2000"
+          rows="3"
+          placeholder="Message de l'annonce"></textarea>
+
+        <button class="btn primary sm:col-span-2" type="submit">
+          Publier l'annonce
+        </button>
+
+      </form>
+
+      <div id="announcementsList" class="grid md:grid-cols-2 gap-3 mt-5"></div>
+
+    </section>
+
+    <!-- ARTISTES -->
+
+    <section class="panel p-4 sm:p-5 mb-6">
+
+      <h3 class="section-title">
+        👩🏽‍🎨 Gestion des artistes
+      </h3>
+
+      <div class="grid lg:grid-cols-2 gap-5">
+
+        <div>
+          <h4 class="font-bold mb-3">Demandes en attente</h4>
+          <div id="artistsPending" class="space-y-3"></div>
+        </div>
+
+        <div>
+          <h4 class="font-bold mb-3">Artistes validés</h4>
+          <div id="artistsApproved" class="space-y-3"></div>
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- EXPOSITIONS -->
+
+    <section class="panel p-4 sm:p-5 mb-6">
+
+      <h3 class="section-title">
+        🏛️ Gestion des expositions
+      </h3>
+
+      <form id="expoForm" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-5">
+
+        <input
+          id="expoTitle"
+          class="field"
+          maxlength="160"
+          placeholder="Titre de l'exposition"
+          required>
+
+        <input
+          id="expoPlace"
+          class="field"
+          maxlength="180"
+          placeholder="Lieu de l'exposition">
+
+        <label class="text-sm muted">
+          Date de début
+          <input
+            id="expoStart"
+            class="field mt-1"
+            type="datetime-local"
+            required>
+        </label>
+
+        <label class="text-sm muted">
+          Date de fin des votes
+          <input
+            id="expoVoteEnd"
+            class="field mt-1"
+            type="datetime-local"
+            required>
+        </label>
+
+        <label class="text-sm muted">
+          Date de fin
+          <input
+            id="expoEnd"
+            class="field mt-1"
+            type="datetime-local"
+            required>
+        </label>
+
+        <button class="btn primary self-end" type="submit">
+          Créer l'exposition
+        </button>
+
+      </form>
+
+      <div id="expositionsList" class="grid md:grid-cols-2 gap-3"></div>
+
+    </section>
+
+    <!-- ŒUVRES -->
+
+    <section class="panel p-4 sm:p-5 mb-6">
+
+      <div class="flex flex-wrap justify-between items-center gap-3 mb-5">
+        <h3 class="section-title !mb-0">
+          🖼️ Gestion des œuvres
+        </h3>
+
+        <button
+          class="btn secondary"
+          type="button"
+          onclick="loadAdmin('popular')">
+          Trier par votes
+        </button>
+      </div>
+
+      <h4 class="font-bold mb-3">Œuvres en attente de validation</h4>
+
+      <div
+        id="artworksPending"
+        class="grid md:grid-cols-2 xl:grid-cols-3 gap-3 mb-6">
+      </div>
+
+      <h4 class="font-bold mb-3">Galerie des œuvres publiées</h4>
+
+      <div
+        id="artworksApproved"
+        class="grid md:grid-cols-2 xl:grid-cols-3 gap-3">
+      </div>
+
+    </section>
+
+    <!-- ENCHÈRES -->
+
+    <section class="panel p-4 sm:p-5 mb-6">
+
+      <h3 class="section-title">
+        🔨 Gestion des enchères
+      </h3>
+
+      <p class="muted text-xs mb-4">
+        La suppression d'une enchère ne réalise aucun remboursement
+        et ne détermine pas automatiquement un gagnant.
+      </p>
+
+      <div id="auctionsList" class="grid md:grid-cols-2 gap-3"></div>
+
+    </section>
+
+    <!-- NFT -->
+
+    <section class="panel p-4 sm:p-5 mb-6">
+
+      <h3 class="section-title">
+        🪙 Fiches NFT
+      </h3>
+
+      <p class="muted text-xs mb-4">
+        Cette section affiche les fiches NFT enregistrées dans la base
+        de données. Elle ne prouve pas le minting sur Pi Network,
+        Polygon ou une autre blockchain.
+      </p>
+
+      <div id="nftsList" class="grid md:grid-cols-2 xl:grid-cols-3 gap-3"></div>
+
+    </section>
+
+  </section>
+
+</main>
 
 <script>
-const API='/api';
-let EXPO_ACTIVE=null;
-function getCountdown(dateFin){
-  const diff=new Date(dateFin)-new Date();
-  if(diff<=0) return "Expirée";
-  const j=Math.floor(diff/86400000),h=Math.floor((diff%86400000)/3600000),m=Math.floor((diff%3600000)/60000);
-  return `${String(j).padStart(2,'0')}j ${String(h).padStart(2,'0')}h ${String(m).padStart(2,'0')}m restant`;
+'use strict';
+
+/*
+ * ART-ZEDMO MARKETPLACE
+ * Panneau d'administration.
+ *
+ * Toutes les opérations protégées transmettent le jeton JWT.
+ * Le backend reste responsable de vérifier le rôle administrateur.
+ */
+
+const API = '/api';
+const TOKEN_KEY = 'azm_admin_token';
+const USER_KEY = 'azm_admin_user';
+
+let currentUser = null;
+
+let allUsers = [];
+let allArtworks = [];
+let allExpositions = [];
+let allAnnouncements = [];
+let allNFTs = [];
+let allAuctions = [];
+
+let artworkSort = '';
+
+const $ = id => document.getElementById(id);
+
+function getToken() {
+  return localStorage.getItem(TOKEN_KEY) || '';
 }
-async function loadAdmin(tri){
-  const annonces=await fetch(API+'/annonces').then(r=>r.json()).catch(()=>[]);
-  document.getElementById('listAnnonces').innerHTML=annonces.map(a=>`<div class="flex justify-between bg-gray-50 p-3 rounded-xl text-sm"><div><b class="text-[10px] bg-black text-white px-2 py-0.5 rounded-full mr-2">${a.type}</b>${a.titre||a.message}</div><button onclick="desactiverAnnonce('${a._id}')" class="text-red-500 text-xs">Désactiver</button></div>`).join('') || '<p class="text-xs opacity-50">Aucune annonce</p>';
-  const expoRes = await fetch(API+'/expositions/active').then(r=>r.json()).catch(()=>null);
-  if(expoRes && expoRes._id){
-    EXPO_ACTIVE = expoRes;
-    if(expoRes.dateFin && new Date(expoRes.dateFin) < new Date()){
-      document.getElementById('expoActiveInfo').innerHTML = `⏰ Expo EXPIRÉE le ${new Date(expoRes.dateFin).toLocaleDateString()}`;
-    } else {
-      document.getElementById('expoActiveInfo').innerHTML = `✅ Expo ACTIVE : <b class="text-yellow-400">${expoRes.titre}</b> du ${new Date(expoRes.dateDebut||expoRes.createdAt).toLocaleDateString()} au ${new Date(expoRes.dateFin||'').toLocaleDateString()}`;
+
+/* Évite l'injection HTML dans les contenus affichés. */
+function escapeHTML(value) {
+  return String(value ?? '').replace(/[&<>"']/g, char => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;'
+  })[char]);
+}
+
+function getId(item) {
+  return item?._id || item?.id || '';
+}
+
+function asArray(data, keys = []) {
+  if (Array.isArray(data)) return data;
+
+  for (const key of keys) {
+    if (Array.isArray(data?.[key])) {
+      return data[key];
     }
-  } else {
-    document.getElementById('expoActiveInfo').innerText = '⚠️ Aucune expo active';
   }
-  try{
-    const users = await fetch(API+'/auth').then(r=>r.json()).catch(()=>[]);
-    const artistesPending = Array.isArray(users)? users.filter(u=>u.statut==='en_attente') : [];
-    const artistesValides = Array.isArray(users)? users.filter(u=>u.statut==='valide') : [];
-    document.getElementById('statArtisteAtt').innerText=artistesPending.length;
-    document.getElementById('statArtisteVal').innerText=artistesValides.length;
-    document.getElementById('artistesAttenteList').innerHTML=artistesPending.map(u=>`<div class="flex gap-3 bg-orange-50 border border-orange-200 p-4 rounded-xl"><div class="w-12 h-12 bg-black text-white rounded-full flex items-center justify-center font-bold">${(u.nom_artiste||u.nom||'?')[0].toUpperCase()}</div><div class="flex-1 text-sm"><div class="font-bold">Nom: ${u.nom} | Artiste: <span class="text-orange-600">${u.nom_artiste||'N/A'}</span></div><div class="text-xs mt-1">📱 ${u.whatsapp} | 📧 ${u.email||'N/A'}</div></div><div class="flex flex-col gap-1"><button onclick="validerArtiste('${u._id}')" class="bg-black text-white px-4 py-2 rounded-full text-xs font-bold">Valider</button><button onclick="refuserArtiste('${u._id}')" class="border border-red-300 text-red-600 px-4 py-1.5 rounded-full text-xs">Refuser</button></div></div>`).join('') || '<div class="text-sm opacity-60 text-center py-4">✅ Aucun artiste en attente</div>';
-    document.getElementById('artistesValidesList').innerHTML=artistesValides.map(u=>`<div class="flex justify-between bg-green-50 p-2 rounded-lg"><span>✅ ${u.nom_artiste} (${u.email})</span></div>`).join('') || '<p class="opacity-60">0 validé</p>';
-  }catch(e){ document.getElementById('artistesAttenteList').innerHTML='<p class="text-red-500 text-xs">Erreur: '+e.message+'</p>';}
-  const q = tri? `?all=true&tri=${tri}` : '?all=true';
-  const all=await fetch(API+'/artworks'+q).then(r=>r.json()).catch(()=>[]);
-  const pending = all.filter(a=>a.statut==='en_attente');
-  const valides = all.filter(a=>a.statut!=='en_attente');
-  document.getElementById('statAttente').innerText=pending.length;
-  document.getElementById('statValide').innerText=valides.length;
-  document.getElementById('statVotes').innerText=all.reduce((s,a)=>s+(a.votesCount||a.votes||0),0);
-  document.getElementById('attenteList').innerHTML=pending.map(a=>`<div class="flex gap-3 bg-yellow-50 border border-yellow-200 p-3 rounded-xl"><img src="${a.image||a.images?.[0]||'https://picsum.photos/100'}" class="w-16 h-16 rounded-xl object-cover"><div class="flex-1"><div class="font-bold text-sm">${a.titre}</div><div class="text-xs opacity-60">${(a.prix||0).toLocaleString()} FCFA</div></div><div class="flex flex-col gap-1"><button onclick="valider('${a._id}')" class="bg-black text-white px-4 py-1.5 rounded-full text-xs">Valider</button><button onclick="refuser('${a._id}')" class="border px-4 py-1.5 rounded-full text-xs">Refuser</button></div></div>`).join('') || '<div class="text-sm opacity-60">✅ Aucune oeuvre en attente</div>';
-  document.getElementById('valideList').innerHTML=valides.map(a=>`<div class="border rounded-xl overflow-hidden bg-white"><img src="${a.image||a.images?.[0]||'https://picsum.photos/200'}" class="h-28 w-full object-cover"><div class="p-2"><div class="font-bold text-xs truncate">${a.titre}</div><div class="text-[11px]">${a.statut} • ${a.votesCount||0} votes</div><div class="flex gap-1 mt-2"><button onclick="addToExpo('${a._id}')" class="flex-1 border text-[11px] py-1.5 rounded-full">+ Expo</button><button onclick="supprimerGalerie('${a._id}')" class="bg-red-600 text-white text-[11px] px-3 py-1.5 rounded-full">🗑️</button></div></div></div>`).join('');
 
-  // NFT LIST - FIX #7
-  const nfts=await fetch(API+'/nft').then(r=>r.json()).catch(()=>[]);
-  document.getElementById('statNFT').innerText=nfts.length;
-  document.getElementById('nftAdminList').innerHTML=nfts.map(n=>`<div class="border border-zinc-700 rounded-xl overflow-hidden bg-zinc-900"><img src="${n.imageUrl||'https://via.placeholder.com/200'}" class="h-28 w-full object-cover"><div class="p-2"><div class="font-bold text-xs truncate">${n.titre} <span class="text-[#D4AF37] text-[9px]">NFT</span></div><div class="text-[10px] opacity-60">${n.azmId||n._id} • ${n.prixUSDX||100} USDX</div><div class="flex gap-1 mt-2"><button onclick="supprimerNFT('${n._id}')" class="w-full bg-red-600 text-white text-[11px] py-1.5 rounded-full">🗑️ Supprimer NFT définitivement</button></div></div></div>`).join('') || '<p class="text-xs opacity-50">Aucun NFT</p>';
+  if (Array.isArray(data?.data)) {
+    return data.data;
+  }
 
-  const enchs=await fetch(API+'/encheres').then(r=>r.json()).catch(()=>[]);
-  document.getElementById('statEnchere').innerText=enchs.length;
-  document.getElementById('enchereList').innerHTML=enchs.map(e=>`<div class="flex justify-between bg-black text-white p-3 rounded-xl text-xs items-center"><span class="flex-1"><b class="text-[#D4AF37]">${e.artwork?.titre || e.titre || 'Oeuvre'}</b> - ${(e.enchereActuelle||e.prixDepart||0).toLocaleString()} FCFA<br><span class="opacity-60 text-[10px]">Fin: ${new Date(e.dateFin).toLocaleString()} • ${getCountdown(e.dateFin)}</span></span><button onclick="supprimerEnchere('${e._id}')" class="bg-red-600 text-white px-3 py-1.5 rounded-full text-[11px] ml-2">🗑 Supprimer</button></div>`).join('') || '<p class="text-xs opacity-50">Pas d\'enchère</p>';
+  if (Array.isArray(data?.results)) {
+    return data.results;
+  }
+
+  return [];
 }
-async function creerExpoAdmin(){
-  const titre=document.getElementById('expoTitre').value.trim();
-  const debut=document.getElementById('expoDebut').value;
-  const fin=document.getElementById('expoFin').value;
-  const msg=document.getElementById('msgExpoAdmin');
-  const btn=document.getElementById('btnCreerExpo');
-  if(!titre||!debut||!fin) return msg.innerText='❌ Remplis titre + début + fin';
-  try{
-    btn.innerText='⏳ Création...';
-    const res=await fetch(API+'/expositions',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({titre, dateDebut:debut, dateFin:fin, active:true})}).then(r=>r.json());
-    if(res.error) throw new Error(res.error);
-    msg.innerHTML='<span class="text-green-400">✅ Expo créée</span>';
+
+function formatMoney(value) {
+  const number = Number(value ?? 0);
+
+  return Number.isFinite(number)
+    ? number.toLocaleString('fr-FR')
+    : '0';
+}
+
+function formatDate(value) {
+  if (!value) return 'Non définie';
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return 'Non définie';
+  }
+
+  return date.toLocaleString('fr-FR');
+}
+
+function userName(user) {
+  return user?.nom_artiste ||
+         user?.nom ||
+         user?.name ||
+         user?.email ||
+         'Utilisateur';
+}
+
+function artworkTitle(artwork) {
+  return artwork?.titre ||
+         artwork?.title ||
+         'Œuvre sans titre';
+}
+
+function artworkImage(artwork) {
+  if (Array.isArray(artwork?.images) && artwork.images[0]) {
+    return artwork.images[0];
+  }
+
+  return artwork?.image ||
+         artwork?.imageUrl ||
+         artwork?.image_url ||
+         '';
+}
+
+function getArtist(artwork) {
+  if (artwork?.artiste && typeof artwork.artiste === 'object') {
+    return artwork.artiste;
+  }
+
+  if (artwork?.artist && typeof artwork.artist === 'object') {
+    return artwork.artist;
+  }
+
+  return null;
+}
+
+function showNotice(message, type = 'info') {
+  const notice = $('globalNotice');
+
+  notice.textContent = message;
+  notice.className = `notice show ${type}`;
+
+  window.scrollTo({
+    top: 0,
+    behavior: 'smooth'
+  });
+
+  if (type !== 'error') {
+    setTimeout(() => {
+      notice.classList.remove('show');
+    }, 6000);
+  }
+}
+
+/* Client API centralisé : ajoute automatiquement le JWT. */
+async function api(path, options = {}) {
+  const headers = new Headers(options.headers || {});
+
+  if (options.body && !(options.body instanceof FormData)) {
+    headers.set('Content-Type', 'application/json');
+  }
+
+  if (getToken()) {
+    headers.set('Authorization', `Bearer ${getToken()}`);
+  }
+
+  const response = await fetch(API + path, {
+    ...options,
+    headers
+  });
+
+  const raw = await response.text();
+
+  let data = {};
+
+  try {
+    data = raw ? JSON.parse(raw) : {};
+  } catch {
+    data = {
+      message: raw || 'Réponse serveur illisible.'
+    };
+  }
+
+  if (!response.ok) {
+    const message =
+      data.message ||
+      data.error ||
+      `Erreur HTTP ${response.status}`;
+
+    const error = new Error(message);
+    error.status = response.status;
+
+    throw error;
+  }
+
+  return data;
+}
+
+/*
+ * Essaie plusieurs routes uniquement lorsqu'une route n'existe pas.
+ * Une erreur d'autorisation ne doit jamais être contournée.
+ */
+async function tryEndpoints(paths, options = {}) {
+  let lastError;
+
+  for (const path of paths) {
+    try {
+      return await api(path, options);
+    } catch (error) {
+      lastError = error;
+
+      if (
+        error.status !== 404 &&
+        error.status !== 405
+      ) {
+        throw error;
+      }
+    }
+  }
+
+  throw lastError || new Error('Route API introuvable.');
+}
+
+function showLogin() {
+  $('loginPanel').classList.remove('hidden');
+  $('dashboard').classList.add('hidden');
+  $('logoutBtn').classList.add('hidden');
+  $('sessionLabel').textContent = 'Non connecté';
+}
+
+function showDashboard() {
+  $('loginPanel').classList.add('hidden');
+  $('dashboard').classList.remove('hidden');
+  $('logoutBtn').classList.remove('hidden');
+
+  $('sessionLabel').textContent = currentUser
+    ? 'Administrateur : ' + userName(currentUser)
+    : 'Session administrateur';
+}
+
+function logout() {
+  localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(USER_KEY);
+
+  currentUser = null;
+
+  showLogin();
+
+  showNotice('Vous êtes déconnecté.', 'ok');
+}
+
+/* CONNEXION */
+
+$('loginForm').addEventListener('submit', async event => {
+  event.preventDefault();
+
+  const identifier = $('loginIdentifier').value.trim();
+  const password = $('loginPassword').value;
+
+  const button = event.submitter;
+
+  if (button) button.disabled = true;
+
+  try {
+    const result = await api('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({
+        email: identifier,
+        whatsapp: identifier,
+        password
+      })
+    });
+
+    const jwt =
+      result.token ||
+      result.accessToken ||
+      result.data?.token;
+
+    const user =
+      result.user ||
+      result.utilisateur ||
+      result.data?.user ||
+      null;
+
+    if (!jwt) {
+      throw new Error(
+        'Le serveur n’a pas renvoyé de jeton JWT. Vérifiez la route /api/auth/login.'
+      );
+    }
+
+    /*
+     * Si le serveur renvoie le rôle, contrôle préliminaire côté interface.
+     * Le serveur doit aussi vérifier le rôle pour chaque opération.
+     */
+    if (user && user.role && user.role !== 'admin') {
+      throw new Error(
+        'Ce compte ne possède pas le rôle administrateur.'
+      );
+    }
+
+    localStorage.setItem(TOKEN_KEY, jwt);
+
+    if (user) {
+      localStorage.setItem(USER_KEY, JSON.stringify(user));
+    }
+
+    currentUser = user;
+
+    showDashboard();
+
+    await loadAdmin();
+
+    showNotice('Connexion réussie.', 'ok');
+
+  } catch (error) {
+    showNotice(error.message || 'Connexion impossible.', 'error');
+  } finally {
+    if (button) button.disabled = false;
+  }
+});
+
+/* CARTES ARTISTES */
+
+function artistCard(user, approved) {
+  const id = escapeHTML(getId(user));
+
+  return `
+    <article class="card">
+      <div class="font-bold">
+        ${escapeHTML(userName(user))}
+      </div>
+
+      <div class="text-sm muted mt-1">
+        ${escapeHTML(user.email || '')}
+      </div>
+
+      <div class="text-sm muted">
+        ${escapeHTML(user.whatsapp || '')}
+      </div>
+
+      <div class="text-xs muted mt-2">
+        Ville : ${escapeHTML(user.ville || 'Non précisée')}
+      </div>
+
+      <div class="text-xs mt-2">
+        Statut :
+        ${escapeHTML(user.statut || 'inconnu')}
+      </div>
+
+      ${
+        approved
+          ? ''
+          : `
+            <div class="flex flex-wrap gap-2 mt-3">
+              <button
+                class="btn success"
+                onclick="validerArtiste('${id}')">
+                Valider
+              </button>
+
+              <button
+                class="btn danger"
+                onclick="refuserArtiste('${id}')">
+                Refuser
+              </button>
+            </div>
+          `
+      }
+    </article>
+  `;
+}
+
+/* CARTES ŒUVRES */
+
+function artworkCard(artwork, pending) {
+  const id = escapeHTML(getId(artwork));
+  const image = artworkImage(artwork);
+  const artist = getArtist(artwork);
+
+  const artistLabel = artist
+    ? userName(artist)
+    : artwork?.nom_artiste ||
+      artwork?.artisteNom ||
+      'Artiste non précisé';
+
+  const imageHTML = image
+    ? `
+      <img
+        class="thumb"
+        src="${escapeHTML(image)}"
+        alt=""
+        loading="lazy"
+        onerror="this.style.display='none'">
+    `
+    : `
+      <div class="thumb flex items-center justify-center text-xs muted">
+        Sans image
+      </div>
+    `;
+
+  return `
+    <article class="card">
+
+      <div class="flex gap-3">
+        ${imageHTML}
+
+        <div class="min-w-0 flex-1">
+          <div class="font-bold">
+            ${escapeHTML(artworkTitle(artwork))}
+          </div>
+
+          <div class="text-sm muted mt-1">
+            ${escapeHTML(artistLabel)}
+          </div>
+
+          <div class="text-sm mt-1">
+            ${formatMoney(artwork.prix)} FCFA
+          </div>
+
+          <div class="text-xs muted mt-1">
+            Statut : ${escapeHTML(artwork.statut || 'inconnu')}
+          </div>
+
+          <div class="text-xs muted mt-1">
+            Votes : ${formatMoney(artwork.votesCount || 0)}
+          </div>
+        </div>
+      </div>
+
+      <div class="flex flex-wrap gap-2 mt-3">
+
+        ${
+          pending
+            ? `
+              <button
+                class="btn success"
+                onclick="validerOeuvre('${id}')">
+                Valider
+              </button>
+            `
+            : ''
+        }
+
+        <button
+          class="btn secondary"
+          onclick="ajouterOeuvreExpo('${id}')">
+          Ajouter à une expo
+        </button>
+
+        <button
+          class="btn danger"
+          onclick="supprimerOeuvre('${id}')">
+          Supprimer
+        </button>
+
+      </div>
+
+    </article>
+  `;
+}
+
+/* CARTES EXPOSITIONS */
+
+function expoCard(expo) {
+  const id = escapeHTML(getId(expo));
+
+  return `
+    <article class="card">
+
+      <div class="font-bold">
+        ${escapeHTML(expo.titre || expo.title || 'Exposition')}
+      </div>
+
+      <div class="text-sm muted mt-1">
+        ${escapeHTML(expo.lieu || '')}
+      </div>
+
+      <div class="text-xs muted mt-2">
+        Début : ${escapeHTML(formatDate(expo.dateDebut))}
+      </div>
+
+      <div class="text-xs muted mt-1">
+        Fin des votes : ${escapeHTML(formatDate(expo.dateFinVote))}
+      </div>
+
+      <div class="text-xs muted mt-1">
+        Fin : ${escapeHTML(formatDate(expo.dateFin))}
+      </div>
+
+      <div class="text-xs mt-2">
+        Statut :
+        <span class="tag">
+          ${escapeHTML(expo.statut || 'inconnu')}
+        </span>
+      </div>
+
+      <button
+        class="btn secondary mt-3"
+        onclick="calculerTop('${id}')">
+        Calculer le Top 10
+      </button>
+
+    </article>
+  `;
+}
+
+/* CARTES ANNONCES */
+
+function announcementCard(announcement) {
+  const id = escapeHTML(getId(announcement));
+
+  return `
+    <article class="card">
+
+      <div class="flex justify-between gap-2">
+        <strong>
+          ${escapeHTML(announcement.titre || 'Annonce')}
+        </strong>
+
+        <span class="tag">
+          ${escapeHTML(announcement.type || 'info')}
+        </span>
+      </div>
+
+      <p class="text-sm muted mt-2 whitespace-pre-wrap">
+        ${escapeHTML(announcement.message || '')}
+      </p>
+
+      <div class="text-xs muted mt-2">
+        ${escapeHTML(formatDate(announcement.createdAt))}
+      </div>
+
+      <button
+        class="btn danger mt-3"
+        onclick="desactiverAnnonce('${id}')">
+        Désactiver / supprimer
+      </button>
+
+    </article>
+  `;
+}
+
+/* CARTES ENCHÈRES */
+
+function auctionCard(auction) {
+  const id = escapeHTML(getId(auction));
+
+  const artwork =
+    auction.artwork && typeof auction.artwork === 'object'
+      ? auction.artwork
+      : null;
+
+  const title =
+    auction.titre ||
+    artworkTitle(artwork || {});
+
+  return `
+    <article class="card">
+
+      <div class="font-bold">
+        ${escapeHTML(title)}
+      </div>
+
+      <div class="text-sm mt-2">
+        Prix actuel :
+        <strong>
+          ${formatMoney(
+            auction.enchereActuelle ??
+            auction.prixDepart ??
+            0
+          )} FCFA
+        </strong>
+      </div>
+
+      <div class="text-xs muted mt-2">
+        Fin : ${escapeHTML(formatDate(auction.dateFin))}
+      </div>
+
+      <div class="text-xs muted mt-1">
+        Statut : ${escapeHTML(auction.statut || 'inconnu')}
+      </div>
+
+      <button
+        class="btn danger mt-3"
+        onclick="supprimerEnchere('${id}')">
+        Supprimer l'enchère
+      </button>
+
+    </article>
+  `;
+}
+
+/* CARTES NFT */
+
+function nftCard(nft) {
+  const id = escapeHTML(getId(nft));
+  const image = artworkImage(nft);
+
+  return `
+    <article class="card">
+
+      <div class="flex gap-3">
+
+        ${
+          image
+            ? `
+              <img
+                class="thumb"
+                src="${escapeHTML(image)}"
+                alt=""
+                loading="lazy"
+                onerror="this.style.display='none'">
+            `
+            : `
+              <div class="thumb flex items-center justify-center text-xs muted">
+                NFT
+              </div>
+            `
+        }
+
+        <div class="min-w-0 flex-1">
+
+          <div class="font-bold">
+            ${escapeHTML(nft.title || nft.titre || nft.azmId || 'Fiche NFT')}
+          </div>
+
+          <div class="text-xs muted mt-2">
+            Identifiant : ${escapeHTML(nft.azmId || '—')}
+          </div>
+
+          <div class="text-xs muted mt-1">
+            Blockchain : ${escapeHTML(nft.blockchain || 'Non précisée')}
+          </div>
+
+          <div class="text-xs mt-2">
+            ${
+              nft.blockchainMinted === true
+                ? 'Mint déclaré'
+                : 'Fiche en base uniquement'
+            }
+          </div>
+
+        </div>
+
+      </div>
+
+      <button
+        class="btn danger mt-3"
+        onclick="supprimerNFT('${id}')">
+        Supprimer la fiche
+      </button>
+
+    </article>
+  `;
+}
+
+function renderList(elementId, items, renderer, emptyMessage) {
+  const element = $(elementId);
+
+  element.innerHTML = items.length
+    ? items.map(renderer).join('')
+    : `<p class="muted text-sm">${escapeHTML(emptyMessage)}</p>`;
+}
+
+/* CHARGEMENT DU TABLEAU DE BORD */
+
+async function loadAdmin(sort = artworkSort) {
+  artworkSort = sort;
+
+  if (!getToken()) {
+    showLogin();
+    return;
+  }
+
+  document.body.classList.add('loading');
+
+  try {
+    const results = await Promise.allSettled([
+
+      tryEndpoints(['/annonces']),
+
+      tryEndpoints(['/expositions/active']),
+
+      tryEndpoints([
+        '/auth/admin/users',
+        '/auth/admin',
+        '/auth'
+      ]),
+
+      tryEndpoints([
+        '/artworks?all=true' +
+        (sort === 'popular' ? '&tri=popular' : '')
+      ]),
+
+      tryEndpoints(['/nft']),
+
+      tryEndpoints(['/encheres'])
+
+    ]);
+
+    /*
+     * On garde les résultats disponibles même si un endpoint échoue.
+     */
+    const resultValue = index =>
+      results[index].status === 'fulfilled'
+        ? results[index].value
+        : null;
+
+    const announcementResult = resultValue(0);
+    const expoResult = resultValue(1);
+    const usersResult = resultValue(2);
+    const artworkResult = resultValue(3);
+    const nftResult = resultValue(4);
+    const auctionResult = resultValue(5);
+
+    allAnnouncements = asArray(
+      announcementResult,
+      ['annonces', 'data']
+    );
+
+    allUsers = asArray(
+      usersResult,
+      ['users', 'utilisateurs', 'artistes', 'data']
+    );
+
+    allArtworks = asArray(
+      artworkResult,
+      ['artworks', 'oeuvres', 'data']
+    );
+
+    allNFTs = asArray(
+      nftResult,
+      ['nfts', 'items', 'data']
+    );
+
+    allAuctions = asArray(
+      auctionResult,
+      ['encheres', 'auctions', 'data']
+    );
+
+    /*
+     * La route /expositions/active peut renvoyer un objet
+     * ou une liste selon l'implémentation du backend.
+     */
+    if (Array.isArray(expoResult)) {
+      allExpositions = expoResult;
+    } else if (Array.isArray(expoResult?.expositions)) {
+      allExpositions = expoResult.expositions;
+    } else {
+      const expo =
+        expoResult?.exposition ||
+        expoResult?.data ||
+        expoResult;
+
+      allExpositions =
+        expo && typeof expo === 'object' && getId(expo)
+          ? [expo]
+          : [];
+    }
+
+    if (results[0].status === 'fulfilled') {
+      renderList(
+        'announcementsList',
+        allAnnouncements,
+        announcementCard,
+        'Aucune annonce disponible.'
+      );
+    } else {
+      $('announcementsList').textContent =
+        'Annonces indisponibles : ' +
+        results[0].reason.message;
+    }
+
+    if (results[1].status === 'fulfilled') {
+      renderList(
+        'expositionsList',
+        allExpositions,
+        expoCard,
+        'Aucune exposition disponible.'
+      );
+    } else {
+      $('expositionsList').textContent =
+        'Expositions indisponibles : ' +
+        results[1].reason.message;
+    }
+
+    if (results[2].status === 'fulfilled') {
+      const pendingUsers = allUsers.filter(user =>
+        user.role !== 'admin' &&
+        user.statut === 'en_attente'
+      );
+
+      const approvedUsers = allUsers.filter(user =>
+        user.role !== 'admin' &&
+        user.statut === 'valide'
+      );
+
+      renderList(
+        'artistsPending',
+        pendingUsers,
+        user => artistCard(user, false),
+        'Aucun artiste en attente.'
+      );
+
+      renderList(
+        'artistsApproved',
+        approvedUsers,
+        user => artistCard(user, true),
+        'Aucun artiste validé.'
+      );
+    } else {
+      $('artistsPending').textContent =
+        'Liste des utilisateurs indisponible : ' +
+        results[2].reason.message;
+
+      $('artistsApproved').textContent = '';
+    }
+
+    if (results[3].status === 'fulfilled') {
+      renderList(
+        'artworksPending',
+        allArtworks.filter(artwork =>
+          artwork.statut === 'en_attente'
+        ),
+        artwork => artworkCard(artwork, true),
+        'Aucune œuvre en attente.'
+      );
+
+      renderList(
+        'artworksApproved',
+        allArtworks.filter(artwork =>
+          !['en_attente', 'rejetee'].includes(artwork.statut)
+        ),
+        artwork => artworkCard(artwork, false),
+        'Aucune œuvre publiée.'
+      );
+    } else {
+      $('artworksPending').textContent =
+        'Œuvres indisponibles : ' +
+        results[3].reason.message;
+
+      $('artworksApproved').textContent = '';
+    }
+
+    if (results[4].status === 'fulfilled') {
+      renderList(
+        'nftsList',
+        allNFTs,
+        nftCard,
+        'Aucune fiche NFT.'
+      );
+    } else {
+      $('nftsList').textContent =
+        'Fiches NFT indisponibles : ' +
+        results[4].reason.message;
+    }
+
+    if (results[5].status === 'fulfilled') {
+      renderList(
+        'auctionsList',
+        allAuctions,
+        auctionCard,
+        'Aucune enchère disponible.'
+      );
+    } else {
+      $('auctionsList').textContent =
+        'Enchères indisponibles : ' +
+        results[5].reason.message;
+    }
+
+    /* STATISTIQUES */
+
+    $('statArtistsPending').textContent =
+      allUsers.filter(user =>
+        user.role !== 'admin' &&
+        user.statut === 'en_attente'
+      ).length;
+
+    $('statArtistsApproved').textContent =
+      allUsers.filter(user =>
+        user.role !== 'admin' &&
+        user.statut === 'valide'
+      ).length;
+
+    $('statArtPending').textContent =
+      allArtworks.filter(artwork =>
+        artwork.statut === 'en_attente'
+      ).length;
+
+    $('statVotes').textContent = formatMoney(
+      allArtworks.reduce(
+        (total, artwork) =>
+          total + Number(artwork.votesCount || 0),
+        0
+      )
+    );
+
+    $('statAuctions').textContent =
+      allAuctions.filter(auction =>
+        auction.statut === 'en_cours'
+      ).length;
+
+    $('statNFT').textContent = allNFTs.length;
+
+    /*
+     * Si tous les endpoints sensibles indiquent un refus d'accès,
+     * l'utilisateur doit vérifier sa session et ses permissions.
+     */
+    const sensitiveResults = [
+      results[2],
+      results[3],
+      results[5]
+    ];
+
+    const allForbidden = sensitiveResults.every(result =>
+      result.status === 'rejected' &&
+      [401, 403].includes(result.reason?.status)
+    );
+
+    if (allForbidden) {
+      logout();
+
+      showNotice(
+        'Accès refusé. Vérifiez votre compte administrateur et reconnectez-vous.',
+        'error'
+      );
+    }
+
+  } catch (error) {
+    showNotice(
+      error.message || 'Erreur lors du chargement du tableau de bord.',
+      'error'
+    );
+  } finally {
+    document.body.classList.remove('loading');
+  }
+}
+
+/* ACTIONS ADMINISTRATEUR */
+
+async function performAction(paths, options, successMessage) {
+  try {
+    await tryEndpoints(paths, options);
+
+    showNotice(successMessage, 'ok');
+
+    await loadAdmin(artworkSort);
+
+  } catch (error) {
+    showNotice(
+      error.message || 'Cette opération a échoué.',
+      'error'
+    );
+  }
+}
+
+/* VALIDER UN ARTISTE */
+
+async function validerArtiste(id) {
+  if (!confirm('Valider cet artiste ?')) return;
+
+  await performAction(
+    [
+      `/auth/${encodeURIComponent(id)}/valider`,
+      `/auth/${encodeURIComponent(id)}/approve`
+    ],
+    { method: 'PUT' },
+    'Artiste validé.'
+  );
+}
+
+/* REFUSER UN ARTISTE */
+
+async function refuserArtiste(id) {
+  if (!confirm('Refuser la demande de cet artiste ?')) return;
+
+  await performAction(
+    [
+      `/auth/${encodeURIComponent(id)}/refuser`,
+      `/auth/${encodeURIComponent(id)}/refuse`
+    ],
+    { method: 'PUT' },
+    'Demande refusée.'
+  );
+}
+
+/* VALIDER UNE ŒUVRE */
+
+async function validerOeuvre(id) {
+  if (!confirm('Valider cette œuvre ?')) return;
+
+  await performAction(
+    [`/artworks/${encodeURIComponent(id)}/valider`],
+    { method: 'PUT' },
+    'Œuvre validée.'
+  );
+}
+
+/* SUPPRIMER UNE ŒUVRE */
+
+async function supprimerOeuvre(id) {
+  if (!confirm('Supprimer définitivement cette œuvre ?')) return;
+
+  await performAction(
+    [`/artworks/${encodeURIComponent(id)}`],
+    { method: 'DELETE' },
+    'Œuvre supprimée.'
+  );
+}
+
+/* PUBLIER UNE ANNONCE */
+
+$('announcementForm').addEventListener('submit', async event => {
+  event.preventDefault();
+
+  const titre = $('announcementTitle').value.trim();
+  const message = $('announcementMessage').value.trim();
+  const type = $('announcementType').value;
+
+  if (!titre) {
+    showNotice('Le titre est obligatoire.', 'error');
+    return;
+  }
+
+  try {
+    await api('/annonces', {
+      method: 'POST',
+      body: JSON.stringify({
+        titre,
+        message,
+        type,
+        active: true
+      })
+    });
+
+    $('announcementForm').reset();
+
+    showNotice('Annonce publiée.', 'ok');
+
+    await loadAdmin();
+
+  } catch (error) {
+    showNotice(error.message, 'error');
+  }
+});
+
+/* DÉSACTIVER UNE ANNONCE */
+
+async function desactiverAnnonce(id) {
+  if (!confirm('Désactiver ou supprimer cette annonce ?')) return;
+
+  /*
+   * Le code essaie d'abord PUT /desactiver.
+   * Il n'utilise DELETE que si cette route est absente,
+   * et non si le serveur refuse l'accès.
+   */
+  try {
+    await tryEndpoints(
+      [
+        `/annonces/${encodeURIComponent(id)}/desactiver`
+      ],
+      { method: 'PUT' }
+    );
+
+    showNotice('Annonce désactivée.', 'ok');
+
+  } catch (error) {
+    if (error.status !== 404 && error.status !== 405) {
+      showNotice(error.message, 'error');
+      return;
+    }
+
+    await performAction(
+      [`/annonces/${encodeURIComponent(id)}`],
+      { method: 'DELETE' },
+      'Annonce supprimée.'
+    );
+
+    return;
+  }
+
+  await loadAdmin();
+}
+
+/* CRÉER UNE EXPOSITION */
+
+$('expoForm').addEventListener('submit', async event => {
+  event.preventDefault();
+
+  const titre = $('expoTitle').value.trim();
+  const dateDebut = $('expoStart').value;
+  const dateFinVote = $('expoVoteEnd').value;
+  const dateFin = $('expoEnd').value;
+  const lieu = $('expoPlace').value.trim();
+
+  if (!titre || !dateDebut || !dateFinVote || !dateFin) {
+    showNotice('Veuillez remplir les champs obligatoires.', 'error');
+    return;
+  }
+
+  if (new Date(dateFin) <= new Date(dateDebut)) {
+    showNotice(
+      'La date de fin doit être postérieure à la date de début.',
+      'error'
+    );
+    return;
+  }
+
+  if (
+    new Date(dateFinVote) < new Date(dateDebut) ||
+    new Date(dateFinVote) > new Date(dateFin)
+  ) {
+    showNotice(
+      'La fin des votes doit se situer entre le début et la fin de l’exposition.',
+      'error'
+    );
+    return;
+  }
+
+  try {
+    await api('/expositions', {
+      method: 'POST',
+      body: JSON.stringify({
+        titre,
+        dateDebut,
+        dateFinVote,
+        dateFin,
+        lieu,
+        statut: 'active'
+      })
+    });
+
+    $('expoForm').reset();
+
+    showNotice('Exposition créée.', 'ok');
+
+    await loadAdmin();
+
+  } catch (error) {
+    showNotice(error.message, 'error');
+  }
+});
+
+/* AJOUTER UNE ŒUVRE À UNE EXPOSITION */
+
+async function ajouterOeuvreExpo(artworkId) {
+  if (!allExpositions.length) {
+    showNotice(
+      'Aucune exposition disponible. Créez ou activez une exposition.',
+      'error'
+    );
+    return;
+  }
+
+  let expoId = getId(allExpositions[0]);
+
+  if (allExpositions.length > 1) {
+    const choices = allExpositions
+      .map((expo, index) =>
+        `${index + 1}. ${expo.titre || 'Exposition'}`
+      )
+      .join('\n');
+
+    const answer = prompt(
+      'Choisissez une exposition par numéro :\n' + choices,
+      '1'
+    );
+
+    if (answer === null) return;
+
+    const choice = Number(answer);
+
+    if (
+      !Number.isInteger(choice) ||
+      choice < 1 ||
+      choice > allExpositions.length
+    ) {
+      showNotice('Numéro d’exposition invalide.', 'error');
+      return;
+    }
+
+    expoId = getId(allExpositions[choice - 1]);
+  }
+
+  if (!confirm('Ajouter cette œuvre à l’exposition choisie ?')) {
+    return;
+  }
+
+  await performAction(
+    [
+      `/expositions/${encodeURIComponent(expoId)}/add-artwork`
+    ],
+    {
+      method: 'POST',
+      body: JSON.stringify({ artworkId })
+    },
+    'Œuvre ajoutée à l’exposition.'
+  );
+}
+
+/* CALCULER LE TOP 10 */
+
+async function calculerTop(expoId) {
+  if (
+    !confirm(
+      'Demander au serveur de calculer le Top 10 et de préparer les enchères ?'
+    )
+  ) {
+    return;
+  }
+
+  await performAction(
+    [
+      `/expositions/${encodeURIComponent(expoId)}/calculer-top-et-encherir`
+    ],
+    { method: 'POST' },
+    'Demande de calcul du Top 10 envoyée.'
+  );
+}
+
+/* SUPPRIMER UNE ENCHÈRE */
+
+async function supprimerEnchere(id) {
+  if (!confirm('Supprimer cette enchère ?')) return;
+
+  await performAction(
+    [`/encheres/${encodeURIComponent(id)}`],
+    { method: 'DELETE' },
+    'Enchère supprimée.'
+  );
+}
+
+/* SUPPRIMER UNE FICHE NFT */
+
+async function supprimerNFT(id) {
+  if (
+    !confirm(
+      'Supprimer cette fiche NFT de la base de données ?'
+    )
+  ) {
+    return;
+  }
+
+  await performAction(
+    [`/nft/${encodeURIComponent(id)}`],
+    { method: 'DELETE' },
+    'Fiche NFT supprimée.'
+  );
+}
+
+/* INITIALISATION */
+
+(function init() {
+  try {
+    currentUser = JSON.parse(
+      localStorage.getItem(USER_KEY) || 'null'
+    );
+  } catch {
+    currentUser = null;
+  }
+
+  if (getToken()) {
+    showDashboard();
     loadAdmin();
-  }catch(e){ msg.innerText='❌ '+e.message; }
-  finally{ btn.innerText="Créer l'Exposition"; }
-}
-async function supprimerGalerie(id){ if(!confirm('Supprimer cette oeuvre de la galerie?')) return; await fetch(`${API}/artworks/${id}`,{method:'DELETE'}); loadAdmin(); }
-async function supprimerNFT(id){ if(!confirm('Supprimer ce NFT définitivement de la galerie?')) return; const r=await fetch(`${API}/nft/${id}`,{method:'DELETE'}).then(r=>r.json()).catch(()=>({})); if(r.error){ // fallback admin route
-    await fetch(`${API}/admin/nft/${id}`,{method:'DELETE'});
-  } loadAdmin(); }
-async function supprimerEnchere(id){ if(!confirm('Supprimer enchère?')) return; await fetch(`${API}/encheres/${id}`,{method:'DELETE'}); loadAdmin(); }
-async function validerArtiste(id){ const res = await fetch(`${API}/auth/${id}/valider`,{method:'PUT'}).then(r=>r.json()); alert('✅ Validé'); loadAdmin(); }
-async function refuserArtiste(id){ if(!confirm('Refuser?'))return; await fetch(`${API}/auth/${id}`,{method:'DELETE'}); loadAdmin(); }
-async function valider(id){ await fetch(`${API}/artworks/${id}/valider`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({statut:'validee'})}); loadAdmin(); }
-async function refuser(id){ if(!confirm('Supprimer?')) return; await fetch(`${API}/artworks/${id}`,{method:'DELETE'}); loadAdmin(); }
-async function publierAnnonce(){ const t=document.getElementById('annonceInput').value; if(!t)return; await fetch(API+'/annonces',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({titre:t, message:t, type:'expo', texte:t, active:true})}); document.getElementById('annonceInput').value=''; loadAdmin(); }
-async function desactiverAnnonce(id){ await fetch(`${API}/annonces/${id}`,{method:'DELETE'}).catch(async()=>{await fetch(`${API}/annonces/${id}/desactiver`,{method:'PUT'});}); loadAdmin(); }
-async function addToExpo(artId){ if(!EXPO_ACTIVE){ alert('Crée expo active'); return; } await fetch(`${API}/expositions/${EXPO_ACTIVE._id}/add-artwork`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({artworkId:artId})}); alert('Ajoutée Expo!'); }
-async function calculerTop(){
-  if(!EXPO_ACTIVE) return alert('Pas d\'expo active');
-  const dateFinInput = document.getElementById('enchDateFinAdmin').value;
-  if(!dateFinInput) return alert('Choisis date Fin LIVE');
-  const enchs = await fetch(API+'/encheres').then(r=>r.json()).catch(()=>[]);
-  if(enchs.length>0){
-    if(!confirm('Modifier date LIVE de '+enchs.length+' enchères?')) return;
-    await fetch(API+'/encheres/bulk/update-date',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({dateFin:dateFinInput})}).then(r=>r.json());
-    alert('✅ Date mise à jour'); loadAdmin(); return;
+  } else {
+    showLogin();
   }
-  if(!confirm('Top10 → enchère x2?'))return;
-  await fetch(`${API}/expositions/${EXPO_ACTIVE._id}/calculer-top-et-encherir`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({dateFin: dateFinInput})}).then(r=>r.json());
-  loadAdmin();
-}
-function passerEnExpo(){ alert('Clique + Expo sous chaque oeuvre'); }
-loadAdmin(); setInterval(loadAdmin,15000);
-</script></body></html>
+})();
+</script>
+
+</body>
+</html>
