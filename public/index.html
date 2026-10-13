@@ -50,7 +50,7 @@
     }
 
     button:disabled {
-      opacity: .5;
+      opacity:.5;
       cursor: not-allowed;
     }
 
@@ -63,7 +63,7 @@
       max-width: 100%;
     }
 
-    .topbar {
+   .topbar {
       position: sticky;
       top: 0;
       z-index: 100;
@@ -72,19 +72,19 @@
       align-items: center;
       gap: 12px;
       padding: 14px 5%;
-      background: rgba(9, 9, 9, .96);
+      background: rgba(9, 9, 9,.96);
       border-bottom: 1px solid var(--border);
       backdrop-filter: blur(12px);
     }
 
-    .brand {
+   .brand {
       display: flex;
       align-items: center;
       gap: 10px;
       min-width: 0;
     }
 
-    .brand-logo {
+   .brand-logo {
       display: grid;
       place-items: center;
       width: 42px;
@@ -96,26 +96,26 @@
       font-weight: 900;
     }
 
-    .brand-name {
+   .brand-name {
       color: var(--gold);
       font-size: 15px;
       font-weight: 900;
-      letter-spacing: .6px;
+      letter-spacing:.6px;
     }
 
-    .brand-subtitle {
+   .brand-subtitle {
       margin-top: 3px;
       color: var(--muted);
       font-size: 10px;
     }
 
-    .header-actions {
+   .header-actions {
       display: flex;
       align-items: center;
       gap: 8px;
     }
 
-    .icon-btn {
+   .icon-btn {
       width: 38px;
       height: 38px;
       border: 1px solid var(--border);
@@ -124,12 +124,12 @@
       background: var(--surface);
     }
 
-    .container {
+   .container {
       width: min(1200px, 92%);
       margin: auto;
     }
 
-    .hero {
+   .hero {
       position: relative;
       overflow: hidden;
       margin-top: 22px;
@@ -141,31 +141,31 @@
         linear-gradient(140deg, #1d1a10, #111, #090909);
     }
 
-    .hero h1 {
+   .hero h1 {
       max-width: 700px;
       margin: 0 0 15px;
       font-size: clamp(30px, 5vw, 55px);
       line-height: 1.12;
     }
 
-    .gold {
+   .gold {
       color: var(--gold);
     }
 
-    .hero p {
+   .hero p {
       max-width: 650px;
       color: #ccc;
       line-height: 1.7;
     }
 
-    .hero-buttons {
+   .hero-buttons {
       display: flex;
       flex-wrap: wrap;
       gap: 10px;
       margin-top: 24px;
     }
 
-    .btn {
+   .btn {
       display: inline-flex;
       align-items: center;
       justify-content: center;
@@ -178,26 +178,26 @@
       font-weight: 700;
     }
 
-    .btn:hover {
+   .btn:hover {
       filter: brightness(1.1);
     }
 
-    .btn-outline {
+   .btn-outline {
       background: transparent;
       color: var(--gold);
     }
 
-    .btn-small {
+   .btn-small {
       padding: 9px 12px;
       font-size: 13px;
     }
 
-    .section {
+   .section {
       margin-top: 38px;
       scroll-margin-top: 85px;
     }
 
-    .section-heading {
+   .section-heading {
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -206,47 +206,47 @@
       margin-bottom: 18px;
     }
 
-    .section-heading h2 {
+   .section-heading h2 {
       margin: 0;
       font-size: 23px;
     }
 
-    .section-heading h2 i {
+   .section-heading h2 i {
       margin-right: 8px;
       color: var(--gold);
     }
 
-    .muted {
+   .muted {
       color: var(--muted);
     }
 
-    .stats {
+   .stats {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
       gap: 12px;
       margin-top: 22px;
     }
 
-    .stat {
+   .stat {
       padding: 17px;
       border: 1px solid var(--border);
       border-radius: 14px;
       background: var(--surface);
     }
 
-    .stat strong {
+   .stat strong {
       display: block;
       margin-bottom: 5px;
       color: var(--gold);
       font-size: 24px;
     }
 
-    .stat span {
+   .stat span {
       color: var(--muted);
       font-size: 12px;
     }
 
-    .notice {
+   .notice {
       margin-top: 20px;
       padding: 15px;
       border: 1px solid #6a551e;
@@ -255,24 +255,24 @@
       line-height: 1.5;
     }
 
-    .notice.success {
+   .notice.success {
       border-color: #1c7655;
       background: #10251d;
     }
 
-    .notice.error {
+   .notice.error {
       border-color: #7e2929;
       background: #2a1111;
     }
 
-    .toolbar {
+   .toolbar {
       display: flex;
       flex-wrap: wrap;
       gap: 10px;
       margin-bottom: 18px;
     }
 
-    .field {
+   .field {
       width: 100%;
       padding: 12px 13px;
       border: 1px solid var(--border);
@@ -282,11 +282,11 @@
       color: var(--text);
     }
 
-    .field:focus {
+   .field:focus {
       border-color: var(--gold);
     }
 
-    .toolbar .field {
+   .toolbar.field {
       flex: 1;
       min-width: 180px;
     }
@@ -296,20 +296,20 @@
       resize: vertical;
     }
 
-    .grid {
+   .grid {
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 18px;
     }
 
-    .card {
+   .card {
       overflow: hidden;
       border: 1px solid var(--border);
       border-radius: var(--radius);
       background: var(--surface);
     }
 
-    .art-image {
+   .art-image {
       display: grid;
       place-items: center;
       width: 100%;
@@ -319,27 +319,27 @@
       object-fit: cover;
     }
 
-    .art-image.placeholder {
+   .art-image.placeholder {
       font-size: 45px;
     }
 
-    .card-body {
+   .card-body {
       padding: 16px;
     }
 
-    .card-body h3 {
+   .card-body h3 {
       margin: 0 0 8px;
       overflow-wrap: anywhere;
     }
 
-    .card-body p {
+   .card-body p {
       color: #c5c5c5;
       font-size: 14px;
       line-height: 1.55;
       overflow-wrap: anywhere;
     }
 
-    .card-meta {
+   .card-meta {
       display: flex;
       flex-wrap: wrap;
       justify-content: space-between;
@@ -349,13 +349,13 @@
       font-size: 12px;
     }
 
-    .price {
+   .price {
       color: var(--gold-light);
       font-size: 17px;
       font-weight: 800;
     }
 
-    .badge {
+   .badge {
       display: inline-block;
       padding: 5px 8px;
       border: 1px solid #65511e;
@@ -365,18 +365,18 @@
       font-size: 11px;
     }
 
-    .card-actions {
+   .card-actions {
       display: flex;
       flex-wrap: wrap;
       gap: 8px;
       margin-top: 14px;
     }
 
-    .card-actions .btn {
+   .card-actions.btn {
       flex: 1;
     }
 
-    .empty {
+   .empty {
       grid-column: 1 / -1;
       padding: 28px 18px;
       border: 1px dashed var(--border);
@@ -386,12 +386,12 @@
       line-height: 1.6;
     }
 
-    .ranking-list {
+   .ranking-list {
       display: grid;
       gap: 10px;
     }
 
-    .ranking-item {
+   .ranking-item {
       display: flex;
       align-items: center;
       gap: 13px;
@@ -401,7 +401,7 @@
       background: var(--surface);
     }
 
-    .rank-number {
+   .rank-number {
       display: grid;
       place-items: center;
       width: 36px;
@@ -413,24 +413,24 @@
       font-weight: 900;
     }
 
-    .ranking-info {
+   .ranking-info {
       flex: 1;
       min-width: 0;
     }
 
-    .ranking-info strong {
+   .ranking-info strong {
       display: block;
       overflow-wrap: anywhere;
     }
 
-    .ranking-info span {
+   .ranking-info span {
       display: block;
       margin-top: 4px;
       color: var(--muted);
       font-size: 12px;
     }
 
-    .bottom-nav {
+   .bottom-nav {
       position: fixed;
       right: 0;
       bottom: 0;
@@ -444,7 +444,7 @@
       backdrop-filter: blur(12px);
     }
 
-    .nav-item {
+   .nav-item {
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -456,58 +456,58 @@
       font-size: 10px;
     }
 
-    .nav-item i {
+   .nav-item i {
       font-size: 18px;
     }
 
-    .nav-item.active {
+   .nav-item.active {
       color: var(--gold);
     }
 
-    .form-grid {
+   .form-grid {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 13px;
     }
 
-    .form-group {
+   .form-group {
       display: flex;
       flex-direction: column;
       gap: 7px;
     }
 
-    .form-group label {
+   .form-group label {
       color: #ddd;
       font-size: 13px;
     }
 
-    .full-width {
+   .full-width {
       grid-column: 1 / -1;
     }
 
-    .panel {
+   .panel {
       padding: 20px;
       border: 1px solid var(--border);
       border-radius: var(--radius);
       background: var(--surface);
     }
 
-    .panel h3 {
+   .panel h3 {
       margin-top: 0;
     }
 
-    .account-actions {
+   .account-actions {
       display: flex;
       flex-wrap: wrap;
       gap: 10px;
       margin: 15px 0;
     }
 
-    .hidden {
-      display: none !important;
+   .hidden {
+      display: none!important;
     }
 
-    .modal {
+   .modal {
       position: fixed;
       inset: 0;
       z-index: 500;
@@ -518,11 +518,11 @@
       background: #000c;
     }
 
-    .modal.open {
+   .modal.open {
       display: flex;
     }
 
-    .modal-content {
+   .modal-content {
       width: min(600px, 100%);
       max-height: 90vh;
       overflow-y: auto;
@@ -532,7 +532,7 @@
       background: #111;
     }
 
-    .modal-header {
+   .modal-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -540,13 +540,13 @@
       margin-bottom: 20px;
     }
 
-    .modal-header h2 {
+   .modal-header h2 {
       margin: 0;
       color: var(--gold);
       font-size: 21px;
     }
 
-    .close-btn {
+   .close-btn {
       width: 35px;
       height: 35px;
       border: 1px solid var(--border);
@@ -555,13 +555,13 @@
       color: white;
     }
 
-    .form-message {
+   .form-message {
       margin-top: 12px;
       font-size: 13px;
       line-height: 1.5;
     }
 
-    .footer {
+   .footer {
       margin-top: 45px;
       padding: 25px 10px;
       border-top: 1px solid var(--border);
@@ -571,14 +571,14 @@
       line-height: 1.7;
     }
 
-    .spinner {
+   .spinner {
       display: inline-block;
       width: 16px;
       height: 16px;
       border: 2px solid #777;
       border-top-color: var(--gold);
       border-radius: 50%;
-      animation: spin .7s linear infinite;
+      animation: spin.7s linear infinite;
     }
 
     @keyframes spin {
@@ -586,70 +586,75 @@
     }
 
     @media (max-width: 850px) {
-      .grid {
+     .grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
       }
     }
 
     @media (max-width: 550px) {
-      .topbar {
+     .topbar {
         padding: 11px 4%;
       }
 
-      .brand-name {
+     .brand-name {
         font-size: 12px;
       }
 
-      .brand-subtitle {
+     .brand-subtitle {
         font-size: 9px;
       }
 
-      .hero {
+     .hero {
         padding: 30px 18px;
       }
 
-      .stats {
+     .stats {
         gap: 8px;
       }
 
-      .stat {
+     .stat {
         padding: 12px 8px;
       }
 
-      .stat strong {
+     .stat strong {
         font-size: 19px;
       }
 
-      .stat span {
+     .stat span {
         font-size: 10px;
       }
 
-      .grid {
+     .grid {
         grid-template-columns: 1fr;
       }
 
-      .art-image {
+     .art-image {
         height: 260px;
       }
 
-      .form-grid {
+     .form-grid {
         grid-template-columns: 1fr;
       }
 
-      .full-width {
+     .full-width {
         grid-column: auto;
       }
 
-      .section-heading h2 {
+     .section-heading h2 {
         font-size: 20px;
       }
     }
+
+    /* ===== FIX ECRANS - AJOUT UNIQUE SANS TOUCHER DEDANS ===== */
+   .screen { display: block; }
+   .screen.screen-hidden { display: none!important; }
+    main.container { min-height: calc(100vh - 140px); }
   </style>
 </head>
 
 <body>
   <header class="topbar">
-    <a href="#accueil" class="brand" aria-label="Accueil ART-ZEDMO">
+    <a href="#accueil" class="brand" aria-label="Accueil ART-ZEDMO" onclick="allerA('accueil'); return false;">
       <div class="brand-logo">AZ</div>
       <div>
         <div class="brand-name">ART-ZEDMO</div>
@@ -672,7 +677,7 @@
 
   <main class="container">
     <!-- ACCUEIL -->
-    <section id="accueil" class="hero">
+    <section id="accueil" class="hero screen">
       <span class="badge">L'art, la culture et la création</span>
 
       <h1>
@@ -718,7 +723,7 @@
     </section>
 
     <!-- GALERIE -->
-    <section id="galerie" class="section">
+    <section id="galerie" class="section screen screen-hidden">
       <div class="section-heading">
         <h2><i class="fas fa-images"></i> Galerie des œuvres</h2>
 
@@ -755,7 +760,7 @@
     </section>
 
     <!-- EXPOSITIONS -->
-    <section id="expositions" class="section">
+    <section id="expositions" class="section screen screen-hidden">
       <div class="section-heading">
         <h2><i class="fas fa-landmark"></i> Expositions</h2>
 
@@ -794,7 +799,7 @@
     </section>
 
     <!-- ENCHERES -->
-    <section id="encheres" class="section">
+    <section id="encheres" class="section screen screen-hidden">
       <div class="section-heading">
         <h2><i class="fas fa-gavel"></i> Enchères</h2>
 
@@ -816,7 +821,7 @@
     </section>
 
     <!-- VERIFICATION -->
-    <section id="verification" class="section">
+    <section id="verification" class="section screen screen-hidden">
       <div class="section-heading">
         <h2><i class="fas fa-certificate"></i> Vérifier une œuvre</h2>
       </div>
@@ -843,7 +848,7 @@
     </section>
 
     <!-- COMPTE -->
-    <section id="compte" class="section">
+    <section id="compte" class="section screen screen-hidden">
       <div class="section-heading">
         <h2><i class="fas fa-user-circle"></i> Mon compte</h2>
       </div>
@@ -934,6 +939,11 @@
     <button class="nav-item" data-target="encheres"
             onclick="allerA('encheres')">
       <i class="fas fa-gavel"></i><span>Enchères</span>
+    </button>
+
+    <button class="nav-item" data-target="verification"
+            onclick="allerA('verification')">
+      <i class="fas fa-certificate"></i><span>Vérif</span>
     </button>
 
     <button class="nav-item" data-target="compte"
@@ -1114,13 +1124,7 @@
   <script>
     'use strict';
 
-    // =========================================================
-    // ART-ZEDMO MARKETPLACE
-    // API relative : le serveur Express sert le dossier public/.
-    // =========================================================
-
     const API_BASE = '/api';
-
     let currentUser = lireJSON('AZ_USER', null);
     let artworks = [];
     let expositions = [];
@@ -1130,7 +1134,7 @@
     function lireJSON(cle, valeurParDefaut) {
       try {
         const contenu = localStorage.getItem(cle);
-        return contenu ? JSON.parse(contenu) : valeurParDefaut;
+        return contenu? JSON.parse(contenu) : valeurParDefaut;
       } catch {
         return valeurParDefaut;
       }
@@ -1141,7 +1145,7 @@
     }
 
     function escapeHTML(valeur) {
-      return String(valeur ?? '').replace(/[&<>"']/g, caractere => ({
+      return String(valeur?? '').replace(/[&<>"']/g, caractere => ({
         '&': '&amp;',
         '<': '&lt;',
         '>': '&gt;',
@@ -1153,7 +1157,7 @@
     function nombre(valeur) {
       const n = Number(valeur);
       return Number.isFinite(n)
-        ? n.toLocaleString('fr-FR')
+       ? n.toLocaleString('fr-FR')
         : '0';
     }
 
@@ -1162,14 +1166,12 @@
       if (!Number.isFinite(n) || n <= 0) {
         return 'Prix à convenir';
       }
-
       return nombre(n) + ' FCFA';
     }
 
     function afficherMessage(elementId, message, type = '') {
       const element = document.getElementById(elementId);
       if (!element) return;
-
       element.className = 'form-message ' + type;
       element.textContent = message;
     }
@@ -1177,43 +1179,35 @@
     async function apiFetch(path, options = {}) {
       const headers = new Headers(options.headers || {});
       const token = getToken();
-
       if (token) {
         headers.set('Authorization', 'Bearer ' + token);
       }
-
       const response = await fetch(API_BASE + path, {
-        ...options,
+       ...options,
         headers
       });
-
       let data = {};
-
       try {
         data = await response.json();
       } catch {
         data = {};
       }
-
       if (response.status === 401) {
         localStorage.removeItem('AZ_TOKEN');
         localStorage.removeItem('AZ_USER');
         currentUser = null;
         mettreAJourCompte();
       }
-
       if (!response.ok) {
         const erreur = new Error(
           data.error ||
           data.message ||
           `Erreur serveur (${response.status})`
         );
-
         erreur.status = response.status;
         erreur.data = data;
         throw erreur;
       }
-
       return data;
     }
 
@@ -1243,21 +1237,21 @@
       }
     });
 
+    /* ===== FIX ECRANS - SEUL ENDROIT MODIFIÉ ===== */
+    const ECRANS = ['accueil','galerie','expositions','encheres','verification','compte'];
     function allerA(id) {
-      const section = document.getElementById(id);
-      if (!section) return;
-
-      section.scrollIntoView({
-        behavior: 'smooth',
-        block: 'start'
+      if (!ECRANS.includes(id)) return;
+      ECRANS.forEach(ecranId => {
+        const el = document.getElementById(ecranId);
+        if (el) el.classList.toggle('screen-hidden', ecranId!== id);
       });
-
       document.querySelectorAll('.nav-item').forEach(button => {
-        button.classList.toggle(
-          'active',
-          button.dataset.target === id
-        );
+        button.classList.toggle('active', button.dataset.target === id);
       });
+      window.scrollTo({top:0, behavior:'smooth'});
+      if (id === 'galerie' && artworks.length === 0) chargerGalerie();
+      if (id === 'expositions') chargerExpositions();
+      if (id === 'encheres') chargerEncheres();
     }
 
     // =========================================================
@@ -1266,40 +1260,32 @@
 
     function mettreAJourCompte() {
       const connecte = Boolean(getToken() && currentUser);
-
       document.getElementById('compteConnecte')
-        .classList.toggle('hidden', !connecte);
-
+       .classList.toggle('hidden',!connecte);
       document.getElementById('compteDeconnecte')
-        .classList.toggle('hidden', connecte);
-
+       .classList.toggle('hidden', connecte);
       if (connecte) {
         const nom =
           currentUser.nom_artiste ||
           currentUser.nom ||
           currentUser.identifiant ||
           'Utilisateur';
-
         document.getElementById('bienvenueUtilisateur')
-          .textContent = 'Bienvenue, ' + nom;
-
+         .textContent = 'Bienvenue, ' + nom;
         document.getElementById('infosUtilisateur')
-          .textContent =
+         .textContent =
             'Rôle : ' + (currentUser.role || 'utilisateur') +
             ' · Statut : ' + (currentUser.statut || 'à vérifier');
       }
     }
 
     document.getElementById('formInscription')
-      .addEventListener('submit', async event => {
+     .addEventListener('submit', async event => {
         event.preventDefault();
-
         const form = event.currentTarget;
         const bouton = form.querySelector('button[type="submit"]');
         bouton.disabled = true;
-
         afficherMessage('inscriptionMessage', 'Création du compte...');
-
         const donnees = {
           nom: form.nom.value.trim(),
           nom_artiste: form.nom_artiste.value.trim(),
@@ -1309,7 +1295,6 @@
           role: form.role.value,
           password: form.password.value
         };
-
         try {
           const resultat = await apiFetch('/auth/register', {
             method: 'POST',
@@ -1318,16 +1303,13 @@
             },
             body: JSON.stringify(donnees)
           });
-
           afficherMessage(
             'inscriptionMessage',
             resultat.message ||
               'Compte créé. Suivez les instructions du serveur pour son activation.',
             'success'
           );
-
           form.reset();
-
         } catch (error) {
           afficherMessage(
             'inscriptionMessage',
@@ -1340,15 +1322,12 @@
       });
 
     document.getElementById('formConnexion')
-      .addEventListener('submit', async event => {
+     .addEventListener('submit', async event => {
         event.preventDefault();
-
         const form = event.currentTarget;
         const bouton = form.querySelector('button[type="submit"]');
         bouton.disabled = true;
-
         afficherMessage('connexionMessage', 'Connexion en cours...');
-
         try {
           const resultat = await apiFetch('/auth/login', {
             method: 'POST',
@@ -1360,35 +1339,28 @@
               password: form.password.value
             })
           });
-
-          if (!resultat.token || !resultat.user) {
+          if (!resultat.token ||!resultat.user) {
             throw new Error(
               "Réponse du serveur incomplète : jeton ou utilisateur absent."
             );
           }
-
           localStorage.setItem('AZ_TOKEN', resultat.token);
           localStorage.setItem(
             'AZ_USER',
             JSON.stringify(resultat.user)
           );
-
           currentUser = resultat.user;
           mettreAJourCompte();
-
           afficherMessage(
             'connexionMessage',
             'Connexion réussie.',
             'success'
           );
-
           form.reset();
-
           setTimeout(() => {
             fermerModal('connexionModal');
             allerA('compte');
           }, 700);
-
         } catch (error) {
           afficherMessage(
             'connexionMessage',
@@ -1405,22 +1377,16 @@
         ouvrirModal('connexionModal');
         return;
       }
-
       try {
         const resultat = await apiFetch('/auth/me');
         const utilisateur = resultat.user || resultat;
-
         currentUser = utilisateur;
-
         localStorage.setItem(
           'AZ_USER',
           JSON.stringify(utilisateur)
         );
-
         mettreAJourCompte();
-
         alert('Informations du compte actualisées.');
-
       } catch (error) {
         alert(
           'Impossible de charger le compte : ' + error.message
@@ -1431,10 +1397,8 @@
     function seDeconnecter() {
       localStorage.removeItem('AZ_TOKEN');
       localStorage.removeItem('AZ_USER');
-
       currentUser = null;
       mettreAJourCompte();
-
       alert('Vous êtes déconnecté.');
     }
 
@@ -1444,35 +1408,27 @@
         ouvrirModal('connexionModal');
         return;
       }
-
       ouvrirModal('oeuvreModal');
     }
 
     // =========================================================
     // GALERIE
-    // GET /api/artworks retourne un objet contenant artworks[].
     // =========================================================
 
     async function chargerGalerie() {
       const conteneur = document.getElementById('galerieOeuvres');
-
       conteneur.innerHTML =
         '<div class="empty"><span class="spinner"></span><p>Chargement...</p></div>';
-
       try {
         const resultat = await apiFetch('/artworks');
-
         artworks = Array.isArray(resultat)
-          ? resultat
+         ? resultat
           : Array.isArray(resultat.artworks)
-            ? resultat.artworks
+           ? resultat.artworks
             : [];
-
         afficherGalerieFiltre();
-
         document.getElementById('statOeuvres').textContent =
           nombre(artworks.length);
-
       } catch (error) {
         conteneur.textContent =
           'Impossible de charger la galerie : ' + error.message;
@@ -1483,29 +1439,22 @@
       if (typeof oeuvre.image === 'string' && oeuvre.image.trim()) {
         return oeuvre.image;
       }
-
       if (Array.isArray(oeuvre.images) && oeuvre.images.length) {
         const premiere = oeuvre.images[0];
-
         if (typeof premiere === 'string') return premiere;
-
         if (premiere && typeof premiere.url === 'string') {
           return premiere.url;
         }
       }
-
       return '';
     }
 
     function afficherGalerieFiltre() {
       const conteneur = document.getElementById('galerieOeuvres');
-
       const recherche = document.getElementById('rechercheGalerie')
-        .value.trim().toLowerCase();
-
+       .value.trim().toLowerCase();
       const categorie = document.getElementById('filtreGalerie')
-        .value.toLowerCase();
-
+       .value.toLowerCase();
       const filtres = artworks.filter(oeuvre => {
         const texte = [
           oeuvre.titre,
@@ -1515,56 +1464,45 @@
           oeuvre.artiste?.nom,
           oeuvre.artiste?.nom_artiste
         ].join(' ').toLowerCase();
-
         const categorieOeuvre =
           String(oeuvre.categorie || '').toLowerCase();
-
         return texte.includes(recherche) &&
           (!categorie || categorieOeuvre === categorie);
       });
-
       if (!filtres.length) {
         conteneur.innerHTML = '';
-
         const vide = document.createElement('div');
         vide.className = 'empty';
         vide.textContent = artworks.length
-          ? 'Aucune œuvre ne correspond à votre recherche.'
+         ? 'Aucune œuvre ne correspond à votre recherche.'
           : 'Aucune œuvre publique disponible pour le moment.';
-
         conteneur.appendChild(vide);
         return;
       }
-
       conteneur.innerHTML = filtres.map(oeuvre => {
         const id = String(oeuvre._id || oeuvre.id || '');
         const titre = escapeHTML(oeuvre.titre || 'Œuvre sans titre');
         const description = escapeHTML(
           oeuvre.description || 'Aucune description.'
         );
-
         const artiste = escapeHTML(
           oeuvre.artiste?.nom_artiste ||
           oeuvre.artiste?.nom ||
           'Artiste'
         );
-
         const categorieTexte = escapeHTML(
           oeuvre.categorie || 'Art'
         );
-
         const prix = prixFCFA(oeuvre.prix);
         const image = obtenirImage(oeuvre);
         const imageHTML = image
-          ? `<img class="art-image"
+         ? `<img class="art-image"
                   src="${escapeHTML(image)}"
                   alt="${titre}"
                   loading="lazy"
                   onerror="this.outerHTML='<div class=&quot;art-image placeholder&quot;><i class=&quot;fas fa-palette&quot;></i></div>'">`
           : `<div class="art-image placeholder"><i class="fas fa-palette"></i></div>`;
-
         const votes = Number(oeuvre.votesCount) || 0;
-
         return `
           <article class="card">
             ${imageHTML}
@@ -1572,28 +1510,23 @@
               <span class="badge">${categorieTexte}</span>
               <h3 style="margin-top:10px">${titre}</h3>
               <p>${description}</p>
-
               <div class="card-meta">
                 <span><i class="fas fa-user"></i> ${artiste}</span>
                 <span><i class="fas fa-heart"></i> ${nombre(votes)} vote(s)</span>
               </div>
-
               <div class="price">${escapeHTML(prix)}</div>
-
               <div class="card-actions">
                 <button class="btn btn-small"
                         onclick="voterPourOeuvre('${escapeHTML(id)}')"
-                        ${id ? '' : 'disabled'}>
+                        ${id? '' : 'disabled'}>
                   <i class="fas fa-heart"></i> Voter
                 </button>
-
                 <button class="btn btn-outline btn-small"
                         onclick="consulterVotes('${escapeHTML(id)}')"
-                        ${id ? '' : 'disabled'}>
+                        ${id? '' : 'disabled'}>
                   <i class="fas fa-chart-bar"></i> Votes
                 </button>
               </div>
-
               <div id="votes-detail-${escapeHTML(id)}"
                    class="muted"
                    style="margin-top:10px;font-size:12px"
@@ -1606,9 +1539,6 @@
 
     // =========================================================
     // VOTES
-    // POST /api/votes
-    // GET /api/votes/artwork/:artworkId
-    // GET /api/votes/top/:expoId
     // =========================================================
 
     async function voterPourOeuvre(artworkId, expositionId = null) {
@@ -1616,20 +1546,15 @@
         alert("L'identifiant de l'œuvre est manquant.");
         return;
       }
-
       const confirmation = confirm(
-        'Confirmez-vous votre vote pour cette œuvre ?'
+        'Confirmez-vous votre vote pour cette œuvre?'
       );
-
       if (!confirmation) return;
-
       try {
         const donnees = { artworkId };
-
         if (expositionId) {
           donnees.expositionId = expositionId;
         }
-
         const resultat = await apiFetch('/votes', {
           method: 'POST',
           headers: {
@@ -1637,23 +1562,18 @@
           },
           body: JSON.stringify(donnees)
         });
-
         alert(
           (resultat.message || 'Vote enregistré.') +
           '\nTotal : ' +
           nombre(resultat.total_votes_oeuvre)
         );
-
         const oeuvre = artworks.find(
           item => String(item._id || item.id) === String(artworkId)
         );
-
         if (oeuvre) {
           oeuvre.votesCount = resultat.total_votes_oeuvre;
         }
-
         afficherGalerieFiltre();
-
       } catch (error) {
         if (error.status === 409) {
           alert('Tu as déjà voté pour cette œuvre.');
@@ -1671,16 +1591,13 @@
         const resultat = await apiFetch(
           '/votes/artwork/' + encodeURIComponent(artworkId)
         );
-
         const zone = document.getElementById(
           'votes-detail-' + artworkId
         );
-
         if (zone) {
           zone.textContent =
             'Total actuel : ' + nombre(resultat.total_votes) + ' vote(s).';
         }
-
       } catch (error) {
         alert(
           'Impossible de consulter les votes : ' + error.message
@@ -1690,46 +1607,35 @@
 
     async function chargerClassement(expositionId) {
       const conteneur = document.getElementById('classementExposition');
-
       if (!expositionId) {
         conteneur.textContent =
           'Sélectionnez une exposition pour afficher le classement.';
         return;
       }
-
       conteneur.textContent = 'Chargement du classement...';
-
       try {
         const resultat = await apiFetch(
           '/votes/top/' + encodeURIComponent(expositionId)
         );
-
         const classement = Array.isArray(resultat.classement)
-          ? resultat.classement
+         ? resultat.classement
           : [];
-
         conteneur.replaceChildren();
-
         if (!classement.length) {
           conteneur.textContent =
             'Aucune œuvre à classer pour cette exposition.';
           return;
         }
-
         classement.forEach((oeuvre, index) => {
           const ligne = document.createElement('div');
           ligne.className = 'ranking-item';
-
           const rang = document.createElement('div');
           rang.className = 'rank-number';
           rang.textContent = String(index + 1);
-
           const info = document.createElement('div');
           info.className = 'ranking-info';
-
           const titre = document.createElement('strong');
           titre.textContent = oeuvre.titre || 'Œuvre sans titre';
-
           const artiste = document.createElement('span');
           artiste.textContent =
             'Artiste : ' +
@@ -1738,18 +1644,14 @@
               oeuvre.artiste?.nom ||
               'Non renseigné'
             );
-
           info.append(titre, artiste);
-
           const total = document.createElement('strong');
           total.className = 'gold';
           total.textContent =
             nombre(oeuvre.votesCount) + ' vote(s)';
-
           ligne.append(rang, info, total);
           conteneur.appendChild(ligne);
         });
-
       } catch (error) {
         conteneur.textContent =
           'Erreur de chargement du classement : ' + error.message;
@@ -1763,46 +1665,34 @@
 
     // =========================================================
     // EXPOSITIONS
-    // GET /api/expositions
-    // GET /api/expositions/active
     // =========================================================
 
     async function chargerExpositions() {
       const conteneur = document.getElementById('expositionActive');
       const select = document.getElementById('selectClassement');
-
       conteneur.textContent = 'Chargement des expositions...';
-
       try {
         const resultat = await apiFetch('/expositions');
-
         expositions = Array.isArray(resultat)
-          ? resultat
+         ? resultat
           : Array.isArray(resultat.expositions)
-            ? resultat.expositions
+           ? resultat.expositions
             : [];
-
         document.getElementById('statExpositions').textContent =
           nombre(expositions.length);
-
         select.replaceChildren();
-
         const optionDefaut = document.createElement('option');
         optionDefaut.value = '';
         optionDefaut.textContent = 'Sélectionner une exposition';
         select.appendChild(optionDefaut);
-
         expositions.forEach(exposition => {
           const option = document.createElement('option');
           option.value = exposition._id || '';
           option.textContent =
             exposition.titre || exposition.nom || 'Exposition';
-
           select.appendChild(option);
         });
-
         afficherExpositionActive();
-
       } catch (error) {
         conteneur.textContent =
           'Impossible de charger les expositions : ' + error.message;
@@ -1811,66 +1701,49 @@
 
     async function afficherExpositionActive() {
       const conteneur = document.getElementById('expositionActive');
-
       try {
         const active = await apiFetch('/expositions/active');
-
         const exposition = active.exposition ||
           active.expo ||
-          (active._id ? active : null);
-
+          (active._id? active : null);
         if (!exposition) {
           conteneur.replaceChildren();
-
           const titre = document.createElement('h3');
           titre.textContent = 'Aucune exposition active';
-
           const description = document.createElement('p');
           description.className = 'muted';
           description.textContent =
             active.message ||
             'Une nouvelle exposition sera annoncée ici.';
-
           conteneur.append(titre, description);
           return;
         }
-
         conteneur.replaceChildren();
-
         const titre = document.createElement('h3');
         titre.textContent =
           exposition.titre || exposition.nom || 'Exposition en cours';
-
         const description = document.createElement('p');
         description.textContent =
           exposition.description || 'Découvrez les œuvres de cette exposition.';
-
         const statut = document.createElement('span');
         statut.className = 'badge';
         statut.textContent = exposition.statut || 'Active';
-
         const actions = document.createElement('div');
         actions.className = 'account-actions';
-
         const classement = document.createElement('button');
         classement.className = 'btn';
         classement.textContent = 'Voir le classement';
-
         classement.addEventListener('click', () => {
           const id = exposition._id;
-
           if (id) {
             document.getElementById('selectClassement').value = id;
             chargerClassement(id);
-
             document.getElementById('classementExposition')
-              .scrollIntoView({ behavior: 'smooth' });
+             .scrollIntoView({ behavior: 'smooth' });
           }
         });
-
         actions.appendChild(classement);
         conteneur.append(titre, description, statut, actions);
-
       } catch (error) {
         conteneur.textContent =
           'Aucune exposition active disponible : ' + error.message;
@@ -1879,70 +1752,56 @@
 
     // =========================================================
     // ENCHERES
-    // GET /api/encheres
-    // POST /api/encheres/:id/encherir
     // =========================================================
 
     async function chargerEncheres() {
       const conteneur = document.getElementById('listeEncheres');
-
       conteneur.textContent = 'Chargement des enchères...';
-
       try {
         const resultat = await apiFetch('/encheres');
-
         encheres = Array.isArray(resultat)
-          ? resultat
+         ? resultat
           : Array.isArray(resultat.encheres)
-            ? resultat.encheres
+           ? resultat.encheres
             : [];
-
         document.getElementById('statEncheres').textContent =
           nombre(encheres.length);
-
         if (!encheres.length) {
           conteneur.innerHTML =
             '<div class="empty">Aucune enchère active pour le moment.</div>';
           return;
         }
-
         conteneur.innerHTML = encheres.map(enchere => {
           const id = String(enchere._id || '');
           const oeuvre = enchere.artwork || {};
           const titre = escapeHTML(oeuvre.titre || 'Œuvre en enchère');
-
           const montant = Number(
-            enchere.montantActuel ??
-            enchere.prixActuel ??
-            enchere.prixDepart ??
-            enchere.montant ??
+            enchere.montantActuel??
+            enchere.prixActuel??
+            enchere.prixDepart??
+            enchere.montant??
             0
           );
-
           const artiste = escapeHTML(
             oeuvre.artiste?.nom_artiste ||
             oeuvre.artiste?.nom ||
             'Artiste'
           );
-
           return `
             <article class="card">
               <div class="art-image placeholder">
                 <i class="fas fa-gavel"></i>
               </div>
-
               <div class="card-body">
                 <span class="badge">Enchère active</span>
                 <h3 style="margin-top:10px">${titre}</h3>
                 <p>Artiste : ${artiste}</p>
-
                 <div class="price">
-                  ${montant > 0 ? escapeHTML(prixFCFA(montant)) : 'Montant à vérifier'}
+                  ${montant > 0? escapeHTML(prixFCFA(montant)) : 'Montant à vérifier'}
                 </div>
-
                 <div class="card-actions">
                   <button class="btn btn-small"
-                          onclick="proposerEnchere('${escapeHTML(id)}', ${Number.isFinite(montant) ? montant : 0})">
+                          onclick="proposerEnchere('${escapeHTML(id)}', ${Number.isFinite(montant)? montant : 0})">
                     <i class="fas fa-arrow-up"></i> Enchérir
                   </button>
                 </div>
@@ -1950,7 +1809,6 @@
             </article>
           `;
         }).join('');
-
       } catch (error) {
         conteneur.textContent =
           'Impossible de charger les enchères : ' + error.message;
@@ -1963,31 +1821,25 @@
         ouvrirModal('connexionModal');
         return;
       }
-
       const proposition = prompt(
         'Saisissez votre proposition en FCFA. ' +
         'Montant actuel : ' + nombre(montantActuel),
         String(Math.max(0, montantActuel + 1))
       );
-
       if (proposition === null) return;
-
       const montant = Number(proposition);
-
       if (!Number.isFinite(montant) || montant <= montantActuel) {
         alert(
           'Le montant doit être supérieur au montant actuel affiché.'
         );
         return;
       }
-
       if (!confirm(
         'Confirmer votre proposition de ' +
-        nombre(montant) + ' FCFA ?'
+        nombre(montant) + ' FCFA?'
       )) {
         return;
       }
-
       try {
         const resultat = await apiFetch(
           '/encheres/' + encodeURIComponent(enchereId) + '/encherir',
@@ -1999,10 +1851,8 @@
             body: JSON.stringify({ montant })
           }
         );
-
         alert(resultat.message || 'Proposition envoyée au serveur.');
         await chargerEncheres();
-
       } catch (error) {
         alert(
           'Proposition refusée : ' + error.message
@@ -2012,13 +1862,11 @@
 
     // =========================================================
     // PUBLICATION D'UNE OEUVRE
-    // POST /api/artworks exige un JWT.
     // =========================================================
 
     document.getElementById('formOeuvre')
-      .addEventListener('submit', async event => {
+     .addEventListener('submit', async event => {
         event.preventDefault();
-
         if (!getToken()) {
           afficherMessage(
             'oeuvreMessage',
@@ -2027,38 +1875,29 @@
           );
           return;
         }
-
         const form = event.currentTarget;
         const bouton = form.querySelector('button[type="submit"]');
-
         bouton.disabled = true;
-
         afficherMessage('oeuvreMessage', 'Envoi en cours...');
-
         try {
           const fichier = form.image.files[0];
           let imageURL = '';
-
           if (fichier) {
             if (!fichier.type.startsWith('image/')) {
               throw new Error('Veuillez sélectionner un fichier image.');
             }
-
             const formulaireImage = new FormData();
             formulaireImage.append('image', fichier);
-
             const resultatUpload = await apiFetch('/upload', {
               method: 'POST',
               body: formulaireImage
             });
-
             imageURL =
               resultatUpload.url ||
               resultatUpload.image ||
               resultatUpload.path ||
               resultatUpload.file?.url ||
               '';
-
             if (!imageURL) {
               throw new Error(
                 "Le serveur n'a pas retourné l'adresse de l'image. " +
@@ -2066,19 +1905,16 @@
               );
             }
           }
-
           const donnees = {
             titre: form.titre.value.trim(),
             categorie: form.categorie.value,
             prix: Number(form.prix.value || 0),
             description: form.description.value.trim()
           };
-
           if (imageURL) {
             donnees.image = imageURL;
             donnees.images = [imageURL];
           }
-
           const resultat = await apiFetch('/artworks', {
             method: 'POST',
             headers: {
@@ -2086,17 +1922,14 @@
             },
             body: JSON.stringify(donnees)
           });
-
           afficherMessage(
             'oeuvreMessage',
             resultat.message ||
               'Œuvre envoyée. Elle peut nécessiter une validation administrative.',
             'success'
           );
-
           form.reset();
           await chargerGalerie();
-
         } catch (error) {
           afficherMessage(
             'oeuvreMessage',
@@ -2114,37 +1947,27 @@
 
     async function verifierOeuvre() {
       const id = document.getElementById('verificationArtworkId')
-        .value.trim();
-
+       .value.trim();
       const zone = document.getElementById('verificationResultat');
-
       if (!id) {
         zone.textContent = 'Veuillez saisir un identifiant.';
         return;
       }
-
       zone.textContent = 'Recherche en cours...';
-
       try {
         const resultat = await apiFetch(
           '/votes/artwork/' + encodeURIComponent(id)
         );
-
         zone.replaceChildren();
-
         const titre = document.createElement('h3');
         titre.textContent = resultat.titre || 'Œuvre';
-
         const identifiant = document.createElement('p');
         identifiant.textContent =
           'Identifiant : ' + (resultat.artworkId || id);
-
         const votes = document.createElement('p');
         votes.textContent =
           'Nombre de votes : ' + nombre(resultat.total_votes);
-
         zone.append(titre, identifiant, votes);
-
       } catch (error) {
         zone.textContent =
           'Vérification impossible : ' + error.message;
@@ -2153,42 +1976,31 @@
 
     // =========================================================
     // ANNONCES
-    // GET /api/annonces retourne un tableau.
     // =========================================================
 
     async function chargerAnnonces() {
       const zone = document.getElementById('annoncePrincipale');
-
       try {
         const resultat = await apiFetch('/annonces');
-
         annonces = Array.isArray(resultat)
-          ? resultat
+         ? resultat
           : Array.isArray(resultat.annonces)
-            ? resultat.annonces
+           ? resultat.annonces
             : [];
-
         if (!annonces.length) {
           zone.replaceChildren();
           return;
         }
-
         const annonce = annonces[0];
-
         zone.replaceChildren();
-
         const bloc = document.createElement('div');
         bloc.className = 'notice';
-
         const titre = document.createElement('strong');
         titre.textContent = annonce.titre || 'Annonce';
-
         const message = document.createElement('p');
         message.textContent = annonce.message || '';
-
         bloc.append(titre, message);
         zone.appendChild(bloc);
-
       } catch (error) {
         console.warn('Chargement des annonces :', error.message);
         zone.replaceChildren();
@@ -2210,20 +2022,17 @@
 
     async function initialiser() {
       mettreAJourCompte();
-
+      // Fix écrans : afficher accueil au démarrage
+      allerA('accueil');
       await actualiserTout();
-
-      // Si un jeton existe, vérifier qu'il est toujours valide.
       if (getToken()) {
         try {
           const resultat = await apiFetch('/auth/me');
           currentUser = resultat.user || resultat;
-
           localStorage.setItem(
             'AZ_USER',
             JSON.stringify(currentUser)
           );
-
           mettreAJourCompte();
         } catch (error) {
           console.warn(
