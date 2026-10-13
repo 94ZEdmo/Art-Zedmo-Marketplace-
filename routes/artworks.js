@@ -1,683 +1,277 @@
 import express from 'express';
 import mongoose from 'mongoose';
 import jwt from 'jsonwebtoken';
-
 import Artwork from '../models/Artwork.js';
 import User from '../models/User.js';
 
 const router = express.Router();
 
-// =====================================================
-// 1. CONFIGURATION
-// =====================================================
-
 const JWT_SECRET = process.env.JWT_SECRET;
-
 if (!JWT_SECRET || JWT_SECRET.length < 32) {
-  throw new Error(
-    'JWT_SECRET doit être configuré avec au moins 32 caractères.'
-  );
+  throw new Error('JWT_SECRET doit être configuré avec au moins 32 caractères.');
 }
 
-// =====================================================
-// 2. AUTHENTIFICATION
-// =====================================================
-
+// AUTH
 async function authenticateToken(req, res, next) {
   try {
     const authorization = req.headers.authorization;
-
-    if (!authorization ||!authorization.startsWith('Bearer ')) {
-      return res.status(401).json({
-        error: 'Authentification requise.'
-      });
+    if (!authorization || !authorization.startsWith('Bearer ')) {
+      return res.status(401).json({ error: 'Authentification requise.' });
     }
-
     const token = authorization.slice(7);
-
     let decoded;
-
     try {
-      decoded = jwt.verify(token, JWT_SECRET, {
-        algorithms: ['HS256']
-      });
+      decoded = jwt.verify(token, JWT_SECRET, { algorithms: ['HS256'] });
     } catch {
-      return res.status(401).json({
-        error: 'Jeton invalide ou expiré.'
-      });
+      return res.status(401).json({ error: 'Jeton invalide ou expiré.' });
     }
-
-    if (!decoded.id ||!mongoose.Types.ObjectId.isValid(decoded.id)) {
-      return res.status(401).json({
-        error: 'Identifiant utilisateur invalide.'
-      });
+    if (!decoded.id || !mongoose.Types.ObjectId.isValid(decoded.id)) {
+      return res.status(401).json({ error: 'Identifiant invalide.' });
     }
-
-    const user = await User.findById(decoded.id)
-     .select('_id nom nom_artiste role statut');
-
-    if (!user) {
-      return res.status(401).json({
-        error: 'Utilisateur introuvable.'
-      });
-    }
-
-    if (user.statut!== 'valide') {
-      return res.status(403).json({
-        error: 'Votre compte n’est pas autorisé.'
-      });
-    }
-
+    const user = await User.findById(decoded.id).select('_id nom nom_artiste role statut');
+    if (!user) return res.status(401).json({ error: 'Utilisateur introuvable.' });
+    if (user.statut !== 'valide') return res.status(403).json({ error: 'Compte non autorisé.' });
     req.user = user;
     req.auth = decoded;
-
     next();
-  } catch (error) {
-    next(error);
-  }
+  } catch (error) { next(error); }
 }
 
-// =====================================================
-// 3. AUTORISATION ADMINISTRATEUR
-// =====================================================
-
 function requireAdmin(req, res, next) {
-  if (!req.user || req.user.role!== 'admin') {
-    return res.status(403).json({
-      error: 'Cette opération est réservée à un administrateur.'
-    });
+  if (!req.user || req.user.role !== 'admin') {
+    return res.status(403).json({ error: 'Opération réservée à admin.' });
   }
-
   next();
 }
 
-// =====================================================
-// 4. VALIDATION DES IDENTIFIANTS
-// =====================================================
+function validObjectId(id) { return mongoose.Types.ObjectId.isValid(id); }
 
-function validObjectId(id) {
-  return mongoose.Types.ObjectId.isValid(id);
-}
-
-// =====================================================
-// 5. GÉNÉRATION DES IDENTIFIANTS AZM
-// =====================================================
-
-const counterSchema = new mongoose.Schema({
-  _id: {
-    type: String,
-    required: true
-  },
-  seq: {
-    type: Number,
-    default: 0
-  }
-});
-
-const Counter =
-  mongoose.models.Counter ||
-  mongoose.model('Counter', counterSchema);
-
+// AZM ID
+const counterSchema = new mongoose.Schema({ _id: { type: String, required: true }, seq: { type: Number, default: 0 } });
+const Counter = mongoose.models.Counter || mongoose.model('Counter', counterSchema);
 async function getNextAZM() {
   const year = new Date().getFullYear();
-
   const counter = await Counter.findOneAndUpdate(
-    { _id: `AZM-${year}` },
-    { $inc: { seq: 1 } },
-    {
-      upsert: true,
-      returnDocument: 'after',
-      setDefaultsOnInsert: true
-    }
+    { _id: `AZM-${year}` }, { $inc: { seq: 1 } }, { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true }
   );
-
-  if (!counter) {
-    throw new Error('Impossible de générer un identifiant AZM.');
-  }
-
+  if (!counter) throw new Error('Impossible de générer AZM');
   return `AZM-${year}-${String(counter.seq).padStart(6, '0')}`;
 }
 
-// =====================================================
-// 6. UTILITAIRES
-// =====================================================
+function escapeRegex(v) { return v.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
 
-function escapeRegex(value) {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
+// TES ADRESSES PAIEMENT RÉELLES
+const ADRESSES = {
+  usdt_trc20: 'TFXZSyJaC6mdCva8kAJBMMvKYhyhpzpHn2',
+  pi: 'GAF62KXAV7IUM3HSHQ3TI6EFMIDSGII2EVEZXFTXGMH5D2EDPA6RVAM',
+  mtn: '0196587303',
+  moov: '0194655238'
+};
 
-function getArtworkImage(artwork) {
-  if (Array.isArray(artwork.images) && artwork.images.length > 0) {
-    return artwork.images[0];
-  }
-
-  return artwork.image || artwork.imageUrl || '';
-}
-
-// CORRIGÉ : Ne cache plus les œuvres en exposition
+// CORRIGÉ : galerie montre tout sauf en_attente / rejetee
+// Donc une œuvre validee qui est en expo RESTE en galerie
 function publicArtworkQuery() {
-  return Artwork.find({
-    statut: {
-      $nin: ['en_attente', 'rejetee']
-    }
-  });
+  return { statut: { $nin: ['en_attente', 'rejetee'] } };
 }
 
-// =====================================================
-// 7. LISTE DES ŒUVRES
-// GET /api/artworks
-// =====================================================
-
+// LISTE PUBLIQUE
 router.get('/', async (req, res, next) => {
   try {
-    const {
-      tri,
-      search,
-      categorie,
-      statut,
-      page = '1',
-      limit = '50'
-    } = req.query;
+    const { tri, search, categorie, page = '1', limit = '50' } = req.query;
+    const pageNumber = Math.max(1, parseInt(page, 10) || 1);
+    const limitNumber = Math.min(100, Math.max(1, parseInt(limit, 10) || 50));
+    const filter = publicArtworkQuery();
 
-    const pageNumber = Math.max(1, Number.parseInt(page, 10) || 1);
-    const limitNumber = Math.min(
-      100,
-      Math.max(1, Number.parseInt(limit, 10) || 50)
-    );
-
-    const filter = {};
-
-    if (statut === 'all' || req.query.all === 'true') {
-      if (!req.headers.authorization) {
-        return res.status(401).json({
-          error: 'Authentification requise pour consulter toutes les œuvres.'
-        });
-      }
-      return next();
-    }
-
-    // CORRIGÉ : La galerie montre tout sauf en_attente et rejetee
-    // Donc une œuvre validee qui est aussi en expo reste visible
-    filter.statut = {
-      $nin: ['en_attente', 'rejetee']
-    };
-
-    if (search!== undefined) {
+    if (search) {
       const terme = String(search).trim().slice(0, 100);
-
-      if (terme) {
-        filter.titre = {
-          $regex: escapeRegex(terme),
-          $options: 'i'
-        };
+      if (terme) filter.titre = { $regex: escapeRegex(terme), $options: 'i' };
+    }
+    if (categorie && categorie !== 'Tous') {
+      if (categorie.toLowerCase() === 'nft') {
+        filter.isNFT = true;
+      } else {
+        filter.categorie = String(categorie).slice(0, 100);
       }
     }
-
-    if (categorie && categorie!== 'Tous') {
-      filter.categorie = String(categorie).slice(0, 100);
-    }
-
     let sort = { createdAt: -1 };
-
-    if (tri === 'populaire') {
-      sort = { votesCount: -1, createdAt: -1 };
-    } else if (tri === 'prix') {
-      sort = { prix: 1, createdAt: -1 };
-    } else if (tri === 'prix_desc') {
-      sort = { prix: -1, createdAt: -1 };
-    }
+    if (tri === 'populaire') sort = { votesCount: -1, createdAt: -1 };
+    else if (tri === 'prix') sort = { prix: 1, createdAt: -1 };
+    else if (tri === 'prix_desc') sort = { prix: -1, createdAt: -1 };
 
     const [arts, total] = await Promise.all([
-      Artwork.find(filter)
-       .populate('artiste', 'nom nom_artiste ville')
-       .sort(sort)
-       .skip((pageNumber - 1) * limitNumber)
-       .limit(limitNumber),
-
+      Artwork.find(filter).populate('artiste', 'nom nom_artiste ville').populate('expositions', 'titre statut').sort(sort).skip((pageNumber - 1) * limitNumber).limit(limitNumber),
       Artwork.countDocuments(filter)
     ]);
-
-    return res.json({
-      success: true,
-      total,
-      page: pageNumber,
-      limit: limitNumber,
-      pages: Math.ceil(total / limitNumber),
-      artworks: arts
-    });
-  } catch (error) {
-    next(error);
-  }
+    return res.json({ success: true, total, page: pageNumber, limit: limitNumber, pages: Math.ceil(total / limitNumber), artworks: arts });
+  } catch (error) { next(error); }
 });
 
-// =====================================================
-// 8. LISTE COMPLÈTE POUR L'ADMINISTRATEUR
-// GET /api/artworks/admin/all
-// =====================================================
+// ADMIN ALL
+router.get('/admin/all', authenticateToken, requireAdmin, async (req, res, next) => {
+  try {
+    const arts = await Artwork.find().populate('artiste', 'nom nom_artiste ville').populate('expositions', 'titre statut').sort({ createdAt: -1 }).limit(500);
+    return res.json({ success: true, artworks: arts });
+  } catch (e) { next(e); }
+});
 
-router.get(
-  '/admin/all',
-  authenticateToken,
-  requireAdmin,
-  async (req, res, next) => {
-    try {
-      const arts = await Artwork.find()
-       .populate('artiste', 'nom nom_artiste ville')
-       .sort({ createdAt: -1 })
-       .limit(500);
-
-      return res.json({
-        success: true,
-        artworks: arts
-      });
-    } catch (error) {
-      next(error);
-    }
-  }
-);
-
-// =====================================================
-// 9. DÉTAIL D'UNE ŒUVRE
-// GET /api/artworks/:id
-// =====================================================
-
+// DETAIL
 router.get('/:id', async (req, res, next) => {
   try {
-    if (!validObjectId(req.params.id)) {
-      return res.status(400).json({
-        error: 'Identifiant d’œuvre invalide.'
-      });
-    }
-
-    const artwork = await Artwork.findById(req.params.id)
-     .populate('artiste', 'nom nom_artiste ville bio avatar')
-     .populate('exposition', 'titre')
-     .populate('expositions', 'titre statut');
-
-    if (!artwork) {
-      return res.status(404).json({
-        error: 'Œuvre non trouvée.'
-      });
-    }
-
-    const isPublic =!['en_attente', 'rejetee'].includes(artwork.statut);
-
+    if (!validObjectId(req.params.id)) return res.status(400).json({ error: 'ID invalide.' });
+    const artwork = await Artwork.findById(req.params.id).populate('artiste', 'nom nom_artiste ville bio').populate('exposition', 'titre').populate('expositions', 'titre statut');
+    if (!artwork) return res.status(404).json({ error: 'Œuvre non trouvée.' });
+    const isPublic = !['en_attente', 'rejetee'].includes(artwork.statut);
     if (!isPublic) {
-      const authorization = req.headers.authorization;
-
-      if (!authorization?.startsWith('Bearer ')) {
-        return res.status(404).json({
-          error: 'Œuvre non trouvée.'
-        });
-      }
-
-      let decoded;
-
-      try {
-        decoded = jwt.verify(
-          authorization.slice(7),
-          JWT_SECRET,
-          { algorithms: ['HS256'] }
-        );
-      } catch {
-        return res.status(401).json({
-          error: 'Jeton invalide ou expiré.'
-        });
-      }
-
-      const requester = await User.findById(decoded.id)
-       .select('_id role statut');
-
-      const ownerId =
-        artwork.artiste?._id?.toString() ||
-        artwork.artiste?.toString();
-
+      const auth = req.headers.authorization;
+      if (!auth?.startsWith('Bearer ')) return res.status(404).json({ error: 'Non trouvée.' });
+      let decoded; try { decoded = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); } catch { return res.status(401).json({ error: 'Jeton invalide.' }); }
+      const requester = await User.findById(decoded.id).select('_id role statut');
+      const ownerId = artwork.artiste?._id?.toString() || artwork.artiste?.toString();
       const isOwner = ownerId === requester?._id.toString();
-      const isAdmin =
-        requester?.role === 'admin' &&
-        requester?.statut === 'valide';
-
-      if (
-       !requester ||
-        requester.statut!== 'valide' ||
-        (!isOwner &&!isAdmin)
-      ) {
-        return res.status(404).json({
-          error: 'Œuvre non trouvée.'
-        });
-      }
+      const isAdmin = requester?.role === 'admin' && requester?.statut === 'valide';
+      if (!requester || requester.statut !== 'valide' || (!isOwner && !isAdmin)) return res.status(404).json({ error: 'Non trouvée.' });
     }
-
-    await Artwork.updateOne(
-      { _id: artwork._id },
-      { $inc: { vues: 1 } }
-    );
-
+    await Artwork.updateOne({ _id: artwork._id }, { $inc: { vues: 1 } });
     artwork.vues = (artwork.vues || 0) + 1;
-
     return res.json(artwork);
-  } catch (error) {
-    next(error);
-  }
+  } catch (e) { next(e); }
 });
 
-// =====================================================
-// 10. CRÉER UNE ŒUVRE
-// POST /api/artworks
-// =====================================================
-
+// CRÉER - AVEC NFT PI
 router.post('/', authenticateToken, async (req, res, next) => {
   try {
-    const {
-      titre,
-      description,
-      prix,
-      images,
-      image,
-      categorie,
-      ville
-    } = req.body;
-
-    if (typeof titre!== 'string' ||!titre.trim()) {
-      return res.status(400).json({
-        error: 'Le titre est obligatoire.'
-      });
-    }
-
+    const { titre, description, prix, images, image, categorie, ville, isNFT, blockchain } = req.body;
+    if (typeof titre !== 'string' || !titre.trim()) return res.status(400).json({ error: 'Titre obligatoire.' });
     const prixNumber = Number(prix);
+    if (!Number.isFinite(prixNumber) || prixNumber < 0) return res.status(400).json({ error: 'Prix invalide.' });
+    if (titre.trim().length > 200) return res.status(400).json({ error: 'Titre trop long.' });
 
-    if (!Number.isFinite(prixNumber) || prixNumber <= 0) {
-      return res.status(400).json({
-        error: 'Le prix doit être un nombre positif.'
-      });
-    }
-
-    if (titre.trim().length > 200) {
-      return res.status(400).json({
-        error: 'Le titre ne doit pas dépasser 200 caractères.'
-      });
-    }
-
-    if (
-      description!== undefined &&
-      typeof description!== 'string'
-    ) {
-      return res.status(400).json({
-        error: 'La description est invalide.'
-      });
-    }
-
-    const categoriesAutorisees = [
-      'Peinture',
-      'Sculpture',
-      'Dessin',
-      'Photographie',
-      'Art numérique',
-      'Artisanat',
-      'Autre'
-    ];
-
-    const categorieFinale = categoriesAutorisees.includes(categorie)
-     ? categorie
-      : 'Autre';
+    const categoriesAutorisees = ['Peinture', 'Sculpture', 'Dessin', 'Photographie', 'Art numérique', 'Artisanat', 'NFT', 'Autre'];
+    const categorieFinale = categoriesAutorisees.includes(categorie) ? categorie : 'Autre';
 
     let listeImages = [];
-
-    if (Array.isArray(images)) {
-      listeImages = images;
-    } else if (typeof image === 'string' && image.trim()) {
-      listeImages = [image.trim()];
+    if (Array.isArray(images)) listeImages = images;
+    else if (typeof image === 'string' && image.trim()) listeImages = [image.trim()];
+    if (listeImages.length > 10 || listeImages.some(i => typeof i !== 'string' || i.length > 2048)) {
+      return res.status(400).json({ error: 'Images invalides.' });
     }
-
-    if (
-      listeImages.length > 10 ||
-      listeImages.some(
-        item => typeof item!== 'string' || item.length > 2048
-      )
-    ) {
-      return res.status(400).json({
-        error: 'Les images fournies sont invalides.'
-      });
-    }
-
-    const artiste = req.user._id;
 
     const azmId = await getNextAZM();
 
+    // NFT : on marque isNFT true mais blockchainMinted false tant que pas minté réellement sur Pi
+    const isNFTFinal = Boolean(isNFT) || categorieFinale === 'NFT';
+    const blockchainFinal = isNFTFinal ? (blockchain === 'pi' ? 'pi' : 'pi') : undefined;
+
     const artwork = await Artwork.create({
       titre: titre.trim(),
-      description:
-        typeof description === 'string'
-         ? description.trim().slice(0, 10000)
-          : '',
+      description: typeof description === 'string' ? description.trim().slice(0, 10000) : '',
       prix: prixNumber,
       images: listeImages,
       categorie: categorieFinale,
-      ville:
-        typeof ville === 'string' && ville.trim()
-         ? ville.trim().slice(0, 100)
-          : req.user.ville || 'Abomey-Calavi',
-      artiste,
+      ville: typeof ville === 'string' && ville.trim() ? ville.trim().slice(0, 100) : req.user.ville || 'Abomey-Calavi',
+      artiste: req.user._id,
       statut: 'en_attente',
-      azmId
+      azmId,
+      isNFT: isNFTFinal,
+      blockchain: blockchainFinal,
+      blockchainMinted: false, // IMPORTANT : pas authentique tant que pas minté
+      expositions: [],
+      isEnExpoActuelle: false
     });
 
-    await User.findByIdAndUpdate(
-      artiste,
-      { $inc: { totalOeuvres: 1 } }
-    );
+    await User.findByIdAndUpdate(req.user._id, { $inc: { totalOeuvres: 1 } });
 
     return res.status(201).json({
       success: true,
-      message: 'Œuvre enregistrée et envoyée pour validation.',
-      artwork,
-      azmId
+      message: isNFTFinal ? 'NFT enregistré en galerie. Mint réel sur Pi requis pour authenticité.' : 'Œuvre enregistrée pour validation.',
+      artwork, azmId
     });
-  } catch (error) {
-    next(error);
-  }
+  } catch (e) { next(e); }
 });
 
-// =====================================================
-// 11. VALIDER OU REFUSER UNE ŒUVRE
-// PUT /api/artworks/:id/valider
-// ADMIN UNIQUEMENT
-// =====================================================
+// VALIDER
+router.put('/:id/valider', authenticateToken, requireAdmin, async (req, res, next) => {
+  try {
+    if (!validObjectId(req.params.id)) return res.status(400).json({ error: 'ID invalide.' });
+    const statut = req.body.statut || 'validee';
+    if (!['validee', 'rejetee'].includes(statut)) return res.status(400).json({ error: 'Statut invalide.' });
+    const artwork = await Artwork.findById(req.params.id);
+    if (!artwork) return res.status(404).json({ error: 'Non trouvée.' });
+    if (artwork.statut !== 'en_attente') return res.status(409).json({ error: 'Déjà traitée.' });
+    artwork.statut = statut;
+    await artwork.save();
+    return res.json({ success: true, artwork });
+  } catch (e) { next(e); }
+});
 
-router.put(
-  '/:id/valider',
-  authenticateToken,
-  requireAdmin,
-  async (req, res, next) => {
-    try {
-      if (!validObjectId(req.params.id)) {
-        return res.status(400).json({
-          error: 'Identifiant d’œuvre invalide.'
-        });
-      }
-
-      const statut = req.body.statut || 'validee';
-
-      const statutsAutorises = [
-        'validee',
-        'rejetee'
-      ];
-
-      if (!statutsAutorises.includes(statut)) {
-        return res.status(400).json({
-          error: 'Statut de validation invalide.'
-        });
-      }
-
-      const artwork = await Artwork.findById(req.params.id);
-
-      if (!artwork) {
-        return res.status(404).json({
-          error: 'Œuvre non trouvée.'
-        });
-      }
-
-      if (artwork.statut!== 'en_attente') {
-        return res.status(409).json({
-          error: 'Cette œuvre a déjà été traitée ou son statut a changé.'
-        });
-      }
-
-      artwork.statut = statut;
-
-      await artwork.save();
-
-      return res.json({
-        success: true,
-        artwork
-      });
-    } catch (error) {
-      next(error);
-    }
-  }
-);
-
-// =====================================================
-// 12. MODIFIER UNE ŒUVRE
-// PUT /api/artworks/:id
-// =====================================================
-
+// MODIFIER
 router.put('/:id', authenticateToken, async (req, res, next) => {
   try {
-    if (!validObjectId(req.params.id)) {
-      return res.status(400).json({
-        error: 'Identifiant d’œuvre invalide.'
-      });
-    }
-
+    if (!validObjectId(req.params.id)) return res.status(400).json({ error: 'ID invalide.' });
     const artwork = await Artwork.findById(req.params.id);
-
-    if (!artwork) {
-      return res.status(404).json({
-        error: 'Œuvre non trouvée.'
-      });
-    }
-
-    const isOwner =
-      artwork.artiste.toString() === req.user._id.toString();
-
+    if (!artwork) return res.status(404).json({ error: 'Non trouvée.' });
+    const isOwner = artwork.artiste.toString() === req.user._id.toString();
     const isAdmin = req.user.role === 'admin';
+    if (!isOwner && !isAdmin) return res.status(403).json({ error: 'Non autorisé.' });
+    const champs = ['titre', 'description', 'prix', 'images', 'categorie', 'ville'];
+    for (const c of champs) if (req.body[c] !== undefined) artwork[c] = req.body[c];
+    if (!isAdmin && ['validee'].includes(artwork.statut)) artwork.statut = 'en_attente';
+    await artwork.save();
+    return res.json({ success: true, artwork });
+  } catch (e) { next(e); }
+});
 
-    if (!isOwner &&!isAdmin) {
-      return res.status(403).json({
-        error: 'Vous ne pouvez pas modifier cette œuvre.'
-      });
+// SUPPRIMER
+router.delete('/:id', authenticateToken, async (req, res, next) => {
+  try {
+    if (!validObjectId(req.params.id)) return res.status(400).json({ error: 'ID invalide.' });
+    const artwork = await Artwork.findById(req.params.id);
+    if (!artwork) return res.status(404).json({ error: 'Non trouvée.' });
+    const isOwner = artwork.artiste.toString() === req.user._id.toString();
+    const isAdmin = req.user.role === 'admin';
+    if (!isOwner && !isAdmin) return res.status(403).json({ error: 'Non autorisé.' });
+    if (artwork.statut === 'vendue') return res.status(409).json({ error: 'Vendue, suppression impossible.' });
+    await Artwork.deleteOne({ _id: artwork._id });
+    await User.findByIdAndUpdate(artwork.artiste, { $inc: { totalOeuvres: -1 } });
+    return res.json({ success: true, message: 'Supprimée.' });
+  } catch (e) { next(e); }
+});
+
+// PREUVE DE PAIEMENT AVEC TES ADRESSES
+router.post('/:id/preuve-paiement', authenticateToken, async (req, res, next) => {
+  try {
+    if (!validObjectId(req.params.id)) return res.status(400).json({ error: 'ID invalide.' });
+    const { preuve, method } = req.body;
+    if (!preuve || typeof preuve !== 'string' || preuve.trim().length < 3) {
+      return res.status(400).json({ error: 'Preuve requise.' });
     }
+    const artwork = await Artwork.findById(req.params.id);
+    if (!artwork) return res.status(404).json({ error: 'Œuvre non trouvée.' });
+    if (artwork.statut === 'vendue') return res.status(409).json({ error: 'Déjà vendue.' });
 
-    const champsModifiables = [
-      'titre',
-      'description',
-      'prix',
-      'images',
-      'categorie',
-      'ville'
-    ];
-
-    for (const champ of champsModifiables) {
-      if (req.body[champ]!== undefined) {
-        artwork[champ] = req.body[champ];
-      }
-    }
-
-    if (!isAdmin) {
-      if (
-        ['validee'].includes(artwork.statut)
-      ) {
-        artwork.statut = 'en_attente';
-      }
-    }
-
+    artwork.preuvesPaiement = artwork.preuvesPaiement || [];
+    artwork.preuvesPaiement.push({
+      user: req.user._id,
+      preuve: preuve.trim().slice(0, 2000),
+      method: method || 'manual',
+      adressesUtilisees: ADRESSES,
+      date: new Date()
+    });
+    // On ne marque pas vendue directement, admin doit valider
+    artwork.statutPaiement = 'preuve_envoyee';
     await artwork.save();
 
     return res.json({
       success: true,
+      message: `Preuve reçue. Admin va vérifier le paiement sur ${ADRESSES.mtn} / ${ADRESSES.moov} / ${ADRESSES.usdt_trc20} / Pi ${ADRESSES.pi} et valider.`,
       artwork
     });
-  } catch (error) {
-    next(error);
-  }
+  } catch (e) { next(e); }
 });
 
-// =====================================================
-// 13. SUPPRIMER UNE ŒUVRE
-// DELETE /api/artworks/:id
-// =====================================================
-
-router.delete('/:id', authenticateToken, async (req, res, next) => {
-  try {
-    if (!validObjectId(req.params.id)) {
-      return res.status(400).json({
-        error: 'Identifiant d’œuvre invalide.'
-      });
-    }
-
-    const artwork = await Artwork.findById(req.params.id);
-
-    if (!artwork) {
-      return res.status(404).json({
-        error: 'Œuvre non trouvée.'
-      });
-    }
-
-    const isOwner =
-      artwork.artiste.toString() === req.user._id.toString();
-
-    const isAdmin = req.user.role === 'admin';
-
-    if (!isOwner &&!isAdmin) {
-      return res.status(403).json({
-        error: 'Vous ne pouvez pas supprimer cette œuvre.'
-      });
-    }
-
-    if (artwork.statut === 'vendue') {
-      return res.status(409).json({
-        error: 'Une œuvre vendue ne peut pas être supprimée.'
-      });
-    }
-
-    await Artwork.deleteOne({ _id: artwork._id });
-
-    await User.findByIdAndUpdate(
-      artwork.artiste,
-      { $inc: { totalOeuvres: -1 } }
-    );
-
-    return res.json({
-      success: true,
-      message: 'Œuvre supprimée.'
-    });
-  } catch (error) {
-    next(error);
-  }
-});
-
-// =====================================================
-// 14. ANCIENNE ROUTE DE VOTE DÉSACTIVÉE
-// =====================================================
-
+// ANCIENNE ROUTE VOTE DÉSACTIVÉE
 router.post('/:id/vote', (req, res) => {
-  return res.status(410).json({
-    error: 'Cette route de vote est désactivée.',
-    message: 'Utilisez le système centralisé /api/votes.'
-  });
-});
-
-// =====================================================
-// 15. ACHAT FCFA
-// =====================================================
-
-router.post('/:id/buy-fcfa', (req, res) => {
-  return res.status(501).json({
-    error: 'Confirmation automatique des paiements FCFA non configurée.',
-    message:
-      'L’œuvre ne sera marquée comme vendue qu’après vérification du paiement.'
-  });
+  return res.status(410).json({ error: 'Route désactivée, utilisez /api/votes.' });
 });
 
 export default router;
