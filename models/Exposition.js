@@ -10,157 +10,84 @@ const expositionSchema = new mongoose.Schema(
       maxlength: 200,
       default: 'Expo OCT 2026 - Royauté Africaine'
     },
+    theme: { type: String, trim: true, maxlength: 200, default: 'Royauté Africaine' },
+    description: { type: String, trim: true, maxlength: 10000, default: '' },
+    lieu: { type: String, trim: true, maxlength: 200, default: '' },
+    image: { type: String, trim: true, maxlength: 2048, default: '' },
 
-    theme: {
-      type: String,
-      trim: true,
-      maxlength: 200,
-      default: 'Royauté Africaine'
-    },
+    // =================================================
+    // DATES - CORRIGÉ POUR TON FONCTIONNEMENT DÉFINITIF
+    // =================================================
+    dateDebut: { type: Date, required: true, default: Date.now },
+    dateFin: { type: Date, required: true, default: () => new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) },
+    
+    // NOUVEAU : On sépare soumission et vote comme tu l'as demandé
+    dateDebutSoumission: { type: Date, default: Date.now },
+    dateFinSoumission: { type: Date, default: () => new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) },
+    dateDebutVote: { type: Date, default: () => new Date(Date.now() + 8 * 24 * 60 * 60 * 1000) },
+    dateFinVote: { type: Date, required: true, default: () => new Date(Date.now() + 27 * 24 * 60 * 60 * 1000) },
 
-    description: {
-      type: String,
-      trim: true,
-      maxlength: 10000,
-      default: ''
-    },
-
-    lieu: {
-      type: String,
-      trim: true,
-      maxlength: 200,
-      default: ''
-    },
-
-    image: {
-      type: String,
-      trim: true,
-      maxlength: 2048,
-      default: ''
-    },
-
-    dateDebut: {
-      type: Date,
-      required: true,
-      default: Date.now
-    },
-
-    dateFin: {
-      type: Date,
-      required: true,
-      default: () =>
-        new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
-    },
-
-    dateFinVote: {
-      type: Date,
-      required: true,
-      default: () =>
-        new Date(Date.now() + 27 * 24 * 60 * 60 * 1000)
-    },
-
+    // =================================================
+    // STATUT - CORRIGÉ ALIGNÉ AVEC TON DOC
+    // =================================================
     statut: {
       type: String,
       enum: [
         'a_venir',
-        'active',
+        'soumission', // NOUVEAU : ouvert aux soumissions
+        'vote',       // NOUVEAU : en cours de vote
+        'active',     // ancien, on le garde pour compat
         'vote_clos',
         'enchere',
         'terminee'
       ],
-      default: 'active',
+      default: 'soumission',
       index: true
     },
 
-    oeuvres: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Artwork'
-      }
-    ],
-
-    oeuvres_top: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Artwork'
-      }
-    ],
-
-    totalVotes: {
-      type: Number,
-      default: 0,
-      min: 0
+    // =================================================
+    // RÈGLES D'EXPOSITION - NOUVEAU
+    // =================================================
+    regles: {
+      maxOeuvresParArtiste: { type: Number, default: 3, min: 1 },
+      topPourEnchere: { type: Number, default: 10, min: 1 },
+      voteUniqueParVisiteur: { type: Boolean, default: true }
     },
 
-    totalArtistes: {
-      type: Number,
-      default: 0,
-      min: 0
-    }
+    // ANCIEN : On garde oeuvres pour compatibilité
+    oeuvres: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Artwork' }],
+    
+    // NOUVEAU : Candidatures avec accept/refus comme dans ton doc
+    candidatures: [
+      {
+        artwork: { type: mongoose.Schema.Types.ObjectId, ref: 'Artwork', required: true },
+        artiste: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+        dateSoumission: { type: Date, default: Date.now },
+        statut: { type: String, enum: ['en_attente', 'acceptee', 'refusee'], default: 'en_attente' }
+      }
+    ],
+
+    oeuvres_top: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Artwork' }],
+    totalVotes: { type: Number, default: 0, min: 0 },
+    totalArtistes: { type: Number, default: 0, min: 0 }
   },
-  {
-    timestamps: true
-  }
+  { timestamps: true }
 );
 
-/*
- * Vérification de cohérence des dates.
- *
- * Les règles suivantes s'appliquent lors de la validation
- * d'un document :
- * - la fin est postérieure au début ;
- * - la fin du vote ne précède pas le début ;
- * - la fin du vote ne dépasse pas la fin de l'exposition.
- */
+// Validation des dates mise à jour
 expositionSchema.pre('validate', function () {
-  if (
-    this.dateDebut &&
-    this.dateFin &&
-    this.dateFin <= this.dateDebut
-  ) {
-    this.invalidate(
-      'dateFin',
-      'La fin de l’exposition doit être postérieure à son début.'
-    );
+  if (this.dateDebut && this.dateFin && this.dateFin <= this.dateDebut) {
+    this.invalidate('dateFin', 'La fin doit être après le début.');
   }
-
-  if (
-    this.dateDebut &&
-    this.dateFinVote &&
-    this.dateFinVote < this.dateDebut
-  ) {
-    this.invalidate(
-      'dateFinVote',
-      'La clôture des votes ne peut pas précéder le début de l’exposition.'
-    );
+  if (this.dateDebutSoumission && this.dateFinSoumission && this.dateFinSoumission <= this.dateDebutSoumission) {
+    this.invalidate('dateFinSoumission', 'Fin soumission après début soumission.');
   }
-
-  if (
-    this.dateFin &&
-    this.dateFinVote &&
-    this.dateFinVote > this.dateFin
-  ) {
-    this.invalidate(
-      'dateFinVote',
-      'La clôture des votes ne peut pas dépasser la fin de l’exposition.'
-    );
+  if (this.dateDebutVote && this.dateFinVote && this.dateFinVote <= this.dateDebutVote) {
+    this.invalidate('dateFinVote', 'Fin vote après début vote.');
   }
 });
 
-/*
- * Index pour retrouver rapidement les expositions récentes.
- */
-expositionSchema.index({
-  statut: 1,
-  dateDebut: -1
-});
+expositionSchema.index({ statut: 1, dateDebut: -1 });
 
-/*
- * Évite de compiler plusieurs fois le modèle dans
- * certains environnements de développement.
- */
-const Exposition =
-  mongoose.models.Exposition ||
-  mongoose.model('Exposition', expositionSchema);
-
+const Exposition = mongoose.models.Exposition || mongoose.model('Exposition', expositionSchema);
 export default Exposition;
