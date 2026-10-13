@@ -8,215 +8,200 @@ import User from '../models/User.js';
 
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET;
+const STATUTS_PUBLIQUES = ['a_venir', 'soumission', 'active', 'vote', 'vote_clos', 'enchere', 'terminee'];
 
-const STATUTS_OEUVRE_VOTABLES = ['validee', 'en_expo'];
-const STATUTS_EXPOSITION_PUBLIQUES = ['a_venir', 'soumission', 'active', 'vote', 'vote_clos', 'enchere', 'terminee'];
-
-//... GARDE TON authenticateToken et requireAdmin IDENTIQUE...
 async function authenticateToken(req, res, next) {
   const authorization = req.headers.authorization;
-  if (!authorization?.startsWith('Bearer ')) {
-    return res.status(401).json({ success: false, error: 'Authentification requise.' });
-  }
-  if (!JWT_SECRET || JWT_SECRET.length < 32) {
-    return res.status(500).json({ success: false, error: 'Configuration de sécurité indisponible.' });
-  }
+  if (!authorization?.startsWith('Bearer ')) return res.status(401).json({ success: false, error: 'Auth requise.' });
+  if (!JWT_SECRET || JWT_SECRET.length < 32) return res.status(500).json({ success: false, error: 'Config sécurité indisponible.' });
   try {
     const token = authorization.slice(7);
     const payload = jwt.verify(token, JWT_SECRET, { algorithms: ['HS256'] });
-    if (!payload.id &&!payload._id) {
-      return res.status(401).json({ success: false, error: 'Jeton invalide.' });
-    }
     const userId = payload.id || payload._id;
-    if (!mongoose.isValidObjectId(userId)) {
-      return res.status(401).json({ success: false, error: 'Identifiant utilisateur invalide.' });
-    }
+    if (!mongoose.isValidObjectId(userId)) return res.status(401).json({ success: false, error: 'ID invalide.' });
     const user = await User.findById(userId).select('_id role statut');
-    if (!user || user.statut!== 'valide') {
-      return res.status(403).json({ success: false, error: 'Compte absent, inactif ou non validé.' });
-    }
-    req.user = user;
-    next();
-  } catch {
-    return res.status(401).json({ success: false, error: 'Jeton invalide ou expiré.' });
-  }
+    if (!user || user.statut!== 'valide') return res.status(403).json({ success: false, error: 'Compte non validé.' });
+    req.user = user; next();
+  } catch { return res.status(401).json({ success: false, error: 'Jeton expiré.' }); }
 }
 function requireAdmin(req, res, next) {
-  if (req.user?.role!== 'admin') {
-    return res.status(403).json({ success: false, error: 'Accès réservé à l’administrateur.' });
-  }
+  if (req.user?.role!== 'admin') return res.status(403).json({ success: false, error: 'Admin requis.' });
   next();
 }
 function validObjectId(id) { return mongoose.isValidObjectId(id); }
 
-/* 1. LISTE DES EXPOSITIONS */
+/* 1. LISTE PUBLIQUE - galerie permanente + expos */
 router.get('/', async (req, res) => {
   try {
-    const expositions = await Exposition.find({ statut: { $in: STATUTS_EXPOSITION_PUBLIQUES } })
-     .populate({ path: 'oeuvres', match: { statut: { $in: ['validee', 'en_expo', 'en_enchere', 'vendue'] } }, populate: { path: 'artiste', select: 'nom nom_artiste ville avatar' } })
+    const expos = await Exposition.find({ statut: { $in: STATUTS_PUBLIQUES } })
+     .populate({ path: 'oeuvres', match: { statut: { $in: ['validee', 'en_enchere', 'vendue'] } }, populate: { path: 'artiste', select: 'nom nom_artiste ville avatar' } })
+     .populate({ path: 'candidatures.artwork', select: 'titre image azmId prix votesCount' })
      .sort({ dateDebut: -1 }).limit(100);
-    return res.json(expositions);
-  } catch (error) {
-    console.error('Erreur GET expositions :', error);
-    return res.status(500).json({ success: false, error: 'Impossible de charger les expositions.' });
+    return res.json(expos);
+  } catch (e) {
+    console.error(e);
+    return res.status(500).json({ success: false, error: 'Chargement expositions impossible.' });
   }
 });
 
-/* 2. EXPOSITION ACTIVE */
+/* 2. EXPO ACTIVE */
 router.get('/active', async (req, res) => {
   try {
     const expo = await Exposition.findOne({ statut: { $in: ['soumission', 'active', 'vote', 'vote_clos', 'enchere'] } })
-     .populate({ path: 'oeuvres', match: { statut: { $in: ['validee', 'en_expo', 'en_enchere'] } }, populate: { path: 'artiste', select: 'nom nom_artiste ville avatar' }, options: { sort: { votesCount: -1 } } })
+     .populate({ path: 'oeuvres', match: { statut: { $in: ['validee', 'en_enchere'] } }, populate: { path: 'artiste', select: 'nom nom_artiste' }, options: { sort: { votesCount: -1 } } })
      .sort({ dateDebut: -1 });
-    if (!expo) { return res.json({ message: 'Pas d’exposition active.', oeuvres: [] }); }
+    if (!expo) return res.json({ message: 'Pas d’exposition active.', oeuvres: [] });
     return res.json(expo);
-  } catch (error) {
-    console.error('Erreur exposition active :', error);
-    return res.status(500).json({ success: false, error: 'Impossible de charger l’exposition active.' });
+  } catch (e) {
+    return res.status(500).json({ success: false, error: 'Expo active indisponible.' });
   }
 });
 
-/* 3. CRÉER UNE EXPOSITION - CORRIGÉ AVEC TES NOUVELLES DATES */
+/* 3. CRÉER - AVEC TES DATES DÉFINITIVES */
 router.post('/', authenticateToken, requireAdmin, async (req, res) => {
   try {
-    const { titre, description, dateDebut, dateFin, dateFinVote, dateDebutSoumission, dateFinSoumission, dateDebutVote, lieu, image, regles } = req.body || {};
-    if (typeof titre!== 'string' || titre.trim().length < 3) {
-      return res.status(400).json({ success: false, error: 'Le titre doit comporter au moins 3 caractères.' });
-    }
+    const { titre, description, theme, dateDebut, dateFin, dateFinVote, dateDebutSoumission, dateFinSoumission, dateDebutVote, lieu, image, regles } = req.body || {};
+    if (!titre || titre.trim().length < 3) return res.status(400).json({ success: false, error: 'Titre min 3 caractères.' });
     const debut = dateDebut? new Date(dateDebut) : new Date();
-    const fin = dateFin? new Date(dateFin) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-    const finVote = dateFinVote? new Date(dateFinVote) : new Date(debut.getTime() + 27 * 24 * 60 * 60 * 1000);
+    const fin = dateFin? new Date(dateFin) : new Date(Date.now() + 30 * 86400000);
+    const finVote = dateFinVote? new Date(dateFinVote) : new Date(debut.getTime() + 27 * 86400000);
 
     const expo = await Exposition.create({
-      titre: titre.trim(), description, dateDebut: debut, dateFin: fin, dateFinVote: finVote,
+      titre: titre.trim(), description, theme: theme || 'Royauté Africaine',
+      dateDebut: debut, dateFin: fin, dateFinVote: finVote,
       dateDebutSoumission: dateDebutSoumission? new Date(dateDebutSoumission) : debut,
-      dateFinSoumission: dateFinSoumission? new Date(dateFinSoumission) : new Date(debut.getTime() + 7*24*60*60*1000),
-      dateDebutVote: dateDebutVote? new Date(dateDebutVote) : new Date(debut.getTime() + 8*24*60*60*1000),
-      lieu, image, statut: 'soumission', regles
+      dateFinSoumission: dateFinSoumission? new Date(dateFinSoumission) : new Date(debut.getTime() + 7*86400000),
+      dateDebutVote: dateDebutVote? new Date(dateDebutVote) : new Date(debut.getTime() + 8*86400000),
+      lieu, image, statut: 'soumission',
+      regles: { topPourEnchere: regles?.topPourEnchere || 10, maxOeuvresParArtiste: regles?.maxOeuvresParArtiste || 3 }
     });
-    return res.status(201).json({ success: true, message: 'Exposition créée.', exposition: expo });
-  } catch (error) {
-    console.error('Erreur création exposition :', error);
-    return res.status(500).json({ success: false, error: 'Impossible de créer l’exposition.' });
+    return res.status(201).json({ success: true, message: 'Exposition créée en mode soumission.', exposition: expo });
+  } catch (e) {
+    console.error(e);
+    return res.status(500).json({ success: false, error: 'Création impossible.' });
   }
 });
 
-/* =====================================================
-   4. AJOUTER UNE ŒUVRE - CORRIGÉ : RESTE EN GALERIE
-===================================================== */
+/* 4. AJOUT ADMIN DIRECT - RESTE EN GALERIE */
 router.post('/:id/add-artwork', authenticateToken, requireAdmin, async (req, res) => {
   try {
-    const { id } = req.params;
-    const { artworkId } = req.body || {};
-    if (!validObjectId(id) ||!validObjectId(artworkId)) {
-      return res.status(400).json({ success: false, error: 'Identifiant d’exposition ou d’œuvre invalide.' });
-    }
+    const { id } = req.params; const { artworkId } = req.body || {};
+    if (!validObjectId(id) ||!validObjectId(artworkId)) return res.status(400).json({ success: false, error: 'ID invalide.' });
     const expo = await Exposition.findById(id);
-    if (!expo) { return res.status(404).json({ success: false, error: 'Exposition introuvable.' }); }
-    if (!['a_venir', 'soumission', 'active'].includes(expo.statut)) {
-      return res.status(400).json({ success: false, error: 'Cette exposition ne peut plus recevoir d’œuvres. Statut: ' + expo.statut });
-    }
+    if (!expo) return res.status(404).json({ success: false, error: 'Expo introuvable.' });
+    if (!['a_venir', 'soumission', 'active'].includes(expo.statut)) return res.status(400).json({ success: false, error: 'Expo fermée aux ajouts, statut: ' + expo.statut });
     const art = await Artwork.findById(artworkId);
-    if (!art) { return res.status(404).json({ success: false, error: 'Œuvre introuvable.' }); }
-    if (!['validee'].includes(art.statut)) { // ON ACCEPTE SEULEMENT VALIDEES DE LA GALERIE
-      return res.status(400).json({ success: false, error: 'Seules les œuvres validées de la galerie peuvent être exposées.' });
-    }
+    if (!art) return res.status(404).json({ success: false, error: 'Œuvre introuvable.' });
+    if (!['validee'].includes(art.statut)) return res.status(400).json({ success: false, error: 'Seules œuvres validées galerie peuvent être exposées.' });
 
-    // CORRECTION ESSENTIELLE : On ne change PAS le statut!
-    // L'œuvre RESTE en galerie (validee)
-    if (!art.expositions) art.expositions = [];
-    if (!art.expositions.some(e => String(e) === String(expo._id))) {
-      art.expositions.push(expo._id);
-    }
+    // RESTE EN GALERIE
+    art.expositions = art.expositions || [];
+    if (!art.expositions.some(e => String(e) === String(expo._id))) art.expositions.push(expo._id);
     art.isEnExpoActuelle = true;
-    // art.statut reste 'validee' pour rester en galerie
     await art.save();
 
-    if (!expo.oeuvres.some(oid => String(oid) === String(art._id))) {
-      expo.oeuvres.push(art._id);
-    }
-    // Ajoute aussi en candidature acceptée
+    if (!expo.oeuvres.some(o => String(o) === String(art._id))) expo.oeuvres.push(art._id);
     if (!expo.candidatures.some(c => String(c.artwork) === String(art._id))) {
       expo.candidatures.push({ artwork: art._id, artiste: art.artiste, statut: 'acceptee' });
     }
     await expo.save();
 
     const baseUrl = (process.env.FRONTEND_URL || 'https://art-zedmo.com').split(',')[0].trim().replace(/\/+$/, '');
-    const lienVote = `${baseUrl}/expo/vote/${art._id}`;
-
-    return res.json({
-      success: true,
-      message: 'Œuvre ajoutée à l’exposition (reste en galerie).',
-      art,
-      lien_viral: art.lien_vote_unique || lienVote,
-      lien_vote: lienVote,
-    });
-  } catch (error) {
-    console.error('Erreur ajout œuvre :', error);
-    return res.status(500).json({ success: false, error: 'Impossible d’ajouter cette œuvre.' });
-  }
-});
-
-/* =====================================================
-   5. NOUVEAU : SOUMISSION PAR ARTISTE
-   POST /api/expositions/:id/soumettre
-===================================================== */
-router.post('/:id/soumettre', authenticateToken, async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { artworkId } = req.body || {};
-    if (!validObjectId(id) ||!validObjectId(artworkId)) {
-      return res.status(400).json({ success: false, error: 'IDs invalides.' });
-    }
-    const expo = await Exposition.findById(id);
-    if (!expo || expo.statut!== 'soumission') {
-      return res.status(400).json({ success: false, error: 'Exposition non ouverte aux soumissions.' });
-    }
-    const art = await Artwork.findById(artworkId);
-    if (!art || String(art.artiste)!== String(req.user._id)) {
-      return res.status(403).json({ success: false, error: 'Vous n’êtes pas propriétaire de cette œuvre.' });
-    }
-    // Vérifie si déjà soumise
-    if (expo.candidatures.some(c => String(c.artwork) === String(artworkId))) {
-      return res.status(409).json({ success: false, error: 'Déjà soumise.' });
-    }
-    expo.candidatures.push({ artwork: artworkId, artiste: req.user._id, statut: 'en_attente' });
-    await expo.save();
-    return res.json({ success: true, message: 'Candidature soumise, en attente de validation admin.' });
+    return res.json({ success: true, message: 'Ajoutée (reste en galerie).', lien_vote: `${baseUrl}/expo/vote/${art._id}` });
   } catch (e) {
     console.error(e);
-    return res.status(500).json({ success: false, error: 'Erreur soumission.' });
+    return res.status(500).json({ success: false, error: 'Ajout impossible.' });
   }
 });
 
-/* 6. TOP 10 ET ENCHÈRES - INCHANGÉ POUR TOI */
+/* 5. SOUMISSION ARTISTE - GALERIE -> EXPO */
+router.post('/:id/soumettre', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params; const { artworkId } = req.body || {};
+    if (!validObjectId(id) ||!validObjectId(artworkId)) return res.status(400).json({ success: false, error: 'ID invalide.' });
+    const expo = await Exposition.findById(id);
+    if (!expo || expo.statut!== 'soumission') return res.status(400).json({ success: false, error: 'Pas ouverte aux soumissions.' });
+    const art = await Artwork.findById(artworkId);
+    if (!art || String(art.artiste)!== String(req.user._id)) return res.status(403).json({ success: false, error: 'Pas propriétaire.' });
+    if (art.statut!== 'validee') return res.status(400).json({ success: false, error: 'Œuvre doit être validée en galerie d’abord.' });
+
+    // Limite 3 par artiste
+    const countArtiste = expo.candidatures.filter(c => String(c.artiste) === String(req.user._id)).length;
+    if (countArtiste >= (expo.regles?.maxOeuvresParArtiste || 3)) {
+      return res.status(400).json({ success: false, error: `Limite ${expo.regles?.maxOeuvresParArtiste || 3} œuvres par artiste atteinte.` });
+    }
+    if (expo.candidatures.some(c => String(c.artwork) === String(artworkId))) return res.status(409).json({ success: false, error: 'Déjà soumise.' });
+
+    expo.candidatures.push({ artwork: artworkId, artiste: req.user._id, statut: 'en_attente' });
+    await expo.save();
+    return res.json({ success: true, message: 'Soumise, en attente admin. Reste en galerie.' });
+  } catch (e) { return res.status(500).json({ success: false, error: 'Erreur soumission.' }); }
+});
+
+/* 5bis. ADMIN ACCEPTE / REFUSE CANDIDATURE */
+router.put('/:id/candidature/:candidatureId', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const { id, candidatureId } = req.params; const { statut } = req.body;
+    if (!validObjectId(id) ||!validObjectId(candidatureId)) return res.status(400).json({ error: 'ID invalide.' });
+    if (!['acceptee', 'refusee'].includes(statut)) return res.status(400).json({ error: 'Statut doit être acceptee ou refusee.' });
+
+    const expo = await Exposition.findById(id);
+    if (!expo) return res.status(404).json({ error: 'Expo introuvable.' });
+    const cand = expo.candidatures.id(candidatureId);
+    if (!cand) return res.status(404).json({ error: 'Candidature introuvable.' });
+
+    cand.statut = statut;
+    if (statut === 'acceptee') {
+      const art = await Artwork.findById(cand.artwork);
+      if (art) {
+        art.expositions = art.expositions || [];
+        if (!art.expositions.some(e => String(e) === String(expo._id))) art.expositions.push(expo._id);
+        art.isEnExpoActuelle = true;
+        await art.save();
+        if (!expo.oeuvres.some(o => String(o) === String(art._id))) expo.oeuvres.push(art._id);
+      }
+    } else {
+      // Refusée : retire de oeuvres si elle y était
+      expo.oeuvres = expo.oeuvres.filter(o => String(o)!== String(cand.artwork));
+    }
+    await expo.save();
+    return res.json({ success: true, message: `Candidature ${statut}. ${statut === 'acceptee'? 'Reste en galerie + expo.' : 'Reste seulement en galerie.'}` });
+  } catch (e) { return res.status(500).json({ error: 'Erreur traitement candidature.' }); }
+});
+
+/* 6. CALCUL TOP 10 -> ENCHERE : SEULEMENT LÀ elle quitte galerie */
 router.post('/:id/calculer-top-et-encherir', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
-    if (!validObjectId(id)) { return res.status(400).json({ success: false, error: 'ID invalide.' }); }
+    if (!validObjectId(id)) return res.status(400).json({ success: false, error: 'ID invalide.' });
     const expo = await Exposition.findById(id);
-    if (!expo) { return res.status(404).json({ success: false, error: 'Exposition introuvable.' }); }
-    const dateFin = req.body?.dateFin? new Date(req.body.dateFin) : new Date(Date.now() + 3*24*60*60*1000);
-    // On prend les œuvres les plus votées de cette expo
-    const top10 = await Artwork.find({ expositions: expo._id, statut: 'validee' }).sort({ votesCount: -1, createdAt: 1 }).limit(expo.regles?.topPourEnchere || 10);
-    if (top10.length === 0) { return res.status(400).json({ success: false, error: 'Aucune œuvre à mettre aux enchères.' }); }
+    if (!expo) return res.status(404).json({ success: false, error: 'Expo introuvable.' });
+    const dateFin = req.body?.dateFin? new Date(req.body.dateFin) : new Date(Date.now() + 3*86400000);
+
+    const topN = expo.regles?.topPourEnchere || 10;
+    const top10 = await Artwork.find({ expositions: expo._id, statut: 'validee' }).sort({ votesCount: -1, createdAt: 1 }).limit(topN);
+    if (top10.length === 0) return res.status(400).json({ success: false, error: 'Aucune œuvre validée à enchérir.' });
+
     const resultats = [];
     for (const art of top10) {
       let enchere = await Enchere.findOne({ artwork: art._id, statut: 'en_cours' });
       if (!enchere) {
-        enchere = await Enchere.create({ artwork: art._id, titre: art.titre, exposition: expo._id, prixDepart: art.prix, enchereActuelle: Math.round(art.prix * 2), dateFin });
+        enchere = await Enchere.create({
+          artwork: art._id, titre: art.titre, exposition: expo._id,
+          prixDepart: art.prix, enchereActuelle: Math.round(art.prix * 1.5), dateFin
+        });
       }
-      art.statut = 'en_enchere'; // Là seulement elle quitte la galerie
+      art.statut = 'en_enchere'; // SEULEMENT ICI elle quitte galerie permanente
       await art.save();
-      resultats.push({ artworkId: art._id, titre: art.titre, enchereId: enchere._id, dateFin: enchere.dateFin });
+      resultats.push({ artworkId: art._id, enchereId: enchere._id });
     }
     expo.oeuvres_top = top10.map(a => a._id);
     expo.statut = 'enchere';
     await expo.save();
-    return res.json({ success: true, message: 'Enchères lancées.', nombreOeuvresClassees: top10.length, dateFin, top: top10, resultats });
-  } catch (error) {
-    console.error('Erreur calcul Top 10 :', error);
-    return res.status(500).json({ success: false, error: 'Impossible de calculer.' });
+    return res.json({ success: true, message: `Top ${top10.length} en enchère. Elles quittent galerie pour enchère.`, nombreOeuvresClassees: top10.length, dateFin, resultats });
+  } catch (e) {
+    console.error(e);
+    return res.status(500).json({ success: false, error: 'Calcul impossible.' });
   }
 });
 
