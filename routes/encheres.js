@@ -74,7 +74,8 @@ router.get('/:id', async (req, res) => {
 });
 
 // =====================================================
-// POST : ENCHERIR - AUGMENTE : NOM + MONTANT + DOUBLAGE
+// POST : ENCHERIR - CORRIGÉ SANS DOUBLER
+// 1 personne peut enchérir plusieurs fois mais montant exact
 // =====================================================
 router.post('/:id/encherir', authenticateToken, async (req, res) => {
   try {
@@ -83,26 +84,23 @@ router.post('/:id/encherir', authenticateToken, async (req, res) => {
     let montant = Number(req.body.montant);
     if (!Number.isFinite(montant) || montant <= 0) return res.status(400).json({ error: 'Le montant proposé doit être un nombre positif.' });
 
-    // NOUVEAU: nom acheteur saisi dans frontend + prixDouble = montant x 2
+    // CORRIGÉ: plus de x2
     const nomAcheteur = (req.body.nomAcheteur || req.user.nom_artiste || req.user.nom || '').trim();
-    const prixDouble = Number(req.body.prixDouble) || montant * 2;
-
     if(!nomAcheteur) return res.status(400).json({error: 'Nom acheteur requis'});
 
     const userId = req.user._id;
     const maintenant = new Date();
 
-    // On enregistre le prix doublé comme nouvelle enchère
+    // On enregistre le montant EXACT, pas doublé
     const enchere = await Enchere.findOneAndUpdate(
-      { _id: req.params.id, statut: 'en_cours', dateFin: { $gt: maintenant }, enchereActuelle: { $lt: prixDouble } },
+      { _id: req.params.id, statut: 'en_cours', dateFin: { $gt: maintenant }, enchereActuelle: { $lt: montant } },
       {
-        $set: { enchereActuelle: prixDouble, dernierEncherisseur: userId, dernierNomAcheteur: nomAcheteur },
+        $set: { enchereActuelle: montant, dernierEncherisseur: userId, dernierNomAcheteur: nomAcheteur },
         $push: {
           offres: {
             user: userId,
             nomAcheteur,
-            montant,
-            prixDouble,
+            montant, // montant exact
             prixOriginal: montant,
             date: maintenant
           }
@@ -121,7 +119,7 @@ router.post('/:id/encherir', authenticateToken, async (req, res) => {
     const tempsRestant = enchere.dateFin.getTime() - Date.now();
     if (tempsRestant > 0 && tempsRestant <= 2 * 60 * 1000) {
       const nouvelleDateFin = new Date(Date.now() + 2 * 60 * 1000);
-      await Enchere.updateOne({ _id: enchere._id, statut: 'en_cours', enchereActuelle: prixDouble, dernierEncherisseur: userId }, { $set: { dateFin: nouvelleDateFin } });
+      await Enchere.updateOne({ _id: enchere._id, statut: 'en_cours', enchereActuelle: montant, dernierEncherisseur: userId }, { $set: { dateFin: nouvelleDateFin } });
       enchere.dateFin = nouvelleDateFin;
     }
 
@@ -129,10 +127,9 @@ router.post('/:id/encherir', authenticateToken, async (req, res) => {
       success: true,
       nomAcheteur,
       montantInitial: montant,
-      nouvelle_enchere: enchere.enchereActuelle, // = prixDouble
-      prixDouble,
+      nouvelle_enchere: enchere.enchereActuelle, // montant exact, plus de x2
       dateFin: enchere.dateFin,
-      message: `Offre acceptée: ${nomAcheteur} - ${montant} FCFA -> enregistré ${prixDouble} FCFA (x2)`
+      message: `Offre acceptée: ${nomAcheteur} - ${montant} FCFA`
     });
   } catch (error) {
     console.error('Erreur enchère :', error);
