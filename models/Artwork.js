@@ -4,10 +4,15 @@ import crypto from 'crypto';
 const preuvePaiementSchema = new mongoose.Schema({
   user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   preuve: { type: String, required: true },
-  method: { type: String, enum: ['mtn','moov','usdt_trc20','pi','fedapay','manual'], default: 'manual' },
+  // AJOUT polygon + corrigé
+  method: { type: String, enum: ['mtn','moov','usdt_trc20','pi','polygon','fedapay','manual'], default: 'manual' },
   transactionId: { type: String, default: '' },
+  nomAcheteur: { type: String, default: '' }, // pour enchère x2
+  montant: { type: Number, min: 0 },
+  prixDouble: { type: Number, min: 0 },
   date: { type: Date, default: Date.now },
-  statut: { type: String, enum: ['en_attente','validee','refusee'], default: 'en_attente' }
+  statut: { type: String, enum: ['en_attente','validee','refusee'], default: 'en_attente' },
+  adressesUtilisees: { type: Object, default: {} }
 }, { _id: true });
 
 const artworkSchema = new mongoose.Schema(
@@ -24,7 +29,7 @@ const artworkSchema = new mongoose.Schema(
 
     categorie: {
       type: String,
-      enum: ['Peinture','Sculpture','Dessin','Photographie','Art numérique','Artisanat','Textile','Digital','NFT','Autre'],
+      enum: ['Peinture','Sculpture','Dessin','Photographie','Art numérique','Artisanat','Textile','Digital','NFT','Autre','peinture','sculpture','dessin','photographie','artisanat','nft','autre'],
       default: 'Autre'
     },
     ville: { type: String, trim: true, maxlength: 100, default: 'Abomey-Calavi' },
@@ -35,20 +40,10 @@ const artworkSchema = new mongoose.Schema(
       required: [true, 'L’artiste est obligatoire']
     },
 
-    // =================================================
-    // GALERIE PERMANENTE + EXPOS - FONCTIONNEMENT DÉFINITIF
-    // =================================================
-    // Ancien champ pour compatibilité
     exposition: { type: mongoose.Schema.Types.ObjectId, ref: 'Exposition', default: null },
-    // NOUVEAU : plusieurs expos, reste en galerie
     expositions: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Exposition' }],
     isEnExpoActuelle: { type: Boolean, default: false },
 
-    // =================================================
-    // STATUT - CORRIGÉ
-    // validee = reste en galerie permanente même en expo
-    // en_enchere = seulement là quitte galerie
-    // =================================================
     statut: {
       type: String,
       enum: ['en_attente','validee','en_expo','en_enchere','vendue','rejetee'],
@@ -59,29 +54,45 @@ const artworkSchema = new mongoose.Schema(
     votesCount: { type: Number, default: 0, min: 0 },
     vues: { type: Number, default: 0, min: 0 },
 
-    // IDs
+    // IDs - EXACT COMME TA PHOTO
     azmId: { type: String, unique: true, sparse: true, trim: true, immutable: true },
     certifId: { type: String, trim: true, default: '' },
     hash: { type: String, default: '' },
     lien_vote_unique: { type: String, unique: true, sparse: true },
+    dimensions: { type: String, default: '80 x 120 cm' },
+    technique: { type: String, default: 'Acrylique' },
+    proprietaireActuel: { type: String, default: 'XXXXXXXX' },
 
     // =================================================
-    // NFT - PI BLOCKCHAIN RÉEL
-    // Important : NFT authentique seulement si blockchainMinted=true
+    // IPFS PINATA (PROBLÈME 4)
+    // =================================================
+    ipfsHash: { type: String, default: '' },
+    imageIPFS: { type: String, default: '' }, // ipfs://...
+    gatewayUrl: { type: String, default: '' }, // https://gateway.pinata...
+
+    // =================================================
+    // NFT - POLYGON + MODEL B POURCENTAGES SANS PRIX FIXE
     // =================================================
     isNFT: { type: Boolean, default: false },
-    blockchain: { type: String, enum: ['pi','Pi','Ethereum','Core','Sidra','polygon','Autre'], default: 'pi' },
-    blockchainMinted: { type: Boolean, default: false }, // VRAI MINT
+    blockchain: { type: String, enum: ['pi','Pi','Ethereum','Core','Sidra','polygon','Polygon','Autre'], default: 'polygon' },
+    blockchainMinted: { type: Boolean, default: false },
     tokenId: { type: String, default: '' },
     contractAddress: { type: String, default: '' },
-    royalties: { type: Number, default: 5, min: 0, max: 20 },
+    
+    // CORRIGÉ: ROYALTIES AVEC % SANS PRIX FIXE
+    royalties: { 
+      type: Object, 
+      default: {
+        primaire: { artiste: 85, plateforme: 15 },
+        secondaire: { vendeur: 85, artiste: 10, plateforme: 5 }
+      }
+    },
+    royaltiesPercent: { type: Number, default: 10, min: 0, max: 20 }, // fallback ancien
+    
     edition: { type: String, trim: true, default: '1/1' },
     proprietaireWallet: { type: String, trim: true, default: '' },
     txHash: { type: String, trim: true, default: '' },
 
-    // =================================================
-    // PAIEMENTS RÉELS - TES ADRESSES
-    // =================================================
     dateVente: { type: Date, default: null },
     prixVendu: { type: Number, min: 0 },
     acheteur: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
@@ -93,12 +104,14 @@ const artworkSchema = new mongoose.Schema(
     },
     preuvesPaiement: [preuvePaiementSchema],
 
-    // Adresses fixées (pour référence)
+    // ADRESSES CORRIGÉES 0194655238 (PROBLÈME 2)
     adressesPaiement: {
       usdt_trc20: { type: String, default: 'TFXZSyJaC6mdCva8kAJBMMvKYhyhpzpHn2' },
       pi: { type: String, default: 'GAF62KXAV7IUM3HSHQ3TI6EFMIDSGII2EVEZXFTXGMH5D2EDPA6RVAM' },
-      mtn: { type: String, default: '0196587303' },
-      moov: { type: String, default: '0194655238' }
+      polygon: { type: String, default: '0xZEDMO' },
+      mtn: { type: String, default: '0194655238' },
+      moov: { type: String, default: '0194655238' },
+      whatsapp: { type: String, default: '2290194655238' }
     }
   },
   { timestamps: true, strict: true }
@@ -113,6 +126,7 @@ artworkSchema.index({ expositions: 1 });
 artworkSchema.index({ isEnExpoActuelle: 1 });
 artworkSchema.index({ isNFT: 1, blockchainMinted: 1 });
 artworkSchema.index({ statutPaiement: 1 });
+artworkSchema.index({ ipfsHash: 1 });
 
 artworkSchema.pre('validate', function () {
   if (Array.isArray(this.images) && this.images.length > 0) {
@@ -132,8 +146,13 @@ artworkSchema.pre('validate', function () {
     });
     this.hash = crypto.createHash('sha256').update(ref).digest('hex');
   }
-  // Si NFT Pi, force blockchain = pi
-  if (this.isNFT &&!this.blockchain) this.blockchain = 'pi';
+  // CORRIGÉ: NFT Polygon par défaut (plus Pi)
+  if (this.isNFT && !this.blockchain) this.blockchain = 'polygon';
+  
+  // Certificat ID auto
+  if(!this.certifId && this.azmId){
+    this.certifId = this.azmId.replace('AZM','AZC');
+  }
 });
 
 const Artwork = mongoose.models.Artwork || mongoose.model('Artwork', artworkSchema);
