@@ -86,7 +86,7 @@ function escapeRegex(v) { return v.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
 const ADRESSES = {
   usdt_trc20: 'TFXZSyJaC6mdCva8kAJBMMvKYhyhpzpHn2',
   pi: 'GAF62KXAV7IUM3HSHQ3TI6EFMIDSGII2EVEZXFTXGMH5D2EDPA6RVAM',
-  polygon: '0xZEDMO', // adresse plateforme
+  polygon: '0xZEDMO',
   mtn: '0194655238',
   moov: '0194655238',
   whatsapp: '2290194655238'
@@ -130,6 +130,58 @@ router.get('/admin/all', authenticateToken, requireAdmin, async (req, res, next)
   } catch (e) { next(e); }
 });
 
+// =================== AJOUT VÉRIFIER - CORRIGE AZM-2026-000007 ===================
+// Doit être AVANT /:id sinon "verifier" est pris pour un ID
+router.get('/verifier/:code', async (req, res, next) => {
+  try {
+    const raw = String(req.params.code || '').trim();
+    if (!raw) return res.status(400).json({ error: 'Code requis.' });
+    const cleaned = raw.toUpperCase().replace(/[^A-Z0-9]/g, ''); // AZM2026000007
+    const withDash = raw.toUpperCase(); // AZM-2026-000007
+    
+    const art = await Artwork.findOne({
+      $or: [
+        { azmId: withDash },
+        { azmId: { $regex: cleaned, $options: 'i' } },
+        { azmId: { $regex: `^${escapeRegex(raw)}$`, $options: 'i' } },
+        { certifId: withDash },
+        { certifId: { $regex: cleaned, $options: 'i' } },
+        { tokenId: withDash }
+      ]
+    }).populate('artiste', 'nom nom_artiste ville').populate('expositions', 'titre');
+
+    if (!art) {
+      return res.status(404).json({ success: false, error: 'Identifiant invalide.', message: `Aucune œuvre trouvée pour ${raw}` });
+    }
+    return res.json({ success: true, message: 'Œuvre authentique ART-ZEDMO', artwork: art });
+  } catch (e) { next(e); }
+});
+
+router.post('/verifier', async (req, res, next) => {
+  try {
+    const code = req.body.azmId || req.body.code || req.body.certifId;
+    if (!code) return res.status(400).json({ error: 'Code requis.' });
+    req.params.code = code;
+    // réutilise la logique GET
+    const raw = String(code).trim();
+    const cleaned = raw.toUpperCase().replace(/[^A-Z0-9]/g, '');
+    const withDash = raw.toUpperCase();
+    const art = await Artwork.findOne({
+      $or: [
+        { azmId: withDash },
+        { azmId: { $regex: cleaned, $options: 'i' } },
+        { azmId: { $regex: `^${escapeRegex(raw)}$`, $options: 'i' } },
+        { certifId: withDash },
+        { certifId: { $regex: cleaned, $options: 'i' } },
+        { tokenId: withDash }
+      ]
+    }).populate('artiste', 'nom nom_artiste ville');
+    if (!art) return res.status(404).json({ success: false, error: 'Identifiant invalide.' });
+    return res.json({ success: true, artwork: art });
+  } catch (e) { next(e); }
+});
+// =================== FIN AJOUT VÉRIFIER ===================
+
 router.get('/:id', async (req, res, next) => {
   try {
     if (!validObjectId(req.params.id)) return res.status(400).json({ error: 'ID invalide.' });
@@ -170,7 +222,6 @@ router.post('/', authenticateToken, async (req, res, next) => {
     }
     const azmId = await getNextAZM();
     const isNFTFinal = Boolean(isNFT) || String(categorieFinale).toLowerCase() === 'nft';
-    // CORRIGE: polygon au lieu de pi
     const blockchainFinal = isNFTFinal ? 'polygon' : undefined;
 
     const artwork = await Artwork.create({
@@ -191,7 +242,6 @@ router.post('/', authenticateToken, async (req, res, next) => {
       blockchainMinted: false,
       ipfsHash: ipfsHash || '',
       imageIPFS: imageIPFS || '',
-      // NFT MODEL B - POURCENTAGES SANS PRIX FIXE (TON EXIGENCE)
       royalties: isNFTFinal ? {
         primaire: { artiste: 85, plateforme: 15 },
         secondaire: { vendeur: 85, artiste: 10, plateforme: 5 }
@@ -202,7 +252,6 @@ router.post('/', authenticateToken, async (req, res, next) => {
 
     await User.findByIdAndUpdate(req.user._id, { $inc: { totalOeuvres: 1 } });
 
-    // EMAIL NOTIF ADMIN + ARTISTE
     if(req.user.email){
       sendEmail(req.user.email, `Œuvre reçue ${azmId}`, `<p>Bonjour ${req.user.nom}, ton œuvre <b>${titre}</b> est en attente de validation. Certificat: ${artwork.certifId}. IPFS: ${ipfsHash||'en cours'}. NFT: ${isNFTFinal?'Polygon avec 85% artiste / 15% plateforme':''}</p>`);
     }
@@ -226,7 +275,6 @@ router.put('/:id/valider', authenticateToken, requireAdmin, async (req, res, nex
     if (artwork.statut !== 'en_attente') return res.status(409).json({ error: 'Déjà traitée.' });
     artwork.statut = statut;
 
-    // SI NFT ET VALIDATION -> SIMULE MINT POLYGON
     if(statut==='validee' && artwork.isNFT){
       artwork.blockchain = 'polygon';
       artwork.blockchainMinted = true;
@@ -288,7 +336,6 @@ router.post('/:id/preuve-paiement', authenticateToken, async (req, res, next) =>
     artwork.statutPaiement = 'preuve_envoyee';
     await artwork.save();
 
-    // EMAIL ADMIN
     sendEmail(process.env.ADMIN_EMAIL, `Preuve paiement ${artwork.azmId}`, `<p>Preuve de ${req.user.nom} pour ${artwork.titre}: ${preuve}. Vérifier sur 0194655238</p>`);
 
     return res.json({ success: true, message: `Preuve reçue. Admin va vérifier sur ${ADRESSES.mtn} / ${ADRESSES.moov} / ${ADRESSES.usdt_trc20} et valider. WhatsApp 0194655238`, artwork });
