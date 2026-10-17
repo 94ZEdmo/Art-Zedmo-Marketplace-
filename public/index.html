@@ -47,6 +47,7 @@
 <section id="expositions" class="section screen screen-hidden">
 <div class="section-heading"><h2><i class="fas fa-landmark"></i> Expositions collectives</h2><button class="btn btn-outline btn-small" onclick="chargerExpositions()"><i class="fas fa-rotate"></i> Actualiser</button></div>
 <div id="expositionActive" class="panel"><p class="muted">Chargement...</p></div>
+<div id="oeuvresExpo" class="grid" style="margin-top:20px"></div>
 <div class="section-heading" style="margin-top:25px"><h2><i class="fas fa-trophy"></i> Classement</h2></div>
 <div class="toolbar"><select id="selectClassement" class="field" onchange="chargerClassementSelectionne()"><option value="">Sélectionner une exposition</option></select><button class="btn btn-small" onclick="chargerClassementSelectionne()">Voir</button></div>
 <div id="classementExposition" class="ranking-list"><div class="empty">Choisissez une exposition.</div></div>
@@ -124,7 +125,6 @@ async function chargerMesInfos(){if(!getToken()){ouvrirModal('connexionModal');r
 async function chargerGalerie(){const c=document.getElementById('galerieOeuvres');c.innerHTML='<div class="empty"><span class="spinner"></span> Chargement</div>';try{const r=await apiFetch('/artworks');artworks=Array.isArray(r)?r:r.artworks||[];afficherGalerieFiltre();document.getElementById('statOeuvres').textContent=nombre(artworks.length)}catch(e){c.textContent=e.message}}
 function obtenirImage(o){if(typeof o.image==='string'&&o.image.trim())return o.image;if(Array.isArray(o.images)&&o.images[0])return typeof o.images[0]==='string'?o.images[0]:o.images[0].url||'';return''}
 
-// GALERIE CORRIGEE - BOUTON ACHETER AVEC ADRESSES + CERTIFICAT + WHATSAPP 0194655238
 function afficherGalerieFiltre(){
   const cont=document.getElementById('galerieOeuvres');const rech=document.getElementById('rechercheGalerie').value.toLowerCase();const cat=document.getElementById('filtreGalerie').value.toLowerCase();
   const filtres=artworks.filter(o=>{const txt=[o.titre,o.description,o.categorie,o.artiste?.nom,o.artiste?.nom_artiste].join(' ').toLowerCase();const c=String(o.categorie||'').toLowerCase();return txt.includes(rech)&&(!cat||c===cat||(cat==='nft'&&o.isNFT))});
@@ -174,14 +174,92 @@ async function confirmerPaiement(id){
   try{await apiFetch('/artworks/'+id+'/preuve-paiement',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({preuve, method:'manual', adresses:ADRESSES_PAIEMENT})});alert('Preuve envoyée, admin va valider et notification email envoyée.');fermerModal('paiementModal')}catch(e){alert('Erreur: '+e.message+' - Envoie preuve par WhatsApp 0194655238')}
 }
 
-async function voterPourOeuvre(aId,expoId=null){ if(!aId)return; alert('Vote retiré de galerie - disponible uniquement en exposition'); }
-async function chargerClassement(id){const c=document.getElementById('classementExposition');if(!id){c.textContent='Choisis une expo';return}c.textContent='Chargement...';try{const r=await apiFetch('/votes/top/'+id);const cls=r.classement||[];if(!cls.length){c.textContent='Aucun vote';return}c.innerHTML=cls.map((o,i)=>`<div class="ranking-item"><div class="rank-number">${i+1}</div><div class="ranking-info"><strong>${escapeHTML(o.titre)}</strong><span>${escapeHTML(o.artiste?.nom_artiste||'')}</span></div><strong class="gold">${nombre(o.votesCount)} votes</strong></div>`).join('')}catch(e){c.textContent=e.message}}
+// ========= CORRIGE EXPO : VOTE 1 FOIS PAR PERSONNE =========
+async function voterPourOeuvre(aId, expoId){
+  if(!aId || !expoId) return alert('Expo invalide');
+  if(!getToken()){ ouvrirModal('connexionModal'); return; }
+  const key='VOTED_EXPO_'+expoId;
+  if(localStorage.getItem(key)){
+    return alert('Tu as déjà voté pour cette exposition. 1 personne = 1 seul vote.');
+  }
+  if(!confirm('Confirmer ton vote ? 1 seul vote par personne pour cette expo.')) return;
+  try{
+    await apiFetch('/votes', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ artworkId: aId, expositionId: expoId })});
+    localStorage.setItem(key, aId);
+    alert('Vote enregistré !');
+    await afficherExpositionActive();
+    await chargerClassement(expoId);
+  }catch(e){
+    if(e.message.toLowerCase().includes('déjà') || e.status===409){
+      localStorage.setItem(key, aId);
+      alert('Tu avais déjà voté pour cette expo.');
+      await afficherExpositionActive();
+    }else{
+      alert(e.message);
+    }
+  }
+}
+async function chargerClassement(id){
+  const c=document.getElementById('classementExposition');
+  if(!id){c.innerHTML='<div class="empty">Choisissez une exposition.</div>';return}
+  c.textContent='Chargement...';
+  try{
+    const r=await apiFetch('/votes/top/'+id);
+    const cls=r.classement||r.top||[];
+    if(!cls.length){c.innerHTML='<div class="empty">Aucun vote encore.</div>';return}
+    c.innerHTML=cls.map((o,i)=>`<div class="ranking-item"><div class="rank-number">${i+1}</div><div class="ranking-info"><strong>${escapeHTML(o.titre||o.artwork?.titre||'Œuvre')}</strong><span>${escapeHTML(o.artiste?.nom_artiste||o.artiste?.nom||'')}</span></div><strong class="gold">${nombre(o.votesCount||0)} votes</strong></div>`).join('');
+  }catch(e){c.textContent=e.message}
+}
 function chargerClassementSelectionne(){chargerClassement(document.getElementById('selectClassement').value)}
 
-async function chargerExpositions(){const cont=document.getElementById('expositionActive');const sel=document.getElementById('selectClassement');cont.textContent='Chargement...';try{const r=await apiFetch('/expositions');expositions=Array.isArray(r)?r:r.expositions||[];document.getElementById('statExpositions').textContent=nombre(expositions.length);sel.innerHTML='<option value="">Sélectionner</option>'+expositions.map(ex=>`<option value="${ex._id}">${escapeHTML(ex.titre)}</option>`).join('');afficherExpositionActive()}catch(e){cont.textContent=e.message}}
-async function afficherExpositionActive(){const cont=document.getElementById('expositionActive');try{const a=await apiFetch('/expositions/active');const expo=a.exposition||a.expo||(a._id?a:null);if(!expo){cont.innerHTML='<h3>Aucune expo active</h3><p class="muted">Bientôt</p>';return}cont.innerHTML=`<h3>${escapeHTML(expo.titre)}</h3><p>${escapeHTML(expo.description||'')}</p><span class="badge">${escapeHTML(expo.statut)}</span><div class="account-actions"><button class="btn" onclick="ouvrirSoumission('${expo._id}')"><i class="fas fa-upload"></i> Soumettre mon œuvre (reste en galerie)</button><button class="btn btn-outline" onclick="document.getElementById('selectClassement').value='${expo._id}';chargerClassement('${expo._id}')"><i class="fas fa-trophy"></i> Classement</button></div>`}catch(e){cont.textContent=e.message}}
+async function chargerExpositions(){
+  const cont=document.getElementById('expositionActive');
+  const sel=document.getElementById('selectClassement');
+  cont.innerHTML='<p class="muted">Chargement...</p>';
+  try{
+    const r=await apiFetch('/expositions');
+    expositions=Array.isArray(r)?r:r.expositions||[];
+    document.getElementById('statExpositions').textContent=nombre(expositions.length);
+    sel.innerHTML='<option value="">Sélectionner</option>'+expositions.map(ex=>`<option value="${ex._id}">${escapeHTML(ex.titre)}</option>`).join('');
+    await afficherExpositionActive();
+  }catch(e){cont.textContent=e.message}
+}
+
+async function afficherExpositionActive(){
+  const cont=document.getElementById('expositionActive');
+  const grid=document.getElementById('oeuvresExpo');
+  grid.innerHTML='';
+  try{
+    const a=await apiFetch('/expositions/active');
+    const expo=a.exposition||a.expo||(a._id?a:null);
+    if(!expo){ cont.innerHTML='<h3>Aucune expo active</h3><p class="muted">Bientôt</p>'; return; }
+    cont.innerHTML=`<h3>${escapeHTML(expo.titre)}</h3><p>${escapeHTML(expo.description||'')}</p><span class="badge">${escapeHTML(expo.statut)}</span><div class="account-actions"><button class="btn" onclick="ouvrirSoumission('${expo._id}')"><i class="fas fa-upload"></i> Soumettre mon œuvre (reste en galerie)</button><button class="btn btn-outline" onclick="document.getElementById('selectClassement').value='${expo._id}';chargerClassement('${expo._id}')"><i class="fas fa-trophy"></i> Classement</button></div>`;
+    
+    let oeuvres=[];
+    try{
+      const detail=await apiFetch('/expositions/'+expo._id);
+      oeuvres=detail.artworks||detail.oeuvres||detail.exposition?.artworks||detail.exposition?.oeuvres||detail.soumissions?.filter(s=>s.statut==='validee').map(s=>s.artwork)||[];
+    }catch(e2){
+      try{ const r2=await apiFetch('/expositions/'+expo._id+'/artworks'); oeuvres=r2.artworks||r2||[]; }catch{}
+    }
+    if(!oeuvres.length){
+      grid.innerHTML='<div class="empty">Aucune œuvre validée pour le moment. Admin doit valider les soumissions dans /admin.</div>';
+      return;
+    }
+    const key='VOTED_EXPO_'+expo._id;
+    const votedId=localStorage.getItem(key);
+    grid.innerHTML=oeuvres.map(o=>{
+      const art=o.artwork||o; const id=String(art._id||''); const titre=escapeHTML(art.titre||'Sans titre');
+      const artiste=escapeHTML(art.artiste?.nom_artiste||art.artiste?.nom||'Artiste');
+      const img=obtenirImage(art); const imgHTML=img?`<img class="art-image" src="${escapeHTML(img)}" alt="${titre}" loading="lazy">`:`<div class="art-image placeholder"><i class="fas fa-palette"></i></div>`;
+      const hasVoted=Boolean(votedId); const isMyVote=votedId===id;
+      return `<article class="card">${imgHTML}<div class="card-body"><h3>${titre}</h3><p class="muted"><i class="fas fa-user"></i> ${artiste}</p><div class="price">${nombre(art.votesCount||0)} votes</div><div class="card-actions"><button class="btn btn-small" ${hasVoted?'disabled':''} onclick="voterPourOeuvre('${id}','${expo._id}')"><i class="fas fa-vote-yea"></i> ${hasVoted?(isMyVote?'Voté ✓':'Déjà voté'):'Voter'}</button><button class="btn btn-outline btn-small" onclick="openCert('${id}')"><i class="fas fa-certificate"></i> Certificat</button></div>${hasVoted?'<small class="muted" style="display:block;margin-top:6px">1 personne = 1 vote par exposition</small>':''}</div></article>`;
+    }).join('');
+  }catch(e){ cont.innerHTML=`<p class="notice error">${escapeHTML(e.message)}</p>`; }
+}
+
 async function ouvrirSoumission(expoId){if(!getToken()){ouvrirModal('connexionModal');return}ouvrirModal('soumissionModal');const list=document.getElementById('soumissionList');list.innerHTML='Chargement...';try{let mes=artworks.filter(o=>String(o.artiste?._id||o.artiste)===String(currentUser._id));if(!mes.length)mes=artworks.filter(o=>o.statut==='validee').slice(0,10);if(!mes.length){list.innerHTML='<div class="empty">Aucune œuvre validée</div>';return}list.innerHTML=mes.map(o=>`<div class="card" style="padding:12px;display:flex;gap:12px;align-items:center"><div style="flex:1"><strong>${escapeHTML(o.titre)}</strong></div><button class="btn btn-small" onclick="soumettreExpo('${expoId}','${o._id}')">Soumettre</button></div>`).join('')}catch(e){list.textContent=e.message}}
-async function soumettreExpo(expoId,artId){try{await apiFetch(`/expositions/${expoId}/soumettre`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({artworkId:artId})});alert('Soumise!');fermerModal('soumissionModal');await chargerGalerie()}catch(e){alert(e.message)}}
+async function soumettreExpo(expoId,artId){try{await apiFetch(`/expositions/${expoId}/soumettre`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({artworkId:artId})});alert('Soumise!');fermerModal('soumissionModal');await chargerGalerie();await afficherExpositionActive()}catch(e){alert(e.message)}}
 
 async function chargerEncheres(){const c=document.getElementById('listeEncheres');c.textContent='Chargement...';try{const r=await apiFetch('/encheres');encheres=Array.isArray(r)?r:r.encheres||[];document.getElementById('statEncheres').textContent=nombre(encheres.length);if(!encheres.length){c.innerHTML='<div class="empty">Aucune enchère</div>';return}c.innerHTML=encheres.map(e=>{
   const id=e._id; const o=e.artwork||{}; const artId=o._id||e.artworkId||'';
