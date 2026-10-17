@@ -54,8 +54,8 @@
 </section>
 
 <section id="encheres" class="section screen screen-hidden"><div class="section-heading"><h2><i class="fas fa-gavel"></i> Enchères - Top 10 votés</h2><button class="btn btn-outline btn-small" onclick="chargerEncheres()"><i class="fas fa-rotate"></i> Actualiser</button></div><div id="listeEncheres" class="grid"><div class="empty">Chargement...</div></div></section>
-<section id="verification" class="section screen screen-hidden"><div class="section-heading"><h2><i class="fas fa-certificate"></i> Vérifier</h2></div><div class="panel"><div class="toolbar"><input id="verificationArtworkId" class="field" placeholder="ID œuvre"><button class="btn" onclick="verifierOeuvre()">Vérifier</button></div><div id="verificationResultat"></div></div></section>
-<section id="compte" class="section screen screen-hidden"><div class="section-heading"><h2><i class="fas fa-user-circle"></i> Mon compte</h2></div><div id="compteConnecte" class="panel hidden"><h3 id="bienvenueUtilisateur">Bienvenue</h3><p id="infosUtilisateur" class="muted"></p><div class="account-actions"><button class="btn" onclick="ouvrirModal('oeuvreModal')"><i class="fas fa-plus"></i> Publier œuvre / NFT</button><button class="btn btn-outline" onclick="chargerMesInfos()">Actualiser</button><button class="btn btn-outline" onclick="seDeconnecter()">Déconnexion</button></div></div><div id="compteDeconnecte" class="panel"><h3>Rejoignez</h3><p class="muted">Connectez-vous pour publier.</p><div class="account-actions"><button class="btn" onclick="ouvrirModal('connexionModal')">Connexion</button><button class="btn btn-outline" onclick="ouvrirModal('inscriptionModal')">Inscription</button></div></div><div class="panel" style="margin-top:15px"><h3><i class="fas fa-palette"></i> Publier</h3><button class="btn" onclick="demarrerPublication()">Publier œuvre</button><p class="muted" style="margin-top:10px">NFT : sera minté réellement sur Polygon si tu coches NFT. Sinon reste œuvre classique.</p></div></section>
+<section id="verification" class="section screen screen-hidden"><div class="section-heading"><h2><i class="fas fa-certificate"></i> Vérifier</h2></div><div class="panel"><div class="toolbar"><input id="verificationArtworkId" class="field" placeholder="AZM-2026-000007 ou AZM2026000007"><button class="btn" onclick="verifierOeuvre()">Vérifier</button></div><div id="verificationResultat"></div></div></section>
+<section id="compte" class="section screen screen-hidden"><div class="section-heading"><h2><i class="fas fa-user-circle"></i> Mon compte</h2></div><div id="compteConnecte" class="panel hidden"><h3 id="bienvenueUtilisateur">Bienvenue</h3><p id="infosUtilisateur" class="muted"></p><div class="account-actions"><button class="btn" onclick="ouvrirModal('oeuvreModal')"><i class="fas fa-plus"></i> Publier œuvre / NFT</button><button class="btn btn-outline" onclick="chargerMesInfos()">Actualiser</button><button class="btn btn-outline" onclick="seDeconnecter()">Déconnexion</button></div></div><div id="compteDeconnecte" class="panel"><h3>Rejoignez</h3><p class="muted">Connectez-vous pour publier.</p><div class="account-actions"><button class="btn" onclick="ouvrirModal('connexionModal')">Connexion</button><button class="btn btn-outline" onclick="ouvrirModal('inscriptionModal')">Inscription</button></div></div><div class="panel" style="margin-top:15px"><h3><i class="fas fa-palette"></i> Publier</h3><button class="btn" onclick="demarrerPublication()">Publier œuvre</button><p class="muted" style="margin-top:10px">NFT : sera minté réellement sur Polygon si tu coches NFT.</p></div></section>
 </main>
 <footer class="footer"><strong class="gold">ART-ZEDMO MARKETPLACE</strong><br>Galerie permanente + Expositions votées + Enchères<br>USDT TRC20 / PI / MTN 0194655238 / Moov 0194655238 - WhatsApp: 0194655238</footer>
 <nav class="bottom-nav"><button class="nav-item active" data-target="accueil" onclick="allerA('accueil')"><i class="fas fa-house"></i><span>Accueil</span></button><button class="nav-item" data-target="galerie" onclick="allerA('galerie')"><i class="fas fa-images"></i><span>Galerie</span></button><button class="nav-item" data-target="expositions" onclick="allerA('expositions')"><i class="fas fa-landmark"></i><span>Expos</span></button><button class="nav-item" data-target="encheres" onclick="allerA('encheres')"><i class="fas fa-gavel"></i><span>Enchères</span></button><button class="nav-item" data-target="verification" onclick="allerA('verification')"><i class="fas fa-certificate"></i><span>Vérif</span></button><button class="nav-item" data-target="compte" onclick="allerA('compte')"><i class="fas fa-user"></i><span>Compte</span></button></nav>
@@ -63,7 +63,7 @@
 <div class="modal" id="inscriptionModal"><div class="modal-content"><div class="modal-header"><h2>Créer compte</h2><button class="close-btn" onclick="fermerModal('inscriptionModal')">&times;</button></div><form id="formInscription"><div class="form-grid"><div class="form-group"><label>Nom *</label><input class="field" name="nom" required></div><div class="form-group"><label>Nom artiste</label><input class="field" name="nom_artiste"></div><div class="form-group"><label>WhatsApp *</label><input class="field" name="whatsapp" required></div><div class="form-group"><label>Email</label><input class="field" name="email" type="email"></div><div class="form-group"><label>Ville</label><input class="field" name="ville"></div><div class="form-group"><label>Type</label><select class="field" name="role"><option value="artiste">Artiste</option><option value="acheteur">Acheteur</option></select></div><div class="form-group full-width"><label>Mot de passe *</label><input class="field" name="password" type="password" required minlength="8"></div></div><button class="btn" type="submit" style="width:100%;margin-top:18px">Créer</button><div id="inscriptionMessage" class="form-message"></div></form></div></div>
 <div class="modal" id="connexionModal"><div class="modal-content"><div class="modal-header"><h2>Connexion</h2><button class="close-btn" onclick="fermerModal('connexionModal')">&times;</button></div><form id="formConnexion"><div class="form-group"><label>Identifiant</label><input class="field" name="identifiant" required></div><div class="form-group" style="margin-top:14px"><label>Mot de passe</label><input class="field" name="password" type="password" required></div><button class="btn" type="submit" style="width:100%;margin-top:18px">Se connecter</button><div id="connexionMessage" class="form-message"></div></form></div></div>
 
-<div class="modal" id="oeuvreModal"><div class="modal-content"><div class="modal-header"><h2>Publier œuvre / NFT</h2><button class="close-btn" onclick="fermerModal('oeuvreModal')">&times;</button></div><form id="formOeuvre"><div class="form-grid"><div class="form-group full-width"><label>Titre *</label><input class="field" name="titre" required></div><div class="form-group"><label>Catégorie *</label><select class="field" name="categorie" required><option value="peinture">Peinture</option><option value="sculpture">Sculpture</option><option value="dessin">Dessin</option><option value="photographie">Photographie</option><option value="artisanat">Artisanat</option><option value="nft">NFT</option><option value="autre">Autre</option></select></div><div class="form-group"><label>Prix FCFA</label><input class="field" name="prix" type="number" min="0" value="0"></div><div class="form-group full-width"><label>Description *</label><textarea class="field" name="description" required></textarea></div><div class="form-group full-width"><label><input type="checkbox" id="isNFT"> C'est un NFT - minter réellement sur Polygon</label><small class="muted">Si coché, l'œuvre ne sera affichée comme NFT authentique qu'après mint réel sur Polygon. Sinon simple enregistrement en base. Royalties: Primaire 85% artiste / 15% plateforme - Secondaire 85% vendeur / 10% artiste / 5% plateforme</small></div><div class="form-group full-width"><label>Image (fixation IPFS Pinata)</label><input class="field" name="image" type="file" accept="image/*"></div></div><button class="btn" type="submit" style="width:100%;margin-top:18px">Envoyer en galerie</button><div id="oeuvreMessage" class="form-message"></div></form></div></div>
+<div class="modal" id="oeuvreModal"><div class="modal-content"><div class="modal-header"><h2>Publier œuvre / NFT</h2><button class="close-btn" onclick="fermerModal('oeuvreModal')">&times;</button></div><form id="formOeuvre"><div class="form-grid"><div class="form-group full-width"><label>Titre *</label><input class="field" name="titre" required></div><div class="form-group"><label>Catégorie *</label><select class="field" name="categorie" required><option value="peinture">Peinture</option><option value="sculpture">Sculpture</option><option value="dessin">Dessin</option><option value="photographie">Photographie</option><option value="artisanat">Artisanat</option><option value="nft">NFT</option><option value="autre">Autre</option></select></div><div class="form-group"><label>Prix FCFA</label><input class="field" name="prix" type="number" min="0" value="0"></div><div class="form-group full-width"><label>Description *</label><textarea class="field" name="description" required></textarea></div><div class="form-group full-width"><label><input type="checkbox" id="isNFT"> C'est un NFT - minter réellement sur Polygon</label><small class="muted">Si coché, l'œuvre ne sera affichée comme NFT authentique qu'après mint réel sur Polygon. Royalties: Primaire 85% artiste / 15% plateforme - Secondaire 85% vendeur / 10% artiste / 5% plateforme</small></div><div class="form-group full-width"><label>Image (fixation IPFS Pinata)</label><input class="field" name="image" type="file" accept="image/*"></div></div><button class="btn" type="submit" style="width:100%;margin-top:18px">Envoyer en galerie</button><div id="oeuvreMessage" class="form-message"></div></form></div></div>
 
 <div class="modal" id="paiementModal"><div class="modal-content"><div class="modal-header"><h2 id="paiementTitre">Paiement</h2><button class="close-btn" onclick="fermerModal('paiementModal')">&times;</button></div><div id="paiementContenu"></div></div></div>
 <div class="modal" id="soumissionModal"><div class="modal-content"><div class="modal-header"><h2>Soumettre à l'expo</h2><button class="close-btn" onclick="fermerModal('soumissionModal')">&times;</button></div><div id="soumissionList" class="grid" style="grid-template-columns:1fr"></div></div></div>
@@ -174,25 +174,25 @@ async function confirmerPaiement(id){
   try{await apiFetch('/artworks/'+id+'/preuve-paiement',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({preuve, method:'manual', adresses:ADRESSES_PAIEMENT})});alert('Preuve envoyée, admin va valider et notification email envoyée.');fermerModal('paiementModal')}catch(e){alert('Erreur: '+e.message+' - Envoie preuve par WhatsApp 0194655238')}
 }
 
-// ========= CORRIGE EXPO : VOTE 1 FOIS PAR PERSONNE =========
+// ========= CORRIGÉ VOTE : 1 FOIS PAR OEUVRE (pas par expo) =========
 async function voterPourOeuvre(aId, expoId){
   if(!aId || !expoId) return alert('Expo invalide');
   if(!getToken()){ ouvrirModal('connexionModal'); return; }
-  const key='VOTED_EXPO_'+expoId;
+  const key='VOTED_ART_'+aId;
   if(localStorage.getItem(key)){
-    return alert('Tu as déjà voté pour cette exposition. 1 personne = 1 seul vote.');
+    return alert('Tu as déjà voté pour cette œuvre. 1 personne = 1 vote par œuvre.');
   }
-  if(!confirm('Confirmer ton vote ? 1 seul vote par personne pour cette expo.')) return;
+  if(!confirm('Confirmer ton vote ? 1 vote par œuvre.')) return;
   try{
     await apiFetch('/votes', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ artworkId: aId, expositionId: expoId })});
-    localStorage.setItem(key, aId);
+    localStorage.setItem(key, '1');
     alert('Vote enregistré !');
     await afficherExpositionActive();
     await chargerClassement(expoId);
   }catch(e){
     if(e.message.toLowerCase().includes('déjà') || e.status===409){
-      localStorage.setItem(key, aId);
-      alert('Tu avais déjà voté pour cette expo.');
+      localStorage.setItem(key, '1');
+      alert('Tu avais déjà voté pour cette œuvre.');
       await afficherExpositionActive();
     }else{
       alert(e.message);
@@ -246,14 +246,13 @@ async function afficherExpositionActive(){
       grid.innerHTML='<div class="empty">Aucune œuvre validée pour le moment. Admin doit valider les soumissions dans /admin.</div>';
       return;
     }
-    const key='VOTED_EXPO_'+expo._id;
-    const votedId=localStorage.getItem(key);
     grid.innerHTML=oeuvres.map(o=>{
       const art=o.artwork||o; const id=String(art._id||''); const titre=escapeHTML(art.titre||'Sans titre');
       const artiste=escapeHTML(art.artiste?.nom_artiste||art.artiste?.nom||'Artiste');
       const img=obtenirImage(art); const imgHTML=img?`<img class="art-image" src="${escapeHTML(img)}" alt="${titre}" loading="lazy">`:`<div class="art-image placeholder"><i class="fas fa-palette"></i></div>`;
-      const hasVoted=Boolean(votedId); const isMyVote=votedId===id;
-      return `<article class="card">${imgHTML}<div class="card-body"><h3>${titre}</h3><p class="muted"><i class="fas fa-user"></i> ${artiste}</p><div class="price">${nombre(art.votesCount||0)} votes</div><div class="card-actions"><button class="btn btn-small" ${hasVoted?'disabled':''} onclick="voterPourOeuvre('${id}','${expo._id}')"><i class="fas fa-vote-yea"></i> ${hasVoted?(isMyVote?'Voté ✓':'Déjà voté'):'Voter'}</button><button class="btn btn-outline btn-small" onclick="openCert('${id}')"><i class="fas fa-certificate"></i> Certificat</button></div>${hasVoted?'<small class="muted" style="display:block;margin-top:6px">1 personne = 1 vote par exposition</small>':''}</div></article>`;
+      const key='VOTED_ART_'+id;
+      const voted=Boolean(localStorage.getItem(key));
+      return `<article class="card">${imgHTML}<div class="card-body"><h3>${titre}</h3><p class="muted"><i class="fas fa-user"></i> ${artiste}</p><div class="price">${nombre(art.votesCount||0)} votes</div><div class="card-actions"><button class="btn btn-small" ${voted?'disabled':''} onclick="voterPourOeuvre('${id}','${expo._id}')"><i class="fas fa-vote-yea"></i> ${voted?'Voté ✓':'Voter'}</button><button class="btn btn-outline btn-small" onclick="openCert('${id}')"><i class="fas fa-certificate"></i> Certificat</button></div>${voted?'<small class="muted" style="display:block;margin-top:6px">1 personne = 1 vote par œuvre</small>':''}</div></article>`;
     }).join('');
   }catch(e){ cont.innerHTML=`<p class="notice error">${escapeHTML(e.message)}</p>`; }
 }
@@ -261,20 +260,20 @@ async function afficherExpositionActive(){
 async function ouvrirSoumission(expoId){if(!getToken()){ouvrirModal('connexionModal');return}ouvrirModal('soumissionModal');const list=document.getElementById('soumissionList');list.innerHTML='Chargement...';try{let mes=artworks.filter(o=>String(o.artiste?._id||o.artiste)===String(currentUser._id));if(!mes.length)mes=artworks.filter(o=>o.statut==='validee').slice(0,10);if(!mes.length){list.innerHTML='<div class="empty">Aucune œuvre validée</div>';return}list.innerHTML=mes.map(o=>`<div class="card" style="padding:12px;display:flex;gap:12px;align-items:center"><div style="flex:1"><strong>${escapeHTML(o.titre)}</strong></div><button class="btn btn-small" onclick="soumettreExpo('${expoId}','${o._id}')">Soumettre</button></div>`).join('')}catch(e){list.textContent=e.message}}
 async function soumettreExpo(expoId,artId){try{await apiFetch(`/expositions/${expoId}/soumettre`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({artworkId:artId})});alert('Soumise!');fermerModal('soumissionModal');await chargerGalerie();await afficherExpositionActive()}catch(e){alert(e.message)}}
 
+// ========= CORRIGÉ ENCHÈRE SANS DOUBLER =========
 async function chargerEncheres(){const c=document.getElementById('listeEncheres');c.textContent='Chargement...';try{const r=await apiFetch('/encheres');encheres=Array.isArray(r)?r:r.encheres||[];document.getElementById('statEncheres').textContent=nombre(encheres.length);if(!encheres.length){c.innerHTML='<div class="empty">Aucune enchère</div>';return}c.innerHTML=encheres.map(e=>{
   const id=e._id; const o=e.artwork||{}; const artId=o._id||e.artworkId||'';
-  return `<article class="card"><div class="art-image placeholder"><i class="fas fa-gavel"></i></div><div class="card-body"><span class="badge">Top 10 - Enchère</span><h3>${escapeHTML(o.titre||'Œuvre')}</h3><div class="price">Actuelle: ${prixFCFA(e.enchereActuelle||e.prixDepart)}</div><div style="margin-top:10px"><input id="nom_${id}" class="field" placeholder="Nom acheteur"><input id="mont_${id}" class="field" type="number" placeholder="Montant" style="margin-top:6px"><button class="btn" style="width:100%;margin-top:8px" onclick="encherir('${id}','${artId}')"><i class="fas fa-gavel"></i> Enchérir (x2 enregistré)</button><small class="muted">Le prix sera doublé automatiquement. Nom + montant enregistrés.</small></div></div></article>`
+  return `<article class="card"><div class="art-image placeholder"><i class="fas fa-gavel"></i></div><div class="card-body"><span class="badge">Top 10 - Enchère</span><h3>${escapeHTML(o.titre||'Œuvre')}</h3><div class="price">Actuelle: ${prixFCFA(e.enchereActuelle||e.prixDepart)}<br><small>Départ galerie: ${prixFCFA(e.prixDepart)}</small></div><div style="margin-top:10px"><input id="nom_${id}" class="field" placeholder="Nom acheteur"><input id="mont_${id}" class="field" type="number" placeholder="Montant > actuel" style="margin-top:6px"><button class="btn" style="width:100%;margin-top:8px" onclick="encherir('${id}','${artId}')"><i class="fas fa-gavel"></i> Enchérir</button><small class="muted">Montant exact enregistré. Pas de x2.</small></div></div></article>`
 }).join('')}catch(e){c.textContent=e.message}}
 
 async function encherir(enchereId, artworkId){
   const nom = document.getElementById('nom_'+enchereId)?.value.trim();
   const mont = Number(document.getElementById('mont_'+enchereId)?.value);
   if(!nom||!mont) return alert('Nom et montant requis');
-  const prixDouble = mont*2;
-  if(!confirm(`Confirmer enchère: ${nom} - ${mont} FCFA -> prix doublé ${prixDouble} FCFA ?`)) return;
+  if(!confirm(`Confirmer enchère: ${nom} - ${mont} FCFA ?`)) return;
   try{
-    await apiFetch(`/encheres/${enchereId}/encherir`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({nomAcheteur:nom,montant:mont,prixDouble,artworkId})});
-    alert(`Enchère enregistrée: ${nom} - ${mont} FCFA (double ${prixDouble})`);
+    await apiFetch(`/encheres/${enchereId}/encherir`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({nomAcheteur:nom,montant:mont,artworkId})});
+    alert(`Enchère enregistrée: ${nom} - ${mont} FCFA`);
     await chargerEncheres();
   }catch(err){ alert(err.message) }
 }
@@ -300,15 +299,38 @@ document.getElementById('formOeuvre').addEventListener('submit',async e=>{
     if(url){d.image=url;d.images=[url]}
     const res=await apiFetch('/artworks',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)});
     if(isNFT){
-      afficherMessage('oeuvreMessage',`Œuvre fixée IPFS ${ipfsHash.slice(0,12)}... Envoyée en galerie. Mint Polygon à venir. Email notif sera envoyé après validation NFT. Pourcentages: 85% artiste / 15% plateforme, secondaire 85% vendeur /10% artiste /5% plateforme`);
+      afficherMessage('oeuvreMessage',`Œuvre fixée IPFS ${ipfsHash.slice(0,12)}... Envoyée en galerie. Mint Polygon à venir.`);
     }else{
-      afficherMessage('oeuvreMessage',res.message||'Envoyée - IPFS '+ipfsHash.slice(0,8));
+      afficherMessage('oeuvreMessage',res.message||'Envoyée');
     }
     f.reset();await chargerGalerie();
   }catch(err){afficherMessage('oeuvreMessage',err.message)}finally{b.disabled=false}
 });
 
-async function verifierOeuvre(){const id=document.getElementById('verificationArtworkId').value.trim();const z=document.getElementById('verificationResultat');if(!id){z.textContent='ID requis';return}z.textContent='...';try{const r=await apiFetch('/votes/artwork/'+id);z.innerHTML=`<h3>${escapeHTML(r.titre||'Œuvre')}</h3><p>Votes: ${nombre(r.total_votes)}</p><p>Statut NFT: ${r.blockchainMinted?'Minté réellement sur '+r.blockchain:'En attente mint'} - IPFS: ${r.ipfsHash||''}</p>`}catch(e){z.textContent=e.message}}
+// ========= CORRIGÉ VÉRIFIER AZM-2026-000007 =========
+async function verifierOeuvre(){
+  const id=document.getElementById('verificationArtworkId').value.trim();
+  const z=document.getElementById('verificationResultat');
+  if(!id){z.textContent='ID AZM requis ex: AZM-2026-000007';return}
+  z.innerHTML='<p class="muted"><span class="spinner"></span> Vérification...</p>';
+  try{
+    let r;
+    try{ 
+      r=await apiFetch('/artworks/verifier/'+encodeURIComponent(id)); 
+    }catch(e1){
+      try{
+        r=await apiFetch('/artworks/verifier',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({azmId:id,code:id})});
+      }catch(e2){
+        throw e1;
+      }
+    }
+    const art=r.artwork||r;
+    if(!art || !art._id) throw new Error('Non trouvé');
+    z.innerHTML=`<div class="notice success"><h3>✓ Authentique ART-ZEDMO</h3><p><strong>${escapeHTML(art.titre||'Œuvre')}</strong><br>AZM: ${escapeHTML(art.azmId||id)}<br>Certificat: ${escapeHTML(art.certifId||'AZC-'+(art.azmId||''))}<br>Artiste: ${escapeHTML(art.artiste?.nom_artiste||art.artiste?.nom||'')}<br>Ville: ${escapeHTML(art.ville||'')}<br>Votes: ${art.votesCount||0}<br>Prix: ${prixFCFA(art.prix)}<br>Blockchain: ${escapeHTML(art.blockchain||'')} ${art.blockchainMinted?'(Minté réellement)':'(En attente mint)'}<br>IPFS: ${escapeHTML(art.ipfsHash||art.imageIPFS||'')}<br>Statut: ${escapeHTML(art.statut||'')}</p><div class="account-actions"><button class="btn btn-small" onclick="openCert('${art._id}')"><i class="fas fa-certificate"></i> Voir certificat + QR</button></div></div>`;
+  }catch(e){
+    z.innerHTML=`<div class="notice error"><strong>Identifiant invalide:</strong> ${escapeHTML(id)}<br><small>Essaie avec tirets AZM-2026-000007 et sans AZM2026000007. Si œuvre récente, attends validation admin.</small><br><br>Erreur: ${escapeHTML(e.message)}</div>`;
+  }
+}
 async function chargerAnnonces(){try{const r=await apiFetch('/annonces');const ann=Array.isArray(r)?r:r.annonces||[];if(ann.length)document.getElementById('annoncePrincipale').innerHTML=`<div class="notice"><strong>${escapeHTML(ann[0].titre)}</strong><p>${escapeHTML(ann[0].message)}</p></div>`}catch{}}
 async function actualiserTout(){await Promise.allSettled([chargerGalerie(),chargerExpositions(),chargerEncheres(),chargerAnnonces()])}
 async function initialiser(){mettreAJourCompte();allerA('accueil');await actualiserTout();if(getToken()){try{const r=await apiFetch('/auth/me');currentUser=r.user||r;localStorage.setItem('AZ_USER',JSON.stringify(currentUser));mettreAJourCompte()}catch{}}}
