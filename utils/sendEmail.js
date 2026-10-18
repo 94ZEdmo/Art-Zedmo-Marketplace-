@@ -1,24 +1,18 @@
-const SibApiV3Sdk = require('sib-api-v3-sdk');
-const defaultClient = SibApiV3Sdk.ApiClient.instance;
-defaultClient.authentications['api-key'].apiKey = process.env.BREVO_API_KEY;
-
-const sendEmail = async (to, subject, html) => {
-  const apiInstance = new SibApiV3Sdk.TransactionalEmailsApi();
-  const sendSmtpEmail = new SibApiV3Sdk.SendSmtpEmail();
-  
-  sendSmtpEmail.sender = { name: "ART-ZEDMO", email: process.env.SMTP_FROM || "artzedmo@gmail.com" };
-  sendSmtpEmail.to = [{ email: to }];
-  sendSmtpEmail.subject = subject;
-  sendSmtpEmail.htmlContent = html;
-
-  try {
-    const data = await apiInstance.sendTransacEmail(sendSmtpEmail);
-    console.log("Email ART-ZEDMO envoyé:", data.messageId);
-    return true;
-  } catch (error) {
-    console.error("Erreur Brevo:", error.response?.body || error.message);
-    return false;
-  }
+export const sendEmail = async (to, subject, html) => {
+  const res = await fetch('https://api.brevo.com/v3/smtp/email', {
+    method: 'POST',
+    headers: {
+      'api-key': process.env.BREVO_API_KEY,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      sender: { name: "ART-ZEDMO", email: "artzedmo@gmail.com" },
+      to: [{ email: to }],
+      subject: subject,
+      htmlContent: html
+    })
+  });
+  const data = await res.json();
+  console.log("Mail envoyé:", data);
+  return true;
 };
-
-module.exports = sendEmail;
