@@ -1,0 +1,29 @@
+export async function testPinata() {
+  try {
+    if (!process.env.PINATA_JWT) {
+      console.log("❌ PINATA_JWT manquant dans Render");
+      return false;
+    }
+    
+    const res = await fetch('https://api.pinata.cloud/data/testAuthentication', {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${process.env.PINATA_JWT}`
+      }
+    });
+    
+    const data = await res.json();
+    console.log("✅ Pinata test:", data);
+    
+    if (data.message === "Congratulations! You are communicating with the Pinata API!") {
+      console.log("✅ PINATA_JWT est VALIDE, ça marche !");
+      return true;
+    } else {
+      console.log("❌ PINATA_JWT invalide:", data);
+      return false;
+    }
+  } catch (e) {
+    console.error("❌ Erreur Pinata:", e.message);
+    return false;
+  }
+}
