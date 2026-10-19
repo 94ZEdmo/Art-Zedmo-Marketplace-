@@ -10,7 +10,7 @@ if (!JWT_SECRET || JWT_SECRET.length < 32) {
   throw new Error('JWT_SECRET doit être configuré dans Render avec au moins 32 caractères.');
 }
 
-// EMAIL BREVO - PLUS DE TIMEOUT
+// EMAIL BREVO - CORRIGÉ AVEC LE BON LIEN MARKETPLACE
 async function sendValidationEmail(user) {
   if (!user.email || !process.env.BREVO_API_KEY) {
     console.log('Email non envoyé : BREVO_API_KEY manquante');
@@ -27,7 +27,7 @@ async function sendValidationEmail(user) {
         sender: { name: "ART-ZEDMO", email: "artzedmo@gmail.com" },
         to: [{ email: user.email }],
         subject: 'Votre profil ART-ZEDMO a été validé',
-        htmlContent: `<div style="font-family:Arial;padding:24px"><h2>Félicitations ${user.nom_artiste} !</h2><p>Votre profil a été validé.</p><p><a href="https://art-zedmo.onrender.com" style="display:inline-block;background:#111;color:#fff;padding:12px 22px;border-radius:8px;text-decoration:none">Accéder à ART-ZEDMO</a></p></div>`
+        htmlContent: `<div style="font-family:Arial;padding:24px"><h2>Félicitations ${user.nom_artiste} !</h2><p>Votre profil a été validé.</p><p><a href="https://art-zedmo-marketplace.onrender.com" style="display:inline-block;background:#111;color:#fff;padding:12px 22px;border-radius:8px;text-decoration:none">Accéder à ART-ZEDMO</a></p></div>`
       })
     });
     const data = await res.json();
