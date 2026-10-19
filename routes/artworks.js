@@ -5,32 +5,42 @@ import Artwork from '../models/Artwork.js';
 import User from '../models/User.js';
 
 const router = express.Router();
-
 const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET || JWT_SECRET.length < 32) {
   throw new Error('JWT_SECRET doit être configuré avec au moins 32 caractères.');
 }
 
-// ================= EMAIL UTILS (PROBLÈME 6) =================
-import nodemailer from 'nodemailer';
-let transporter = null;
-function getMailer(){
-  if(transporter) return transporter;
-  if(!process.env.SMTP_HOST) return null;
-  transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port: Number(process.env.SMTP_PORT||587),
-    secure: false,
-    auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
-  });
-  return transporter;
-}
-async function sendEmail(to, subject, html){
-  try{
-    const mailer = getMailer();
-    if(!mailer || !to) return;
-    await mailer.sendMail({from: process.env.SMTP_FROM || process.env.SMTP_USER, to, subject, html});
-  }catch(e){ console.error('Email error', e.message); }
+// ================= EMAIL BREVO CORRIGÉ (ANTI TIMEOUT) =================
+async function sendEmail(to, subject, html) {
+  if (!to || !process.env.BREVO_API_KEY) {
+    console.log('Email non envoyé: BREVO_API_KEY manquante ou email vide');
+    return false;
+  }
+  try {
+    const res = await fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: {
+        'api-key': process.env.BREVO_API_KEY,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        sender: { name: "ART-ZEDMO", email: "artzedmo@gmail.com" },
+        to: [{ email: to }],
+        subject: subject,
+        htmlContent: html
+      })
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      console.error('Brevo error:', data);
+      return false;
+    }
+    console.log('✅ Email Brevo envoyé:', subject, '->', to);
+    return true;
+  } catch (e) {
+    console.error('Email error', e.message);
+    return false; // On ne bloque JAMAIS l'action si l'email échoue
+  }
 }
 
 // AUTH
@@ -50,7 +60,7 @@ async function authenticateToken(req, res, next) {
     if (!decoded.id || !mongoose.Types.ObjectId.isValid(decoded.id)) {
       return res.status(401).json({ error: 'Identifiant invalide.' });
     }
-    const user = await User.findById(decoded.id).select('_id nom nom_artiste role statut email');
+    const user = await User.findById(decoded.id).select('_id nom nom_artiste role statut email ville');
     if (!user) return res.status(401).json({ error: 'Utilisateur introuvable.' });
     if (user.statut !== 'valide') return res.status(403).json({ error: 'Compte non autorisé.' });
     req.user = user;
@@ -68,7 +78,6 @@ function requireAdmin(req, res, next) {
 
 function validObjectId(id) { return mongoose.Types.ObjectId.isValid(id); }
 
-// AZM ID
 const counterSchema = new mongoose.Schema({ _id: { type: String, required: true }, seq: { type: Number, default: 0 } });
 const Counter = mongoose.models.Counter || mongoose.model('Counter', counterSchema);
 async function getNextAZM() {
@@ -82,7 +91,6 @@ async function getNextAZM() {
 
 function escapeRegex(v) { return v.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
 
-// ADRESSES CORRIGEES - 0194655238 PARTOUT (PROBLÈME 2)
 const ADRESSES = {
   usdt_trc20: 'TFXZSyJaC6mdCva8kAJBMMvKYhyhpzpHn2',
   pi: 'GAF62KXAV7IUM3HSHQ3TI6EFMIDSGII2EVEZXFTXGMH5D2EDPA6RVAM',
@@ -96,7 +104,6 @@ function publicArtworkQuery() {
   return { statut: { $nin: ['en_attente', 'rejetee'] } };
 }
 
-// LISTE PUBLIQUE
 router.get('/', async (req, res, next) => {
   try {
     const { tri, search, categorie, page = '1', limit = '50' } = req.query;
@@ -130,15 +137,12 @@ router.get('/admin/all', authenticateToken, requireAdmin, async (req, res, next)
   } catch (e) { next(e); }
 });
 
-// =================== AJOUT VÉRIFIER - CORRIGE AZM-2026-000007 ===================
-// Doit être AVANT /:id sinon "verifier" est pris pour un ID
 router.get('/verifier/:code', async (req, res, next) => {
   try {
     const raw = String(req.params.code || '').trim();
     if (!raw) return res.status(400).json({ error: 'Code requis.' });
-    const cleaned = raw.toUpperCase().replace(/[^A-Z0-9]/g, ''); // AZM2026000007
-    const withDash = raw.toUpperCase(); // AZM-2026-000007
-    
+    const cleaned = raw.toUpperCase().replace(/[^A-Z0-9]/g, '');
+    const withDash = raw.toUpperCase();
     const art = await Artwork.findOne({
       $or: [
         { azmId: withDash },
@@ -149,10 +153,7 @@ router.get('/verifier/:code', async (req, res, next) => {
         { tokenId: withDash }
       ]
     }).populate('artiste', 'nom nom_artiste ville').populate('expositions', 'titre');
-
-    if (!art) {
-      return res.status(404).json({ success: false, error: 'Identifiant invalide.', message: `Aucune œuvre trouvée pour ${raw}` });
-    }
+    if (!art) return res.status(404).json({ success: false, error: 'Identifiant invalide.', message: `Aucune œuvre trouvée pour ${raw}` });
     return res.json({ success: true, message: 'Œuvre authentique ART-ZEDMO', artwork: art });
   } catch (e) { next(e); }
 });
@@ -161,8 +162,6 @@ router.post('/verifier', async (req, res, next) => {
   try {
     const code = req.body.azmId || req.body.code || req.body.certifId;
     if (!code) return res.status(400).json({ error: 'Code requis.' });
-    req.params.code = code;
-    // réutilise la logique GET
     const raw = String(code).trim();
     const cleaned = raw.toUpperCase().replace(/[^A-Z0-9]/g, '');
     const withDash = raw.toUpperCase();
@@ -180,7 +179,6 @@ router.post('/verifier', async (req, res, next) => {
     return res.json({ success: true, artwork: art });
   } catch (e) { next(e); }
 });
-// =================== FIN AJOUT VÉRIFIER ===================
 
 router.get('/:id', async (req, res, next) => {
   try {
@@ -204,7 +202,6 @@ router.get('/:id', async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-// CRÉER - NFT POLYGON + IPFS + POURCENTAGES (PROBLÈMES 4 ET 5)
 router.post('/', authenticateToken, async (req, res, next) => {
   try {
     const { titre, description, prix, images, image, categorie, ville, isNFT, blockchain, ipfsHash, imageIPFS, dimensions, technique } = req.body;
@@ -242,29 +239,26 @@ router.post('/', authenticateToken, async (req, res, next) => {
       blockchainMinted: false,
       ipfsHash: ipfsHash || '',
       imageIPFS: imageIPFS || '',
-      royalties: isNFTFinal ? {
-        primaire: { artiste: 85, plateforme: 15 },
-        secondaire: { vendeur: 85, artiste: 10, plateforme: 5 }
-      } : undefined,
+      royalties: isNFTFinal ? { primaire: { artiste: 85, plateforme: 15 }, secondaire: { vendeur: 85, artiste: 10, plateforme: 5 } } : undefined,
       expositions: [],
       isEnExpoActuelle: false
     });
 
     await User.findByIdAndUpdate(req.user._id, { $inc: { totalOeuvres: 1 } });
 
+    // Email non bloquant
     if(req.user.email){
-      sendEmail(req.user.email, `Œuvre reçue ${azmId}`, `<p>Bonjour ${req.user.nom}, ton œuvre <b>${titre}</b> est en attente de validation. Certificat: ${artwork.certifId}. IPFS: ${ipfsHash||'en cours'}. NFT: ${isNFTFinal?'Polygon avec 85% artiste / 15% plateforme':''}</p>`);
+      sendEmail(req.user.email, `Œuvre reçue ${azmId}`, `<div style="font-family:Arial;padding:20px"><h3>Œuvre reçue</h3><p>Bonjour ${req.user.nom_artiste}, ton œuvre <b>${titre}</b> est en attente de validation.</p><p>Certificat: <b>${artwork.certifId}</b><br>IPFS: ${ipfsHash||'en cours'}<br>${isNFTFinal?'NFT Polygon 85% artiste / 15% plateforme':''}</p><p><a href="https://art-zedmo-marketplace.onrender.com" style="background:#111;color:#fff;padding:10px 18px;border-radius:6px;text-decoration:none">Voir le marketplace</a></p></div>`);
     }
 
     return res.status(201).json({
       success: true,
-      message: isNFTFinal ? 'NFT enregistré en galerie. Fixé IPFS, mint Polygon requis. Royalties 85/15 primaire, 85/10/5 secondaire.' : 'Œuvre enregistrée pour validation.',
+      message: isNFTFinal ? 'NFT enregistré en galerie. Fixé IPFS, mint Polygon requis.' : 'Œuvre enregistrée pour validation.',
       artwork, azmId
     });
   } catch (e) { next(e); }
 });
 
-// VALIDER + MINT SIMULATION POLYGON
 router.put('/:id/valider', authenticateToken, requireAdmin, async (req, res, next) => {
   try {
     if (!validObjectId(req.params.id)) return res.status(400).json({ error: 'ID invalide.' });
@@ -274,20 +268,16 @@ router.put('/:id/valider', authenticateToken, requireAdmin, async (req, res, nex
     if (!artwork) return res.status(404).json({ error: 'Non trouvée.' });
     if (artwork.statut !== 'en_attente') return res.status(409).json({ error: 'Déjà traitée.' });
     artwork.statut = statut;
-
     if(statut==='validee' && artwork.isNFT){
       artwork.blockchain = 'polygon';
       artwork.blockchainMinted = true;
       artwork.tokenId = `POL-${artwork.azmId}-${Date.now()}`;
       artwork.contractAddress = process.env.POLYGON_CONTRACT || '0xZEDMO_CONTRACT';
     }
-
     await artwork.save();
-
     if(statut==='validee' && artwork.artiste?.email){
-      sendEmail(artwork.artiste.email, `Œuvre validée ${artwork.azmId}`, `<p>Ton œuvre ${artwork.titre} est validée. Certificat ${artwork.certifId}. ${artwork.isNFT?'Mint Polygon effectué, royalties 85% artiste.':''} WhatsApp: 0194655238</p>`);
+      sendEmail(artwork.artiste.email, `Œuvre validée ${artwork.azmId}`, `<div style="font-family:Arial;padding:20px"><h2>Félicitations !</h2><p>Ton œuvre <b>${artwork.titre}</b> est validée.</p><p>Certificat: ${artwork.certifId} ${artwork.isNFT?'<br>Mint Polygon effectué, royalties 85% artiste.':''}</p><p>WhatsApp: 0194655238</p><p><a href="https://art-zedmo-marketplace.onrender.com" style="background:#111;color:#fff;padding:10px 18px;border-radius:6px;text-decoration:none">Voir sur ART-ZEDMO</a></p></div>`);
     }
-
     return res.json({ success: true, artwork });
   } catch (e) { next(e); }
 });
@@ -335,9 +325,9 @@ router.post('/:id/preuve-paiement', authenticateToken, async (req, res, next) =>
     artwork.preuvesPaiement.push({ user: req.user._id, preuve: preuve.trim().slice(0, 2000), method: method || 'manual', adressesUtilisees: ADRESSES, date: new Date() });
     artwork.statutPaiement = 'preuve_envoyee';
     await artwork.save();
-
-    sendEmail(process.env.ADMIN_EMAIL, `Preuve paiement ${artwork.azmId}`, `<p>Preuve de ${req.user.nom} pour ${artwork.titre}: ${preuve}. Vérifier sur 0194655238</p>`);
-
+    if(process.env.ADMIN_EMAIL){
+      sendEmail(process.env.ADMIN_EMAIL, `Preuve paiement ${artwork.azmId}`, `<p>Preuve de ${req.user.nom} pour ${artwork.titre}: ${preuve}. Vérifier sur 0194655238</p>`);
+    }
     return res.json({ success: true, message: `Preuve reçue. Admin va vérifier sur ${ADRESSES.mtn} / ${ADRESSES.moov} / ${ADRESSES.usdt_trc20} et valider. WhatsApp 0194655238`, artwork });
   } catch (e) { next(e); }
 });
