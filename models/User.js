@@ -12,9 +12,8 @@ const userSchema = new mongoose.Schema(
     },
     nom_artiste: {
       type: String,
-      required: [true, 'Le nom d’artiste est obligatoire'],
       trim: true,
-      minlength: 2,
+      default: '',
       maxlength: 100
     },
     whatsapp: {
@@ -27,12 +26,12 @@ const userSchema = new mongoose.Schema(
     },
     email: {
       type: String,
-      required: [true, 'L’adresse e-mail est obligatoire'],
-      unique: true,
       trim: true,
       lowercase: true,
+      default: '',
       maxlength: 254,
-      match: [/^[^\s@]+@[^\s@]+\.[^\s@]+$/, 'Adresse e-mail invalide']
+      match: [/^[^\s@]+@[^\s@]+\.[^\s@]+$/, 'Adresse e-mail invalide'],
+      sparse: true
     },
     password: {
       type: String,
@@ -62,12 +61,21 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: ''
     },
-    // ✅ NOUVEAU - Adresse de réception uniquement pour artiste
+    // ✅ CORRIGÉ - TRC20 / PI / MTN MOOV - Obligatoire seulement pour artiste
     adresseReception: {
       type: String,
       trim: true,
       default: '',
-      maxlength: 200
+      maxlength: 200,
+      validate: {
+        validator: function(v) {
+          if (this.role === 'artiste') {
+            return v && v.length >= 8; // +2290196587303 ou TFXZ... ou GAF62...
+          }
+          return true;
+        },
+        message: 'Adresse de réception obligatoire pour artiste : USDT TRC20 / Pi Network / MTN Moov'
+      }
     },
     statut: {
       type: String,
@@ -86,6 +94,9 @@ const userSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+// Index sparse pour email pour permettre plusieurs comptes sans email
+userSchema.index({ email: 1 }, { unique: true, sparse: true, partialFilterExpression: { email: { $type: "string", $ne: "" } } });
 
 userSchema.set('toJSON', {
   transform: function (doc, ret) {
