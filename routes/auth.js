@@ -10,7 +10,6 @@ if (!JWT_SECRET || JWT_SECRET.length < 32) {
   throw new Error('JWT_SECRET doit être configuré dans Render avec au moins 32 caractères.');
 }
 
-// EMAIL BREVO - CORRIGÉ AVEC LE BON LIEN MARKETPLACE
 async function sendValidationEmail(user) {
   if (!user.email || !process.env.BREVO_API_KEY) {
     console.log('Email non envoyé : BREVO_API_KEY manquante');
@@ -64,12 +63,25 @@ async function requireAdmin(req, res, next) {
   } catch (error) { next(error); }
 }
 
+// ✅ CORRIGÉ - On ajoute adresseReception
 function publicUser(user) {
   return {
-    _id: user._id, nom: user.nom, nom_artiste: user.nom_artiste, whatsapp: user.whatsapp, email: user.email,
-    role: user.role, ville: user.ville, bio: user.bio, avatar: user.avatar, statut: user.statut,
-    estVerifie: user.estVerifie, totalOeuvres: user.totalOeuvres, totalVentes: user.totalVentes,
-    totalVotesRecus: user.totalVotesRecus, createdAt: user.createdAt
+    _id: user._id, 
+    nom: user.nom, 
+    nom_artiste: user.nom_artiste, 
+    whatsapp: user.whatsapp, 
+    email: user.email,
+    role: user.role, 
+    ville: user.ville, 
+    bio: user.bio, 
+    avatar: user.avatar, 
+    statut: user.statut,
+    estVerifie: user.estVerifie, 
+    totalOeuvres: user.totalOeuvres, 
+    totalVentes: user.totalVentes,
+    totalVotesRecus: user.totalVotesRecus, 
+    adresseReception: user.adresseReception, // ✅ C'ÉTAIT ÇA QUI MANQUAIT
+    createdAt: user.createdAt
   };
 }
 
@@ -94,7 +106,6 @@ router.post('/register', async (req, res, next) => {
 
     const roleAutorise = ['artiste', 'acheteur'].includes(role) ? role : 'artiste';
 
-    // ✅ FIX ICI - Validation adresse artiste
     if (roleAutorise === 'artiste' && (!adresseNettoyee || adresseNettoyee.length < 8)) {
       return res.status(400).json({ error: 'Adresse de réception obligatoire : USDT TRC20 / Pi Network / MTN Moov (+2290196587303 / TFXZ... / GAF62...)' });
     }
