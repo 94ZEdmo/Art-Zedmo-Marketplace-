@@ -79,17 +79,44 @@ function createToken(user) {
 
 router.post('/register', async (req, res, next) => {
   try {
-    const { nom, nom_artiste, whatsapp, email, password, ville, role } = req.body;
+    const { nom, nom_artiste, whatsapp, email, password, ville, role, adresseReception } = req.body;
     if (typeof nom !== 'string' || typeof nom_artiste !== 'string' || typeof whatsapp !== 'string' || typeof email !== 'string' || typeof password !== 'string') return res.status(400).json({ error: 'Les informations d’inscription sont invalides.' });
-    const nomNettoye = nom.trim(); const artisteNettoye = nom_artiste.trim(); const whatsappNettoye = whatsapp.trim(); const emailNettoye = email.trim().toLowerCase();
+    
+    const nomNettoye = nom.trim(); 
+    const artisteNettoye = nom_artiste.trim(); 
+    const whatsappNettoye = whatsapp.trim(); 
+    const emailNettoye = email.trim().toLowerCase();
+    const adresseNettoyee = typeof adresseReception === 'string' ? adresseReception.trim() : '';
+
     if (!nomNettoye || !artisteNettoye || !whatsappNettoye || !emailNettoye || !password) return res.status(400).json({ error: 'Nom complet, nom d’artiste, WhatsApp, e-mail et mot de passe obligatoires.' });
     if (password.length < 10 || password.length > 128) return res.status(400).json({ error: 'Le mot de passe doit contenir entre 10 et 128 caractères.' });
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailNettoye)) return res.status(400).json({ error: 'Adresse e-mail invalide.' });
+
+    const roleAutorise = ['artiste', 'acheteur'].includes(role) ? role : 'artiste';
+
+    // ✅ FIX ICI - Validation adresse artiste
+    if (roleAutorise === 'artiste' && (!adresseNettoyee || adresseNettoyee.length < 8)) {
+      return res.status(400).json({ error: 'Adresse de réception obligatoire : USDT TRC20 / Pi Network / MTN Moov (+2290196587303 / TFXZ... / GAF62...)' });
+    }
+
     const existe = await User.findOne({ $or: [{ whatsapp: whatsappNettoye }, { email: emailNettoye }] }).select('_id');
     if (existe) return res.status(409).json({ error: 'Ce numéro WhatsApp ou cette adresse e-mail est déjà utilisé.' });
-    const roleAutorise = ['artiste', 'acheteur'].includes(role) ? role : 'artiste';
+    
     const villeNettoyee = typeof ville === 'string' && ville.trim() ? ville.trim().slice(0, 100) : 'Abomey-Calavi';
-    const user = await User.create({ nom: nomNettoye, nom_artiste: artisteNettoye, whatsapp: whatsappNettoye, email: emailNettoye, password, ville: villeNettoyee, role: roleAutorise, statut: 'en_attente', estVerifie: false });
+    
+    const user = await User.create({ 
+      nom: nomNettoye, 
+      nom_artiste: artisteNettoye, 
+      whatsapp: whatsappNettoye, 
+      email: emailNettoye, 
+      password, 
+      ville: villeNettoyee, 
+      role: roleAutorise, 
+      adresseReception: adresseNettoyee,
+      statut: 'en_attente', 
+      estVerifie: false 
+    });
+    
     return res.status(201).json({ success: true, message: 'Inscription réussie. Votre compte attend la validation d’un administrateur.', user: publicUser(user) });
   } catch (error) {
     if (error.code === 11000) return res.status(409).json({ error: 'Ce numéro WhatsApp ou cette adresse e-mail est déjà utilisé.' });
