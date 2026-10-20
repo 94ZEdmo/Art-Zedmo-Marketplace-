@@ -58,7 +58,7 @@ router.get('/active', async (req, res) => {
   }
 });
 
-/* 2bis. GET UNE EXPO PAR ID - MANQUAIT CHEZ TOI = ROUTE INTROUVABLE */
+/* 2bis. GET UNE EXPO PAR ID */
 router.get('/:id', async (req, res) => {
   try {
     const { id } = req.params;
@@ -99,7 +99,40 @@ router.post('/', authenticateToken, requireAdmin, async (req, res) => {
   }
 });
 
-/* 4. AJOUT ADMIN DIRECT - RESTE EN GALERIE */
+/* === NOUVEAU - SUPPRIMER EXPOSITION (pour ton bouton admin) === */
+router.delete('/:id', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!validObjectId(id)) return res.status(400).json({ success: false, error: 'ID invalide.' });
+    const expo = await Exposition.findById(id);
+    if (!expo) return res.status(404).json({ success: false, error: 'Expo introuvable.' });
+
+    // Nettoyer les références dans les artworks
+    if (expo.oeuvres?.length) {
+      await Artwork.updateMany(
+        { _id: { $in: expo.oeuvres } },
+        { $pull: { expositions: expo._id }, $set: { isEnExpoActuelle: false } }
+      );
+    }
+    if (expo.candidatures?.length) {
+      const artIds = expo.candidatures.map(c => c.artwork).filter(Boolean);
+      if (artIds.length) {
+        await Artwork.updateMany(
+          { _id: { $in: artIds } },
+          { $pull: { expositions: expo._id } }
+        );
+      }
+    }
+
+    await Exposition.findByIdAndDelete(id);
+    return res.json({ success: true, message: 'Exposition supprimée définitivement.' });
+  } catch (e) {
+    console.error(e);
+    return res.status(500).json({ success: false, error: 'Suppression impossible.' });
+  }
+});
+
+/* 4. AJOUT ADMIN DIRECT */
 router.post('/:id/add-artwork', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const { id } = req.params; const { artworkId } = req.body || {};
@@ -117,8 +150,6 @@ router.post('/:id/add-artwork', authenticateToken, requireAdmin, async (req, res
     await art.save();
 
     if (!expo.oeuvres.some(o => String(o) === String(art._id))) expo.oeuvres.push(art._id);
-    
-    // Si candidature en attente existe, passe en acceptee
     const existingCand = expo.candidatures.find(c=> String(c.artwork)===String(art._id));
     if(existingCand){ existingCand.statut='acceptee'; }
     else {
@@ -134,7 +165,7 @@ router.post('/:id/add-artwork', authenticateToken, requireAdmin, async (req, res
   }
 });
 
-/* 5. SOUMISSION ARTISTE - GALERIE -> EXPO */
+/* 5. SOUMISSION ARTISTE */
 router.post('/:id/soumettre', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params; const { artworkId } = req.body || {};
@@ -157,7 +188,7 @@ router.post('/:id/soumettre', authenticateToken, async (req, res) => {
   } catch (e) { return res.status(500).json({ success: false, error: 'Erreur soumission.' }); }
 });
 
-/* 5bis. ADMIN ACCEPTE / REFUSE PAR ID CANDIDATURE (ton ancien) */
+/* 5bis. ADMIN ACCEPTE / REFUSE PAR ID CANDIDATURE */
 router.put('/:id/candidature/:candidatureId', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const { id, candidatureId } = req.params; const { statut } = req.body;
@@ -188,7 +219,7 @@ router.put('/:id/candidature/:candidatureId', authenticateToken, requireAdmin, a
   } catch (e) { return res.status(500).json({ error: 'Erreur traitement candidature.' }); }
 });
 
-/* 5ter. NOUVEAU - ADMIN VALIDE PAR ARTWORK ID (compatible avec ton admin corrigé) */
+/* 5ter. NOUVEAU - ADMIN VALIDE PAR ARTWORK ID */
 async function validerParArtworkId(req,res){
   try{
     const { id, artworkId } = req.params;
@@ -219,14 +250,13 @@ async function validerParArtworkId(req,res){
       expo.oeuvres = expo.oeuvres.filter(o => String(o)!== String(artworkId));
     }
     await expo.save();
-    return res.json({ success: true, message: `Soumission ${finalStatut} - ${finalStatut==='acceptee'?'visible dans expo avec bouton Voter (reste en galerie)':'retirée de expo'}` });
+    return res.json({ success: true, message: `Soumission ${finalStatut}` });
   }catch(e){
     console.error(e);
     return res.status(500).json({ error: 'Erreur validation.' });
   }
 }
 
-// Routes compatibles avec admin corrigé (artworkId)
 router.put('/:id/soumissions/:artworkId/valider', authenticateToken, requireAdmin, validerParArtworkId);
 router.put('/:id/candidatures/:artworkId/valider', authenticateToken, requireAdmin, validerParArtworkId);
 router.put('/:id/soumissions/:artworkId', authenticateToken, requireAdmin, validerParArtworkId);
