@@ -24,20 +24,20 @@ const userSchema = new mongoose.Schema(
       minlength: 6,
       maxlength: 25
     },
+    // ✅ FIX 1 - Pas de default '', pas de sparse dans le field
     email: {
       type: String,
       trim: true,
       lowercase: true,
-      default: '',
       maxlength: 254,
       match: [/^[^\s@]+@[^\s@]+\.[^\s@]+$/, 'Adresse e-mail invalide'],
-      sparse: true
+      default: undefined
     },
     password: {
       type: String,
       required: [true, 'Le mot de passe est obligatoire'],
-      minlength: 10,
-      select: false
+      minlength: 10
+      // ✅ FIX 2 - On enlève select:false pour éviter le bug de login
     },
     role: {
       type: String,
@@ -51,31 +51,16 @@ const userSchema = new mongoose.Schema(
       default: 'Abomey-Calavi',
       maxlength: 100
     },
-    bio: {
-      type: String,
-      trim: true,
-      maxlength: 1000,
-      default: ''
-    },
-    avatar: {
-      type: String,
-      default: ''
-    },
-    // ✅ CORRIGÉ - TRC20 / PI / MTN MOOV - Obligatoire seulement pour artiste
+    bio: { type: String, trim: true, maxlength: 1000, default: '' },
+    avatar: { type: String, default: '' },
+    
+    // ✅ FIX 3 - On enlève le validator du schéma, on le fait dans auth.js
+    // TRC20 / PI / MTN Moov - +2290196587303 / TFXZ... / GAF62...
     adresseReception: {
       type: String,
       trim: true,
       default: '',
-      maxlength: 200,
-      validate: {
-        validator: function(v) {
-          if (this.role === 'artiste') {
-            return v && v.length >= 8; // +2290196587303 ou TFXZ... ou GAF62...
-          }
-          return true;
-        },
-        message: 'Adresse de réception obligatoire pour artiste : USDT TRC20 / Pi Network / MTN Moov'
-      }
+      maxlength: 200
     },
     statut: {
       type: String,
@@ -83,10 +68,7 @@ const userSchema = new mongoose.Schema(
       default: 'en_attente',
       required: true
     },
-    estVerifie: {
-      type: Boolean,
-      default: false
-    },
+    estVerifie: { type: Boolean, default: false },
     totalOeuvres: { type: Number, default: 0, min: 0 },
     totalVentes: { type: Number, default: 0, min: 0 },
     totalVotesRecus: { type: Number, default: 0, min: 0 },
@@ -95,8 +77,8 @@ const userSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// Index sparse pour email pour permettre plusieurs comptes sans email
-userSchema.index({ email: 1 }, { unique: true, sparse: true, partialFilterExpression: { email: { $type: "string", $ne: "" } } });
+// ✅ Un seul index, pas de doublon
+userSchema.index({ email: 1 }, { unique: true, sparse: true });
 
 userSchema.set('toJSON', {
   transform: function (doc, ret) {
