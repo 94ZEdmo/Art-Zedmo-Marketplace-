@@ -7,6 +7,11 @@
   <meta name="description" content="ART-ZEDMO MARKETPLACE">
   <title>ART-ZEDMO MARKETPLACE</title>
   <link rel="icon" href="/logo-zedmo.png">
+  <!-- PWA ART-ZEDMO -->
+  <link rel="manifest" href="/manifest.json">
+  <link rel="apple-touch-icon" href="/icon-192.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="/icon-512.png">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
   <style>
     :root{--bg:#090909;--surface:#141414;--surface2:#1d1d1d;--gold:#d4af37;--gold-light:#f5d76e;--text:#f5f5f5;--muted:#a8a8a8;--border:#343434;--success:#31c48d;--danger:#ef4444;--radius:16px}
@@ -111,6 +116,16 @@ async function chargerAnnonces(){try{const r=await apiFetch('/annonces');const a
 async function actualiserTout(){await Promise.allSettled([chargerGalerie(),chargerExpositions(),chargerEncheres(),chargerAnnonces()])}
 async function initialiser(){mettreAJourCompte();allerA('accueil');await actualiserTout();if(getToken()){try{const r=await apiFetch('/auth/me');currentUser=r.user||r;localStorage.setItem('AZ_USER',JSON.stringify(currentUser));mettreAJourCompte()}catch{}}toggleAdresseReception();}
 document.addEventListener('DOMContentLoaded',initialiser);
+</script>
+<!-- PWA ART-ZEDMO - ACTIVE L'APP TÉLÉCHARGEABLE -->
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js')
+      .then(reg => console.log('ART-ZEDMO PWA installée:', reg.scope))
+      .catch(err => console.log('PWA erreur:', err));
+  });
+}
 </script>
 </body>
 </html>
