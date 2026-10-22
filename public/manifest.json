@@ -3,6 +3,7 @@
   "short_name": "ART-ZEDMO",
   "description": "Marketplace d'art africain - Achetez et vendez en MoMo et USDT",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#090909",
