@@ -46,7 +46,6 @@ function requireAdmin(req, res, next) {
   next();
 }
 
-// ====== UPLOAD PINATA CORRIGÉ ======
 const allowedMimeTypes = new Set(['image/jpeg','image/png','image/webp','image/gif']);
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -112,10 +111,45 @@ async function getNextAZM() {
   const hash = crypto.createHash('sha256').update(azmId).digest('hex');
   return { azmId, certifId, hash };
 }
-const settingsSchema = new mongoose.Schema({ _id: String, momo: { type: String, default: '' }, moov: { type: String, default: '' }, usdt: { type: String, default: '' }, pi: { type: String, default: '' }, updatedAt: { type: Date, default: Date.now } });
+
+// ADRESSES OFFICIELLES CORRIGEES - COMME CAPTURE 1
+const ADRESSES_OFFICIELLES = {
+  momo: '+2290196587303',
+  moov: '+2290194655238',
+  usdt: 'TFXZSyJaC6mdCva8kAJBMMvKYhyhpzpHn2',
+  pi: 'GAF62KXAV7IUM3H5HQ3T16EFMIDSGII2EVEZFXTXGMH5D2EDPA6RVAM'
+};
+
+const settingsSchema = new mongoose.Schema({ 
+  _id: String, 
+  momo: { type: String, default: ADRESSES_OFFICIELLES.momo }, 
+  moov: { type: String, default: ADRESSES_OFFICIELLES.moov }, 
+  usdt: { type: String, default: ADRESSES_OFFICIELLES.usdt }, 
+  pi: { type: String, default: ADRESSES_OFFICIELLES.pi }, 
+  updatedAt: { type: Date, default: Date.now } 
+});
 const Settings = mongoose.models.Settings || mongoose.model('Settings', settingsSchema);
-app.get('/api/settings/paiements', async (req, res, next) => { try { const s = await Settings.findById('paiements').lean(); if (!s) return res.json({ momo: '', moov: '', usdt: '', pi: '' }); res.json({ momo: s.momo || '', moov: s.moov || '', usdt: s.usdt || '', pi: s.pi || '' }); } catch (e) { next(e); } });
-app.post('/api/settings/paiements', authenticateToken, requireAdmin, async (req, res, next) => { try { const { momo, moov, usdt, pi } = req.body; const settings = await Settings.findOneAndUpdate({ _id: 'paiements' }, { $set: { momo: momo || '', moov: moov || '', usdt: usdt || '', pi: pi || '', updatedAt: new Date() } }, { upsert: true, new: true }); res.json({ success: true, settings }); } catch (e) { next(e); } });
+
+app.get('/api/settings/paiements', async (req, res, next) => { 
+  try { 
+    const s = await Settings.findById('paiements').lean(); 
+    res.json({ 
+      momo: s?.momo || ADRESSES_OFFICIELLES.momo, 
+      moov: s?.moov || ADRESSES_OFFICIELLES.moov, 
+      usdt: s?.usdt || ADRESSES_OFFICIELLES.usdt, 
+      pi: s?.pi || ADRESSES_OFFICIELLES.pi 
+    }); 
+  } catch (e) { next(e); } 
+});
+
+app.post('/api/settings/paiements', authenticateToken, requireAdmin, async (req, res, next) => { 
+  try { 
+    const { momo, moov, usdt, pi } = req.body; 
+    const settings = await Settings.findOneAndUpdate({ _id: 'paiements' }, { $set: { momo: momo || ADRESSES_OFFICIELLES.momo, moov: moov || ADRESSES_OFFICIELLES.moov, usdt: usdt || ADRESSES_OFFICIELLES.usdt, pi: pi || ADRESSES_OFFICIELLES.pi, updatedAt: new Date() } }, { upsert: true, new: true }); 
+    res.json({ success: true, settings }); 
+  } catch (e) { next(e); } 
+});
+
 app.get('/api/health', (req, res) => { res.json({ status: mongoose.connection.readyState === 1 ? 'LIVE' : 'DATABASE_DISCONNECTED', database: mongoose.connection.readyState === 1 ? 'CONNECTED' : 'DISCONNECTED', pi_api_configured: Boolean(process.env.PI_API_KEY), pi_wallet_configured: Boolean(process.env.PI_WALLET), pinata_configured: Boolean(process.env.PINATA_JWT) }); });
 app.get('/api/artworks/verify/:azmId', async (req, res, next) => { try { const azmId = String(req.params.azmId).toUpperCase(); let artwork = null; if (mongoose.models.Artwork) { artwork = await mongoose.models.Artwork.findOne({ azmId }).populate('artiste', 'nom nom_artiste ville'); } if (artwork) return res.json({ ...artwork.toObject(), verified: true, verificationType: 'database_record' }); const nft = await NFT.findOne({ azmId }).populate('artiste', 'nom nom_artiste ville'); if (nft) return res.json({ ...nft.toObject(), verified: true, verificationType: 'database_record' }); res.status(404).json({ error: 'Œuvre ou certificat introuvable.' }); } catch (e) { next(e); } });
 app.get('/api/nft', async (req, res, next) => { try { const nfts = await NFT.find().sort({ createdAt: -1 }).limit(100).lean(); res.json(nfts); } catch (e) { next(e); } });
@@ -128,5 +162,5 @@ app.get('/api/compte/nft-vendus', authenticateToken, requireAdmin, async (req, r
 app.use((err, req, res, next) => { console.error('Erreur API :', err.message); if (err instanceof multer.MulterError) return res.status(400).json({ error: err.code === 'LIMIT_FILE_SIZE' ? 'Image trop volumineuse : maximum 5 Mo.' : 'Erreur lors du téléversement.' }); if (err.message === 'Format d’image non autorisé.') return res.status(400).json({ error: err.message }); res.status(err.status || 500).json({ error: process.env.NODE_ENV === 'production' ? 'Une erreur serveur est survenue.' : err.message }); });
 app.get('/', (req, res) => { res.sendFile(path.join(__dirname, 'public', 'index.html')); });
 app.use((req, res) => { res.status(404).json({ error: 'Route introuvable.' }); });
-async function startServer() { try { await mongoose.connect(MONGO_URL, { serverSelectionTimeoutMS: 15000 }); console.log('MongoDB connecté. Pinata:', process.env.PINATA_JWT ? 'OK' : 'MANQUANT'); app.listen(PORT, '0.0.0.0', () => { console.log(`ART-ZEDMO démarré sur ${PORT}`); }); } catch (e) { console.error('Impossible de démarrer:', e.message); process.exit(1); } }
+async function startServer() { try { await mongoose.connect(MONGO_URL, { serverSelectionTimeoutMS: 15000 }); console.log('MongoDB connecté. Pinata:', process.env.PINATA_JWT ? 'OK' : 'MANQUANT', 'Adresses:', ADRESSES_OFFICIELLES); app.listen(PORT, '0.0.0.0', () => { console.log(`ART-ZEDMO démarré sur ${PORT}`); }); } catch (e) { console.error('Impossible de démarrer:', e.message); process.exit(1); } }
 startServer();
