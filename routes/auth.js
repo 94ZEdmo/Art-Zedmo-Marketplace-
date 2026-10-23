@@ -2,6 +2,7 @@ import express from 'express';
 import jwt from 'jsonwebtoken';
 import mongoose from 'mongoose';
 import User from '../models/User.js';
+import GaleriePrivee from '../models/GaleriePrivee.js';
 
 const router = express.Router();
 
@@ -227,7 +228,7 @@ router.get('/forfaits/list', async (req, res) => {
 });
 
 // =================================================
-// ACHETER FORFAIT - 7 USD PRO / 50 USD GALERIE PRIVEE
+// ACHETER FORFAIT - AUTO CREATION LIEN /nom
 // =================================================
 router.post('/forfait/acheter', authenticateToken, async (req, res, next) => {
   try {
@@ -243,17 +244,45 @@ router.post('/forfait/acheter', authenticateToken, async (req, res, next) => {
       user.forfaitPrixUSD = 7;
       user.forfaitPrixFCFA = 4200;
       user.forfaitExpireAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-    } else if (forfait === 'galerie_privee') {
-      // GALERIE PRIVEE achetable par tous même si 0 œuvre
+      await user.save();
+      return res.json({ success: true, message: `Forfait PRO activé. 10 œuvres pour 7 USD (4.200 FCFA)`, user: publicUser(user) });
+    } 
+    
+    if (forfait === 'galerie_privee') {
       user.forfait = 'galerie_privee';
       user.limiteOeuvres = 9999;
       user.limiteNFT = 9999;
       user.forfaitPrixUSD = 50;
       user.forfaitPrixFCFA = 30000;
       user.forfaitExpireAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+      await user.save();
+
+      // AUTO-CREATION GALERIE PRIVEE /nom
+      let galerie = await GaleriePrivee.findOne({ proprietaire: user._id });
+      if (!galerie) {
+        const baseSlug = (user.nom_artiste || user.nom).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '').slice(0, 30);
+        const suffix = user._id.toString().slice(-6);
+        const slugFinal = `${baseSlug}-${suffix}`;
+        galerie = await GaleriePrivee.create({
+          proprietaire: user._id,
+          nomGalerie: `Galerie de ${user.nom_artiste}`,
+          slug: slugFinal,
+          description: `Bienvenue dans la galerie privée de ${user.nom_artiste}. 50 œuvres minimum, illimité.`,
+          whatsapp: user.whatsapp,
+          isActive: true
+        });
+      }
+
+      const lienGalerie = `https://art-zedmo-marketplace.onrender.com/#galerie-privee/${galerie.slug}`;
+
+      return res.json({ 
+        success: true, 
+        message: `Galerie Privée activée ! Boutique perso créée auto : ${lienGalerie} - 50 œuvres min, illimité, même avec 0 œuvre.`, 
+        user: publicUser(user),
+        galerie,
+        lien: lienGalerie
+      });
     }
-    await user.save();
-    return res.json({ success: true, message: `Forfait ${forfait} activé. ${forfait === 'pro' ? '10 œuvres pour 7 USD (4.200 FCFA)' : 'Illimité 50+ œuvres pour 50 USD (30.000 FCFA)'}`, user: publicUser(user) });
   } catch (e) { next(e); }
 });
 
