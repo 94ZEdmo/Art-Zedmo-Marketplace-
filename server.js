@@ -14,6 +14,7 @@ import expoRoutes from './routes/expositions.js';
 import voteRoutes from './routes/votes.js';
 import enchereRoutes from './routes/encheres.js';
 import annonceRoutes from './routes/annonces.js';
+import galeriesPriveesRoutes from './routes/galeriesPrivees.js';
 
 dotenv.config();
 const app = express();
@@ -97,6 +98,7 @@ app.use('/api/expositions', expoRoutes);
 app.use('/api/votes', voteRoutes);
 app.use('/api/encheres', enchereRoutes);
 app.use('/api/annonces', annonceRoutes);
+app.use('/api/galeries-privees', galeriesPriveesRoutes);
 
 const nftSchema = new mongoose.Schema({ titre: { type: String, required: true, trim: true }, description: String, edition: { type: String, default: '1/1' }, prixUSDX: { type: Number, min: 0 }, royalties: { type: Number, default: 5, min: 0, max: 100 }, blockchain: { type: String, default: 'Pi' }, categorie: String, artiste: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, azmId: { type: String, unique: true, sparse: true }, certifId: String, hash: String, imageUrl: String, proprietaire: String, proprietaireWallet: String, vendu: { type: Boolean, default: false }, prixVenteFinal: Number, txHash: String, dateVente: Date, artworkId: { type: mongoose.Schema.Types.ObjectId, ref: 'Artwork' }, createdAt: { type: Date, default: Date.now } }, { strict: false });
 const NFT = mongoose.models.NFT || mongoose.model('NFT', nftSchema);
