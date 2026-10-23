@@ -11,6 +11,14 @@ if (!JWT_SECRET || JWT_SECRET.length < 32) {
   throw new Error('JWT_SECRET doit être configuré dans Render avec au moins 32 caractères.');
 }
 
+// ADRESSES OFFICIELLES FIXES - comme sur ta capture
+const ADRESSES = {
+  MTN: '+2290196587303',
+  MOOV: '+2290194655238',
+  USDT: 'TFXZSyJaC6mdCva8kAJBMMvKYhyhpzpHn2',
+  PI: 'GAF62KXAV7IUM3H5HQ3T16EFMIDSGII2EVEZFXTXGMH5D2EDPA6RVAM'
+};
+
 async function sendValidationEmail(user) {
   if (!user.email || !process.env.BREVO_API_KEY) {
     console.log('Email non envoyé : BREVO_API_KEY manquante');
@@ -66,30 +74,13 @@ async function requireAdmin(req, res, next) {
 
 function publicUser(user) {
   return {
-    _id: user._id, 
-    nom: user.nom, 
-    nom_artiste: user.nom_artiste, 
-    whatsapp: user.whatsapp, 
-    email: user.email,
-    role: user.role, 
-    ville: user.ville, 
-    bio: user.bio, 
-    avatar: user.avatar, 
-    statut: user.statut,
-    estVerifie: user.estVerifie, 
-    totalOeuvres: user.totalOeuvres, 
-    totalVentes: user.totalVentes,
-    totalVotesRecus: user.totalVotesRecus, 
-    adresseReception: user.adresseReception,
-    forfait: user.forfait || 'gratuit',
-    limiteOeuvres: user.limiteOeuvres ?? 5,
-    limiteNFT: user.limiteNFT ?? 3,
-    forfaitExpireAt: user.forfaitExpireAt || null,
-    forfaitPrixUSD: user.forfaitPrixUSD ?? 0,
-    forfaitPrixFCFA: user.forfaitPrixFCFA ?? 0,
-    totalOeuvresPubliees: user.totalOeuvresPubliees ?? 0,
-    totalNFTPublies: user.totalNFTPublies ?? 0,
-    createdAt: user.createdAt
+    _id: user._id, nom: user.nom, nom_artiste: user.nom_artiste, whatsapp: user.whatsapp, email: user.email,
+    role: user.role, ville: user.ville, bio: user.bio, avatar: user.avatar, statut: user.statut,
+    estVerifie: user.estVerifie, totalOeuvres: user.totalOeuvres, totalVentes: user.totalVentes,
+    totalVotesRecus: user.totalVotesRecus, adresseReception: user.adresseReception,
+    forfait: user.forfait || 'gratuit', limiteOeuvres: user.limiteOeuvres ?? 5, limiteNFT: user.limiteNFT ?? 3,
+    forfaitExpireAt: user.forfaitExpireAt || null, forfaitPrixUSD: user.forfaitPrixUSD ?? 0, forfaitPrixFCFA: user.forfaitPrixFCFA ?? 0,
+    totalOeuvresPubliees: user.totalOeuvresPubliees ?? 0, totalNFTPublies: user.totalNFTPublies ?? 0, createdAt: user.createdAt
   };
 }
 
@@ -101,9 +92,7 @@ router.post('/register', async (req, res, next) => {
   try {
     const { nom, nom_artiste, whatsapp, email, password, ville, role, adresseReception } = req.body;
     if (typeof nom !== 'string' || typeof nom_artiste !== 'string' || typeof whatsapp !== 'string' || typeof email !== 'string' || typeof password !== 'string') return res.status(400).json({ error: 'Les informations d’inscription sont invalides.' });
-    const nomNettoye = nom.trim(); 
-    const artisteNettoye = nom_artiste.trim(); 
-    const whatsappNettoye = whatsapp.trim(); 
+    const nomNettoye = nom.trim(); const artisteNettoye = nom_artiste.trim(); const whatsappNettoye = whatsapp.trim(); 
     const emailNettoye = email.trim().toLowerCase();
     const adresseNettoyee = typeof adresseReception === 'string' ? adresseReception.trim() : '';
     if (!nomNettoye || !artisteNettoye || !whatsappNettoye || !emailNettoye || !password) return res.status(400).json({ error: 'Nom complet, nom d’artiste, WhatsApp, e-mail et mot de passe obligatoires.' });
@@ -111,7 +100,7 @@ router.post('/register', async (req, res, next) => {
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailNettoye)) return res.status(400).json({ error: 'Adresse e-mail invalide.' });
     const roleAutorise = ['artiste', 'acheteur'].includes(role) ? role : 'artiste';
     if (roleAutorise === 'artiste' && (!adresseNettoyee || adresseNettoyee.length < 8)) {
-      return res.status(400).json({ error: 'Adresse de réception obligatoire : USDT TRC20 / Pi Network / MTN Moov (+2290196587303 / TFXZ... / GAF62...)' });
+      return res.status(400).json({ error: `Adresse de réception obligatoire : USDT TRC20 ${ADRESSES.USDT} / Pi ${ADRESSES.PI} / MTN Moov ${ADRESSES.MTN} / ${ADRESSES.MOOV}` });
     }
     const existe = await User.findOne({ $or: [{ whatsapp: whatsappNettoye }, { email: emailNettoye }] }).select('_id');
     if (existe) return res.status(409).json({ error: 'Ce numéro WhatsApp ou cette adresse e-mail est déjà utilisé.' });
@@ -191,6 +180,7 @@ router.delete('/:id', authenticateToken, requireAdmin, async (req, res, next) =>
 router.get('/forfaits/list', async (req, res) => {
   return res.json({
     success: true,
+    adresses: ADRESSES,
     forfaits: [
       { id: 'gratuit', nom: 'Gratuit', prixUSD: 0, prixFCFA: 0, limiteOeuvres: 5, limiteNFT: 3, description: '5 œuvres + 3 NFT gratuits' },
       { id: 'pro', nom: 'PRO', prixUSD: 7, prixFCFA: 4200, limiteOeuvres: 10, limiteNFT: 10, description: 'Jusqu’à 10 œuvres, 10 NFT' },
@@ -199,46 +189,38 @@ router.get('/forfaits/list', async (req, res) => {
   });
 });
 
-// =================================================
-// ACHETER FORFAIT - PAIEMENT REEL AVEC MEMES ADRESSES
-// +2290196587303 MTN / +2290194655238 MOOV / USDT / Pi
-// =================================================
+// ACHETER FORFAIT - PAIEMENT REEL
 router.post('/forfait/acheter', authenticateToken, async (req, res, next) => {
   try {
-    const { forfait, preuve, adresses } = req.body;
+    const { forfait, preuve } = req.body;
     if (!['pro','galerie_privee'].includes(forfait)) return res.status(400).json({ error: 'Forfait invalide. Choisis pro ou galerie_privee' });
     
-    // PAIEMENT REEL OBLIGATOIRE
     if (!preuve || String(preuve).trim().length < 4) {
-      return res.status(400).json({ error: 'Paiement réel obligatoire ! Colle ton ID transaction MTN Moov (+2290196587303 / +2290194655238) ou USDT TFXZ... ou Pi GAF62... - Ex: 1234567890' });
+      return res.status(400).json({ 
+        error: `Paiement réel obligatoire ! Colle ton ID transaction MTN Moov (${ADRESSES.MTN} / ${ADRESSES.MOOV}) ou USDT ${ADRESSES.USDT.slice(0,8)}... ou Pi ${ADRESSES.PI.slice(0,8)}... - Ex: 1234567890` 
+      });
     }
 
     const user = await User.findById(req.auth.id);
     if (!user) return res.status(404).json({ error: 'Utilisateur introuvable.' });
     
-    console.log(`💰 PAIEMENT FORFAIT REEL RECU: ${forfait} par ${user.nom_artiste} (${user._id}) - Preuve: ${preuve} - Adresses vérif: MTN ${adresses?.mtn||'+2290196587303'} Moov ${adresses?.moov||'+2290194655238'} USDT ${adresses?.usdt_trc20}`);
+    console.log(`💰 PAIEMENT REEL: ${forfait} par ${user.nom_artiste} - Preuve: ${preuve} - Adresses: MTN ${ADRESSES.MTN} Moov ${ADRESSES.MOOV} USDT ${ADRESSES.USDT} Pi ${ADRESSES.PI}`);
     
     if (forfait === 'pro') {
-      user.forfait = 'pro';
-      user.limiteOeuvres = 10;
-      user.limiteNFT = 10;
-      user.forfaitPrixUSD = 7;
-      user.forfaitPrixFCFA = 4200;
+      user.forfait = 'pro'; user.limiteOeuvres = 10; user.limiteNFT = 10;
+      user.forfaitPrixUSD = 7; user.forfaitPrixFCFA = 4200;
       user.forfaitExpireAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
       await user.save();
       return res.json({ 
         success: true, 
-        message: `✅ Paiement PRO 7 USD (4.200 FCFA) reçu ! Preuve: ${preuve} vérifiée sur MTN ${adresses?.mtn||'+2290196587303'} / Moov ${adresses?.moov||'+2290194655238'} - Forfait PRO activé 10 œuvres`, 
-        user: publicUser(user) 
+        message: `✅ PRO activé ! Preuve ${preuve} vérifiée sur MTN ${ADRESSES.MTN} / Moov ${ADRESSES.MOOV} - 10 œuvres`, 
+        user: publicUser(user), adresses: ADRESSES
       });
     } 
     
     if (forfait === 'galerie_privee') {
-      user.forfait = 'galerie_privee';
-      user.limiteOeuvres = 9999;
-      user.limiteNFT = 9999;
-      user.forfaitPrixUSD = 50;
-      user.forfaitPrixFCFA = 30000;
+      user.forfait = 'galerie_privee'; user.limiteOeuvres = 9999; user.limiteNFT = 9999;
+      user.forfaitPrixUSD = 50; user.forfaitPrixFCFA = 30000;
       user.forfaitExpireAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
       await user.save();
 
@@ -246,25 +228,19 @@ router.post('/forfait/acheter', authenticateToken, async (req, res, next) => {
       if (!galerie) {
         const baseSlug = (user.nom_artiste || user.nom).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '').slice(0, 30);
         const suffix = user._id.toString().slice(-6);
-        const slugFinal = `${baseSlug}-${suffix}`;
         galerie = await GaleriePrivee.create({
           proprietaire: user._id,
           nomGalerie: `Galerie de ${user.nom_artiste}`,
-          slug: slugFinal,
+          slug: `${baseSlug}-${suffix}`,
           description: `Bienvenue dans la galerie privée de ${user.nom_artiste}. 50 œuvres minimum, illimité.`,
-          whatsapp: user.whatsapp,
-          isActive: true
+          whatsapp: user.whatsapp, isActive: true
         });
       }
-
       const lienGalerie = `https://art-zedmo-marketplace.onrender.com/#galerie-privee/${galerie.slug}`;
-
       return res.json({ 
         success: true, 
-        message: `✅ Paiement Galerie Privée 50 USD (30.000 FCFA) reçu ! Preuve: ${preuve} sur MTN ${adresses?.mtn||'+2290196587303'} / Moov ${adresses?.moov||'+2290194655238'} / USDT ${adresses?.usdt_trc20} - Boutique perso créée auto : ${lienGalerie} - 50 œuvres min, illimité, même avec 0 œuvre.`, 
-        user: publicUser(user),
-        galerie,
-        lien: lienGalerie
+        message: `✅ Galerie Privée 50 USD (30.000 FCFA) activée ! Preuve: ${preuve} sur ${ADRESSES.MTN} / ${ADRESSES.MOOV} / ${ADRESSES.USDT.slice(0,10)}... - Boutique: ${lienGalerie}`, 
+        user: publicUser(user), galerie, lien: lienGalerie, adresses: ADRESSES
       });
     }
   } catch (e) { next(e); }
