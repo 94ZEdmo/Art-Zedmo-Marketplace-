@@ -72,13 +72,31 @@ const userSchema = new mongoose.Schema(
     totalOeuvres: { type: Number, default: 0, min: 0 },
     totalVentes: { type: Number, default: 0, min: 0 },
     totalVotesRecus: { type: Number, default: 0, min: 0 },
-    solde: { type: Number, default: 0, min: 0 }
+    solde: { type: Number, default: 0, min: 0 },
+
+    // =================================================
+    // FORFAITS ART-ZEDMO - GRATUIT / PRO / GALERIE PRIVEE
+    // =================================================
+    forfait: {
+      type: String,
+      enum: ['gratuit','pro','galerie_privee'],
+      default: 'gratuit'
+    },
+    forfaitExpireAt: { type: Date, default: null },
+    limiteOeuvres: { type: Number, default: 5 }, // 5 gratuit, 10 pro, 9999 galerie
+    limiteNFT: { type: Number, default: 3 }, // 3 NFT gratuit
+    forfaitPrixUSD: { type: Number, default: 0 }, // 0, 7, 50
+    forfaitPrixFCFA: { type: Number, default: 0 }, // 0, 4200, 30000
+    totalOeuvresPubliees: { type: Number, default: 0, min: 0 },
+    totalNFTPublies: { type: Number, default: 0, min: 0 }
   },
   { timestamps: true }
 );
 
 // ✅ Un seul index, pas de doublon
 userSchema.index({ email: 1 }, { unique: true, sparse: true });
+userSchema.index({ forfait: 1 });
+userSchema.index({ forfaitExpireAt: 1 });
 
 userSchema.set('toJSON', {
   transform: function (doc, ret) {
@@ -89,13 +107,64 @@ userSchema.set('toJSON', {
 });
 
 userSchema.pre('save', async function () {
-  if (!this.isModified('password')) return;
+  if (!this.isModified('password')) {
+    // LOGIQUE FORFAITS - AUTO-SET LIMITES
+    if (this.forfait === 'gratuit') {
+      this.limiteOeuvres = 5;
+      this.limiteNFT = 3;
+      this.forfaitPrixUSD = 0;
+      this.forfaitPrixFCFA = 0;
+    } else if (this.forfait === 'pro') {
+      this.limiteOeuvres = 10;
+      this.limiteNFT = 10;
+      this.forfaitPrixUSD = 7;
+      this.forfaitPrixFCFA = 4200;
+    } else if (this.forfait === 'galerie_privee') {
+      this.limiteOeuvres = 9999; // illimité, 50 minimum autorisé mais pas bloqué
+      this.limiteNFT = 9999;
+      this.forfaitPrixUSD = 50;
+      this.forfaitPrixFCFA = 30000;
+    }
+
+    // AUTO-EXPIRE FORFAIT -> retour gratuit
+    if (this.forfaitExpireAt && this.forfaitExpireAt < new Date() && this.forfait !== 'gratuit') {
+      this.forfait = 'gratuit';
+      this.limiteOeuvres = 5;
+      this.limiteNFT = 3;
+    }
+    return;
+  }
   this.password = await bcrypt.hash(this.password, 12);
+
+  // LOGIQUE FORFAITS - AUTO-SET LIMITES (si password modifié aussi)
+  if (this.forfait === 'gratuit') {
+    this.limiteOeuvres = 5;
+    this.limiteNFT = 3;
+    this.forfaitPrixUSD = 0;
+    this.forfaitPrixFCFA = 0;
+  } else if (this.forfait === 'pro') {
+    this.limiteOeuvres = 10;
+    this.limiteNFT = 10;
+    this.forfaitPrixUSD = 7;
+    this.forfaitPrixFCFA = 4200;
+  } else if (this.forfait === 'galerie_privee') {
+    this.limiteOeuvres = 9999;
+    this.limiteNFT = 9999;
+    this.forfaitPrixUSD = 50;
+    this.forfaitPrixFCFA = 30000;
+  }
 });
 
 userSchema.methods.comparePassword = async function (pwd) {
   if (typeof pwd !== 'string' || !this.password) return false;
   return bcrypt.compare(pwd, this.password);
+};
+
+userSchema.methods.peutPublier = function(isNFT = false) {
+  if (isNFT) {
+    return this.totalNFTPublies < this.limiteNFT;
+  }
+  return this.totalOeuvresPubliees < this.limiteOeuvres;
 };
 
 const User = mongoose.models.User || mongoose.model('User', userSchema);
