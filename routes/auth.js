@@ -63,7 +63,7 @@ async function requireAdmin(req, res, next) {
   } catch (error) { next(error); }
 }
 
-// ✅ CORRIGÉ - On ajoute adresseReception
+// ✅ CORRIGÉ - On ajoute adresseReception + FORFAITS
 function publicUser(user) {
   return {
     _id: user._id, 
@@ -80,7 +80,16 @@ function publicUser(user) {
     totalOeuvres: user.totalOeuvres, 
     totalVentes: user.totalVentes,
     totalVotesRecus: user.totalVotesRecus, 
-    adresseReception: user.adresseReception, // ✅ C'ÉTAIT ÇA QUI MANQUAIT
+    adresseReception: user.adresseReception,
+    // FORFAITS
+    forfait: user.forfait || 'gratuit',
+    limiteOeuvres: user.limiteOeuvres ?? 5,
+    limiteNFT: user.limiteNFT ?? 3,
+    forfaitExpireAt: user.forfaitExpireAt || null,
+    forfaitPrixUSD: user.forfaitPrixUSD ?? 0,
+    forfaitPrixFCFA: user.forfaitPrixFCFA ?? 0,
+    totalOeuvresPubliees: user.totalOeuvresPubliees ?? 0,
+    totalNFTPublies: user.totalNFTPublies ?? 0,
     createdAt: user.createdAt
   };
 }
@@ -125,7 +134,12 @@ router.post('/register', async (req, res, next) => {
       role: roleAutorise, 
       adresseReception: adresseNettoyee,
       statut: 'en_attente', 
-      estVerifie: false 
+      estVerifie: false,
+      forfait: 'gratuit',
+      limiteOeuvres: 5,
+      limiteNFT: 3,
+      forfaitPrixUSD: 0,
+      forfaitPrixFCFA: 0
     });
     
     return res.status(201).json({ success: true, message: 'Inscription réussie. Votre compte attend la validation d’un administrateur.', user: publicUser(user) });
@@ -196,6 +210,51 @@ router.delete('/:id', authenticateToken, requireAdmin, async (req, res, next) =>
     await User.deleteOne({ _id: req.params.id });
     return res.json({ success: true, message: 'Compte supprimé.' });
   } catch (error) { next(error); }
+});
+
+// =================================================
+// FORFAITS ART-ZEDMO - TARIFS
+// =================================================
+router.get('/forfaits/list', async (req, res) => {
+  return res.json({
+    success: true,
+    forfaits: [
+      { id: 'gratuit', nom: 'Gratuit', prixUSD: 0, prixFCFA: 0, limiteOeuvres: 5, limiteNFT: 3, description: '5 œuvres + 3 NFT gratuits' },
+      { id: 'pro', nom: 'PRO', prixUSD: 7, prixFCFA: 4200, limiteOeuvres: 10, limiteNFT: 10, description: 'Jusqu’à 10 œuvres, 10 NFT' },
+      { id: 'galerie_privee', nom: 'Galerie Privée', prixUSD: 50, prixFCFA: 30000, limiteOeuvres: 9999, limiteNFT: 9999, description: '50 œuvres minimum, illimité, page privée. Achetable par tous même avec 0 œuvre' }
+    ]
+  });
+});
+
+// =================================================
+// ACHETER FORFAIT - 7 USD PRO / 50 USD GALERIE PRIVEE
+// =================================================
+router.post('/forfait/acheter', authenticateToken, async (req, res, next) => {
+  try {
+    const { forfait } = req.body;
+    if (!['pro','galerie_privee'].includes(forfait)) return res.status(400).json({ error: 'Forfait invalide. Choisis pro ou galerie_privee' });
+    const user = await User.findById(req.auth.id);
+    if (!user) return res.status(404).json({ error: 'Utilisateur introuvable.' });
+    
+    if (forfait === 'pro') {
+      user.forfait = 'pro';
+      user.limiteOeuvres = 10;
+      user.limiteNFT = 10;
+      user.forfaitPrixUSD = 7;
+      user.forfaitPrixFCFA = 4200;
+      user.forfaitExpireAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+    } else if (forfait === 'galerie_privee') {
+      // GALERIE PRIVEE achetable par tous même si 0 œuvre
+      user.forfait = 'galerie_privee';
+      user.limiteOeuvres = 9999;
+      user.limiteNFT = 9999;
+      user.forfaitPrixUSD = 50;
+      user.forfaitPrixFCFA = 30000;
+      user.forfaitExpireAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+    }
+    await user.save();
+    return res.json({ success: true, message: `Forfait ${forfait} activé. ${forfait === 'pro' ? '10 œuvres pour 7 USD (4.200 FCFA)' : 'Illimité 50+ œuvres pour 50 USD (30.000 FCFA)'}`, user: publicUser(user) });
+  } catch (e) { next(e); }
 });
 
 export default router;
