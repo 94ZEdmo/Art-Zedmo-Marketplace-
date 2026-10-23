@@ -97,6 +97,22 @@ const artworkSchema = new mongoose.Schema(
     prixVendu: { type: Number, min: 0 },
     acheteur: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
 
+    // =================================================
+    // COMMISSION ART-ZEDMO - 15% GALERIE / 20% ENCHERE
+    // =================================================
+    typeVente: { type: String, enum: ['galerie','enchere'], default: 'galerie' },
+    commissionRate: { type: Number, default: 15 },
+    montantCommission: { type: Number, min: 0, default: 0 },
+    montantArtiste: { type: Number, min: 0, default: 0 },
+
+    // =================================================
+    // BOOST 48H - 2 USD = 1200 FCFA
+    // =================================================
+    isBoosted: { type: Boolean, default: false },
+    boostExpireAt: { type: Date, default: null },
+    boostPrixUSD: { type: Number, default: 2 },
+    boostPrixFCFA: { type: Number, default: 1200 },
+
     statutPaiement: {
       type: String,
       enum: ['aucun','preuve_envoyee','verifie','paye_fedapay','paye_crypto','paye_mobile','annule'],
@@ -127,6 +143,8 @@ artworkSchema.index({ isEnExpoActuelle: 1 });
 artworkSchema.index({ isNFT: 1, blockchainMinted: 1 });
 artworkSchema.index({ statutPaiement: 1 });
 artworkSchema.index({ ipfsHash: 1 });
+artworkSchema.index({ isBoosted: -1, boostExpireAt: 1 });
+artworkSchema.index({ typeVente: 1 });
 
 artworkSchema.pre('validate', function () {
   if (Array.isArray(this.images) && this.images.length > 0) {
@@ -152,6 +170,22 @@ artworkSchema.pre('validate', function () {
   // Certificat ID auto
   if(!this.certifId && this.azmId){
     this.certifId = this.azmId.replace('AZM','AZC');
+  }
+
+  // AUTO-CALCUL COMMISSION
+  if (this.prixVendu) {
+    if (this.typeVente === 'enchere') {
+      this.commissionRate = 20;
+    } else {
+      this.commissionRate = 15;
+    }
+    this.montantCommission = (this.prixVendu * this.commissionRate) / 100;
+    this.montantArtiste = this.prixVendu - this.montantCommission;
+  }
+
+  // AUTO-EXPIRE BOOST
+  if (this.isBoosted && this.boostExpireAt && this.boostExpireAt < new Date()) {
+    this.isBoosted = false;
   }
 });
 
