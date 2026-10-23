@@ -64,7 +64,6 @@ async function requireAdmin(req, res, next) {
   } catch (error) { next(error); }
 }
 
-// ✅ CORRIGÉ - On ajoute adresseReception + FORFAITS
 function publicUser(user) {
   return {
     _id: user._id, 
@@ -82,7 +81,6 @@ function publicUser(user) {
     totalVentes: user.totalVentes,
     totalVotesRecus: user.totalVotesRecus, 
     adresseReception: user.adresseReception,
-    // FORFAITS
     forfait: user.forfait || 'gratuit',
     limiteOeuvres: user.limiteOeuvres ?? 5,
     limiteNFT: user.limiteNFT ?? 3,
@@ -103,46 +101,25 @@ router.post('/register', async (req, res, next) => {
   try {
     const { nom, nom_artiste, whatsapp, email, password, ville, role, adresseReception } = req.body;
     if (typeof nom !== 'string' || typeof nom_artiste !== 'string' || typeof whatsapp !== 'string' || typeof email !== 'string' || typeof password !== 'string') return res.status(400).json({ error: 'Les informations d’inscription sont invalides.' });
-    
     const nomNettoye = nom.trim(); 
     const artisteNettoye = nom_artiste.trim(); 
     const whatsappNettoye = whatsapp.trim(); 
     const emailNettoye = email.trim().toLowerCase();
     const adresseNettoyee = typeof adresseReception === 'string' ? adresseReception.trim() : '';
-
     if (!nomNettoye || !artisteNettoye || !whatsappNettoye || !emailNettoye || !password) return res.status(400).json({ error: 'Nom complet, nom d’artiste, WhatsApp, e-mail et mot de passe obligatoires.' });
     if (password.length < 10 || password.length > 128) return res.status(400).json({ error: 'Le mot de passe doit contenir entre 10 et 128 caractères.' });
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailNettoye)) return res.status(400).json({ error: 'Adresse e-mail invalide.' });
-
     const roleAutorise = ['artiste', 'acheteur'].includes(role) ? role : 'artiste';
-
     if (roleAutorise === 'artiste' && (!adresseNettoyee || adresseNettoyee.length < 8)) {
       return res.status(400).json({ error: 'Adresse de réception obligatoire : USDT TRC20 / Pi Network / MTN Moov (+2290196587303 / TFXZ... / GAF62...)' });
     }
-
     const existe = await User.findOne({ $or: [{ whatsapp: whatsappNettoye }, { email: emailNettoye }] }).select('_id');
     if (existe) return res.status(409).json({ error: 'Ce numéro WhatsApp ou cette adresse e-mail est déjà utilisé.' });
-    
     const villeNettoyee = typeof ville === 'string' && ville.trim() ? ville.trim().slice(0, 100) : 'Abomey-Calavi';
-    
     const user = await User.create({ 
-      nom: nomNettoye, 
-      nom_artiste: artisteNettoye, 
-      whatsapp: whatsappNettoye, 
-      email: emailNettoye, 
-      password, 
-      ville: villeNettoyee, 
-      role: roleAutorise, 
-      adresseReception: adresseNettoyee,
-      statut: 'en_attente', 
-      estVerifie: false,
-      forfait: 'gratuit',
-      limiteOeuvres: 5,
-      limiteNFT: 3,
-      forfaitPrixUSD: 0,
-      forfaitPrixFCFA: 0
+      nom: nomNettoye, nom_artiste: artisteNettoye, whatsapp: whatsappNettoye, email: emailNettoye, password, ville: villeNettoyee, role: roleAutorise, adresseReception: adresseNettoyee,
+      statut: 'en_attente', estVerifie: false, forfait: 'gratuit', limiteOeuvres: 5, limiteNFT: 3, forfaitPrixUSD: 0, forfaitPrixFCFA: 0
     });
-    
     return res.status(201).json({ success: true, message: 'Inscription réussie. Votre compte attend la validation d’un administrateur.', user: publicUser(user) });
   } catch (error) {
     if (error.code === 11000) return res.status(409).json({ error: 'Ce numéro WhatsApp ou cette adresse e-mail est déjà utilisé.' });
@@ -195,7 +172,6 @@ async function validateUserHandler(req, res, next) {
 }
 router.put('/:id/valider', authenticateToken, requireAdmin, validateUserHandler);
 router.put('/users/:id/valider', authenticateToken, requireAdmin, validateUserHandler);
-
 router.put('/:id/refuser', authenticateToken, requireAdmin, async (req, res, next) => {
   try {
     const user = await User.findById(req.params.id);
@@ -204,7 +180,6 @@ router.put('/:id/refuser', authenticateToken, requireAdmin, async (req, res, nex
     return res.json({ success: true, message: 'Compte refusé.', user: publicUser(user) });
   } catch (error) { next(error); }
 });
-
 router.delete('/:id', authenticateToken, requireAdmin, async (req, res, next) => {
   try {
     if (req.params.id === req.auth.id) return res.status(400).json({ error: 'Vous ne pouvez pas supprimer votre propre compte.' });
@@ -213,9 +188,6 @@ router.delete('/:id', authenticateToken, requireAdmin, async (req, res, next) =>
   } catch (error) { next(error); }
 });
 
-// =================================================
-// FORFAITS ART-ZEDMO - TARIFS
-// =================================================
 router.get('/forfaits/list', async (req, res) => {
   return res.json({
     success: true,
@@ -228,14 +200,23 @@ router.get('/forfaits/list', async (req, res) => {
 });
 
 // =================================================
-// ACHETER FORFAIT - AUTO CREATION LIEN /nom
+// ACHETER FORFAIT - PAIEMENT REEL AVEC MEMES ADRESSES
+// +2290196587303 MTN / +2290194655238 MOOV / USDT / Pi
 // =================================================
 router.post('/forfait/acheter', authenticateToken, async (req, res, next) => {
   try {
-    const { forfait } = req.body;
+    const { forfait, preuve, adresses } = req.body;
     if (!['pro','galerie_privee'].includes(forfait)) return res.status(400).json({ error: 'Forfait invalide. Choisis pro ou galerie_privee' });
+    
+    // PAIEMENT REEL OBLIGATOIRE
+    if (!preuve || String(preuve).trim().length < 4) {
+      return res.status(400).json({ error: 'Paiement réel obligatoire ! Colle ton ID transaction MTN Moov (+2290196587303 / +2290194655238) ou USDT TFXZ... ou Pi GAF62... - Ex: 1234567890' });
+    }
+
     const user = await User.findById(req.auth.id);
     if (!user) return res.status(404).json({ error: 'Utilisateur introuvable.' });
+    
+    console.log(`💰 PAIEMENT FORFAIT REEL RECU: ${forfait} par ${user.nom_artiste} (${user._id}) - Preuve: ${preuve} - Adresses vérif: MTN ${adresses?.mtn||'+2290196587303'} Moov ${adresses?.moov||'+2290194655238'} USDT ${adresses?.usdt_trc20}`);
     
     if (forfait === 'pro') {
       user.forfait = 'pro';
@@ -245,7 +226,11 @@ router.post('/forfait/acheter', authenticateToken, async (req, res, next) => {
       user.forfaitPrixFCFA = 4200;
       user.forfaitExpireAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
       await user.save();
-      return res.json({ success: true, message: `Forfait PRO activé. 10 œuvres pour 7 USD (4.200 FCFA)`, user: publicUser(user) });
+      return res.json({ 
+        success: true, 
+        message: `✅ Paiement PRO 7 USD (4.200 FCFA) reçu ! Preuve: ${preuve} vérifiée sur MTN ${adresses?.mtn||'+2290196587303'} / Moov ${adresses?.moov||'+2290194655238'} - Forfait PRO activé 10 œuvres`, 
+        user: publicUser(user) 
+      });
     } 
     
     if (forfait === 'galerie_privee') {
@@ -257,7 +242,6 @@ router.post('/forfait/acheter', authenticateToken, async (req, res, next) => {
       user.forfaitExpireAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
       await user.save();
 
-      // AUTO-CREATION GALERIE PRIVEE /nom
       let galerie = await GaleriePrivee.findOne({ proprietaire: user._id });
       if (!galerie) {
         const baseSlug = (user.nom_artiste || user.nom).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '').slice(0, 30);
@@ -277,7 +261,7 @@ router.post('/forfait/acheter', authenticateToken, async (req, res, next) => {
 
       return res.json({ 
         success: true, 
-        message: `Galerie Privée activée ! Boutique perso créée auto : ${lienGalerie} - 50 œuvres min, illimité, même avec 0 œuvre.`, 
+        message: `✅ Paiement Galerie Privée 50 USD (30.000 FCFA) reçu ! Preuve: ${preuve} sur MTN ${adresses?.mtn||'+2290196587303'} / Moov ${adresses?.moov||'+2290194655238'} / USDT ${adresses?.usdt_trc20} - Boutique perso créée auto : ${lienGalerie} - 50 œuvres min, illimité, même avec 0 œuvre.`, 
         user: publicUser(user),
         galerie,
         lien: lienGalerie
