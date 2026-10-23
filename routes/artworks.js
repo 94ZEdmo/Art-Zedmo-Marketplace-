@@ -61,12 +61,13 @@ async function getNextAZM() {
 }
 function escapeRegex(v) { return v.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
 
-// ✅ CORRIGÉ : SUPPRIMÉ POLYGON/PI, NOUVEAU NUMÉRO
+// ✅ CORRIGÉ - MEMES ADRESSES REALES QUE FORFAIT
 const ADRESSES = {
   usdt_trc20: 'TFXZSyJaC6mdCva8kAJBMMvKYhyhpzpHn2',
+  pi: 'GAF62KXAV7IUM3HSHQ3TI6EFMIDSGII2EVEZXFTXGMH5D2EDPA6RVAM',
   mtn: '+2290196587303',
-  moov: '+2290196587303',
-  whatsapp: '2290196587303'
+  moov: '+2290194655238',
+  whatsapp: '2290194655238'
 };
 
 function publicArtworkQuery() { return { statut: { $nin: ['en_attente', 'rejetee'] } }; }
@@ -131,7 +132,7 @@ router.get('/:id', async (req, res, next) => {
 });
 router.post('/', authenticateToken, async (req, res, next) => {
   try {
-    const { titre, description, prix, images, image, categorie, ville, isNFT, blockchain, ipfsHash, imageIPFS, dimensions, technique } = req.body;
+    const { titre, description, prix, images, image, categorie, ville, isNFT, ipfsHash, imageIPFS, dimensions, technique } = req.body;
     if (typeof titre !== 'string' || !titre.trim()) return res.status(400).json({ error: 'Titre obligatoire.' });
     const prixNumber = Number(prix); if (!Number.isFinite(prixNumber) || prixNumber < 0) return res.status(400).json({ error: 'Prix invalide.' });
     if (titre.trim().length > 200) return res.status(400).json({ error: 'Titre trop long.' });
@@ -139,10 +140,6 @@ router.post('/', authenticateToken, async (req, res, next) => {
     const categorieFinale = categoriesAutorisees.includes(categorie) ? categorie : 'Autre';
     let listeImages = []; if (Array.isArray(images)) listeImages = images; else if (typeof image === 'string' && image.trim()) listeImages = [image.trim()];
     if (listeImages.length > 10 || listeImages.some(i => typeof i !== 'string' || i.length > 2048)) return res.status(400).json({ error: 'Images invalides.' });
-    
-    // =================================================
-    // BLOCAGE FORFAIT - GRATUIT 5 + 3 NFT / PRO 10 / GALERIE PRIVEE ILLIMITE
-    // =================================================
     const userFull = await User.findById(req.user._id);
     const isNFTFinalCheck = Boolean(isNFT) || String(categorieFinale).toLowerCase() === 'nft';
     if (isNFTFinalCheck) {
@@ -154,21 +151,14 @@ router.post('/', authenticateToken, async (req, res, next) => {
         return res.status(403).json({ error: `Limite œuvres atteinte (${userFull.limiteOeuvres}). Passe en ${userFull.forfait === 'gratuit' ? 'PRO à 7 USD (4.200 FCFA)' : 'GALERIE PRIVEE à 50 USD (30.000 FCFA)'}.`, forfait: userFull.forfait, limite: userFull.limiteOeuvres });
       }
     }
-
     const azmId = await getNextAZM();
     const isNFTFinal = Boolean(isNFT) || String(categorieFinale).toLowerCase() === 'nft';
-    const blockchainFinal = isNFTFinal ? 'polygon' : undefined;
     const artwork = await Artwork.create({
-      titre: titre.trim(), description: typeof description === 'string' ? description.trim().slice(0, 10000) : '', prix: prixNumber, images: listeImages, categorie: categorieFinale, ville: typeof ville === 'string' && ville.trim() ? ville.trim().slice(0, 100) : req.user.ville || 'Abomey-Calavi', artiste: req.user._id, statut: 'en_attente', azmId, certifId: azmId.replace('AZM','AZC'), dimensions: dimensions || '80 x 120 cm', technique: technique || categorieFinale, isNFT: isNFTFinal, blockchain: blockchainFinal, blockchainMinted: false, ipfsHash: ipfsHash || '', imageIPFS: imageIPFS || '', royalties: isNFTFinal ? { primaire: { artiste: 85, plateforme: 15 }, secondaire: { vendeur: 85, artiste: 10, plateforme: 5 } } : undefined, expositions: [], isEnExpoActuelle: false
+      titre: titre.trim(), description: typeof description === 'string' ? description.trim().slice(0, 10000) : '', prix: prixNumber, images: listeImages, categorie: categorieFinale, ville: typeof ville === 'string' && ville.trim() ? ville.trim().slice(0, 100) : req.user.ville || 'Abomey-Calavi', artiste: req.user._id, statut: 'en_attente', azmId, certifId: azmId.replace('AZM','AZC'), dimensions: dimensions || '80 x 120 cm', technique: technique || categorieFinale, isNFT: isNFTFinal, blockchain: isNFTFinal ? 'polygon' : undefined, blockchainMinted: false, ipfsHash: ipfsHash || '', imageIPFS: imageIPFS || '', expositions: [], isEnExpoActuelle: false
     });
-    // INCREMENT COMPTEUR FORFAIT
-    if (isNFTFinal) {
-      await User.findByIdAndUpdate(req.user._id, { $inc: { totalOeuvres: 1, totalNFTPublies: 1 } });
-    } else {
-      await User.findByIdAndUpdate(req.user._id, { $inc: { totalOeuvres: 1, totalOeuvresPubliees: 1 } });
-    }
-    if(req.user.email){ sendEmail(req.user.email, `Œuvre reçue ${azmId}`, `<div style="font-family:Arial;padding:20px"><h3>Œuvre reçue</h3><p>Bonjour ${req.user.nom_artiste}, ton œuvre <b>${titre}</b> est en attente de validation.</p><p>Certificat: <b>${artwork.certifId}</b><br>IPFS: ${ipfsHash||'en cours'}</p></div>`); }
-    return res.status(201).json({ success: true, message: isNFTFinal ? 'NFT enregistré en galerie. Fixé IPFS, mint Polygon requis.' : 'Œuvre enregistrée pour validation.', artwork, azmId });
+    if (isNFTFinal) { await User.findByIdAndUpdate(req.user._id, { $inc: { totalOeuvres: 1, totalNFTPublies: 1 } }); } else { await User.findByIdAndUpdate(req.user._id, { $inc: { totalOeuvres: 1, totalOeuvresPubliees: 1 } }); }
+    if(req.user.email){ sendEmail(req.user.email, `Œuvre reçue ${azmId}`, `<div style="font-family:Arial;padding:20px"><h3>Œuvre reçue</h3><p>Bonjour ${req.user.nom_artiste}, ton œuvre <b>${titre}</b> est en attente.</p></div>`); }
+    return res.status(201).json({ success: true, artwork, azmId });
   } catch (e) { next(e); }
 });
 router.put('/:id/valider', authenticateToken, requireAdmin, async (req, res, next) => {
@@ -178,9 +168,8 @@ router.put('/:id/valider', authenticateToken, requireAdmin, async (req, res, nex
     const artwork = await Artwork.findById(req.params.id).populate('artiste'); if (!artwork) return res.status(404).json({ error: 'Non trouvée.' });
     if (artwork.statut !== 'en_attente') return res.status(409).json({ error: 'Déjà traitée.' });
     artwork.statut = statut;
-    if(statut==='validee' && artwork.isNFT){ artwork.blockchain = 'polygon'; artwork.blockchainMinted = true; artwork.tokenId = `POL-${artwork.azmId}-${Date.now()}`; artwork.contractAddress = process.env.POLYGON_CONTRACT || '0xZEDMO_CONTRACT'; }
+    if(statut==='validee' && artwork.isNFT){ artwork.blockchain = 'polygon'; artwork.blockchainMinted = true; artwork.tokenId = `POL-${artwork.azmId}-${Date.now()}`; }
     await artwork.save();
-    if(statut==='validee' && artwork.artiste?.email){ sendEmail(artwork.artiste.email, `Œuvre validée ${artwork.azmId}`, `<div style="font-family:Arial;padding:20px"><h2>Félicitations !</h2><p>Ton œuvre <b>${artwork.titre}</b> est validée.</p><p>Certificat: ${artwork.certifId}</p><p>WhatsApp: +2290196587303</p></div>`); }
     return res.json({ success: true, artwork });
   } catch (e) { next(e); }
 });
@@ -204,12 +193,7 @@ router.delete('/:id', authenticateToken, async (req, res, next) => {
     if (!isOwner && !isAdmin) return res.status(403).json({ error: 'Non autorisé.' });
     if (artwork.statut === 'vendue') return res.status(409).json({ error: 'Vendue, suppression impossible.' });
     await Artwork.deleteOne({ _id: artwork._id }); 
-    // DECREMENT FORFAIT
-    if (artwork.isNFT) {
-      await User.findByIdAndUpdate(artwork.artiste, { $inc: { totalOeuvres: -1, totalNFTPublies: -1 } });
-    } else {
-      await User.findByIdAndUpdate(artwork.artiste, { $inc: { totalOeuvres: -1, totalOeuvresPubliees: -1 } });
-    }
+    if (artwork.isNFT) { await User.findByIdAndUpdate(artwork.artiste, { $inc: { totalOeuvres: -1, totalNFTPublies: -1 } }); } else { await User.findByIdAndUpdate(artwork.artiste, { $inc: { totalOeuvres: -1, totalOeuvresPubliees: -1 } }); }
     return res.json({ success: true, message: 'Supprimée.' });
   } catch (e) { next(e); }
 });
@@ -222,33 +206,46 @@ router.post('/:id/preuve-paiement', authenticateToken, async (req, res, next) =>
     artwork.preuvesPaiement = artwork.preuvesPaiement || [];
     artwork.preuvesPaiement.push({ user: req.user._id, preuve: preuve.trim().slice(0, 2000), method: method || 'manual', adressesUtilisees: ADRESSES, date: new Date() });
     artwork.statutPaiement = 'preuve_envoyee'; await artwork.save();
-    if(process.env.ADMIN_EMAIL){ sendEmail(process.env.ADMIN_EMAIL, `Preuve paiement ${artwork.azmId}`, `<p>Preuve de ${req.user.nom} pour ${artwork.titre}: ${preuve}. Vérifier sur ${ADRESSES.mtn} / ${ADRESSES.moov} / ${ADRESSES.usdt_trc20} et valider. WhatsApp ${ADRESSES.whatsapp}</p>`); }
-    return res.json({ success: true, message: `Preuve reçue. Admin va vérifier sur ${ADRESSES.mtn} / ${ADRESSES.moov} / ${ADRESSES.usdt_trc20} et valider. WhatsApp ${ADRESSES.whatsapp}`, artwork });
+    return res.json({ success: true, message: `Preuve reçue. Admin va vérifier sur MTN ${ADRESSES.mtn} / Moov ${ADRESSES.moov} / USDT ${ADRESSES.usdt_trc20} / Pi ${ADRESSES.pi} et valider. WhatsApp ${ADRESSES.whatsapp}`, artwork });
   } catch (e) { next(e); }
 });
 
 // =================================================
-// BOOST 48H - 2 USD = 1200 FCFA
+// BOOST 48H - PAIEMENT REEL 2 USD = 1200 FCFA
+// MEMES ADRESSES QUE FORFAIT
 // =================================================
 router.post('/:id/boost', authenticateToken, async (req, res, next) => {
   try {
     if (!validObjectId(req.params.id)) return res.status(400).json({ error: 'ID invalide.' });
+    const { preuve, adresses } = req.body;
+    
+    // PAIEMENT REEL OBLIGATOIRE POUR BOOST
+    if (!preuve || String(preuve).trim().length < 3) {
+      return res.status(400).json({ error: `Paiement réel boost 1.200F obligatoire ! Paye sur MTN ${ADRESSES.mtn} / Moov ${ADRESSES.moov} / USDT ${ADRESSES.usdt_trc20} / Pi ${ADRESSES.pi} puis colle TxID` });
+    }
+
     const artwork = await Artwork.findById(req.params.id);
     if (!artwork) return res.status(404).json({ error: 'Œuvre non trouvée.' });
     if (artwork.artiste.toString() !== req.user._id.toString() && req.user.role !== 'admin') return res.status(403).json({ error: 'Non autorisé.' });
-    // 2 USD = 1200 FCFA pour 48h
+    
+    console.log(`🚀 BOOST REEL PAYE: ${artwork.titre} par ${req.user.nom_artiste} - Preuve: ${preuve} - MTN:${adresses?.mtn||ADRESSES.mtn} Moov:${adresses?.moov||ADRESSES.moov} USDT:${ADRESSES.usdt_trc20}`);
+
     artwork.isBoosted = true;
     artwork.boostExpireAt = new Date(Date.now() + 48 * 60 * 60 * 1000);
     artwork.boostPrixUSD = 2;
     artwork.boostPrixFCFA = 1200;
+    artwork.boostPreuve = preuve;
+    artwork.boostAdresses = adresses || ADRESSES;
     await artwork.save();
-    return res.json({ success: true, message: 'Boost activé 48h pour 2 USD (1.200 FCFA). Œuvre remontée en haut.', artwork });
+    
+    return res.json({ 
+      success: true, 
+      message: `✅ Boost 48h activé après paiement réel ${preuve} (2 USD = 1.200 FCFA) sur MTN ${ADRESSES.mtn} / Moov ${ADRESSES.moov} / USDT. Œuvre remontée en haut avec badge 🔥`, 
+      artwork 
+    });
   } catch (e) { next(e); }
 });
 
-// =================================================
-// COMMISSION - VENTE 15% GALERIE / 20% ENCHERE
-// =================================================
 router.post('/:id/vendre', authenticateToken, requireAdmin, async (req, res, next) => {
   try {
     if (!validObjectId(req.params.id)) return res.status(400).json({ error: 'ID invalide.' });
@@ -271,9 +268,8 @@ router.post('/:id/vendre', authenticateToken, requireAdmin, async (req, res, nex
     artwork.dateVente = new Date();
     if (acheteurId && validObjectId(acheteurId)) artwork.acheteur = acheteurId;
     await artwork.save();
-    // Crédit solde artiste
     await User.findByIdAndUpdate(artwork.artiste._id, { $inc: { solde: pourArtiste, totalVentes: 1 } });
-    return res.json({ success: true, message: `Vendue ${type} ${rate}%. Commission ${commission} pour Art-Zedmo, ${pourArtiste} pour l'artiste.`, artwork, commission: { rate, commission, pourArtiste } });
+    return res.json({ success: true, message: `Vendue ${type} ${rate}%. Commission ${commission} pour Art-Zedmo, ${pourArtiste} pour l'artiste.`, artwork });
   } catch (e) { next(e); }
 });
 
