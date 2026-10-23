@@ -40,7 +40,7 @@ async function authenticateToken(req, res, next) {
     let decoded;
     try { decoded = jwt.verify(token, JWT_SECRET, { algorithms: ['HS256'] }); } catch { return res.status(401).json({ error: 'Jeton invalide ou expiré.' }); }
     if (!decoded.id || !mongoose.Types.ObjectId.isValid(decoded.id)) return res.status(401).json({ error: 'Identifiant invalide.' });
-    const user = await User.findById(decoded.id).select('_id nom nom_artiste role statut email ville adresseReception');
+    const user = await User.findById(decoded.id).select('_id nom nom_artiste role statut email ville adresseReception forfait limiteOeuvres limiteNFT forfaitExpireAt totalOeuvresPubliees totalNFTPublies');
     if (!user) return res.status(401).json({ error: 'Utilisateur introuvable.' });
     if (user.statut !== 'valide') return res.status(403).json({ error: 'Compte non autorisé.' });
     req.user = user; req.auth = decoded; next();
@@ -79,8 +79,8 @@ router.get('/', async (req, res, next) => {
     const filter = publicArtworkQuery();
     if (search) { const terme = String(search).trim().slice(0, 100); if (terme) filter.titre = { $regex: escapeRegex(terme), $options: 'i' }; }
     if (categorie && categorie !== 'Tous') { if (categorie.toLowerCase() === 'nft') filter.isNFT = true; else filter.categorie = String(categorie).slice(0, 100); }
-    let sort = { createdAt: -1 };
-    if (tri === 'populaire') sort = { votesCount: -1, createdAt: -1 }; else if (tri === 'prix') sort = { prix: 1, createdAt: -1 }; else if (tri === 'prix_desc') sort = { prix: -1, createdAt: -1 };
+    let sort = { isBoosted: -1, boostExpireAt: -1, createdAt: -1 };
+    if (tri === 'populaire') sort = { isBoosted: -1, votesCount: -1, createdAt: -1 }; else if (tri === 'prix') sort = { isBoosted: -1, prix: 1, createdAt: -1 }; else if (tri === 'prix_desc') sort = { isBoosted: -1, prix: -1, createdAt: -1 };
     const [arts, total] = await Promise.all([ Artwork.find(filter).populate('artiste', 'nom nom_artiste ville').populate('expositions', 'titre statut').sort(sort).skip((pageNumber - 1) * limitNumber).limit(limitNumber), Artwork.countDocuments(filter) ]);
     return res.json({ success: true, total, page: pageNumber, limit: limitNumber, pages: Math.ceil(total / limitNumber), artworks: arts });
   } catch (error) { next(error); }
@@ -139,13 +139,34 @@ router.post('/', authenticateToken, async (req, res, next) => {
     const categorieFinale = categoriesAutorisees.includes(categorie) ? categorie : 'Autre';
     let listeImages = []; if (Array.isArray(images)) listeImages = images; else if (typeof image === 'string' && image.trim()) listeImages = [image.trim()];
     if (listeImages.length > 10 || listeImages.some(i => typeof i !== 'string' || i.length > 2048)) return res.status(400).json({ error: 'Images invalides.' });
+    
+    // =================================================
+    // BLOCAGE FORFAIT - GRATUIT 5 + 3 NFT / PRO 10 / GALERIE PRIVEE ILLIMITE
+    // =================================================
+    const userFull = await User.findById(req.user._id);
+    const isNFTFinalCheck = Boolean(isNFT) || String(categorieFinale).toLowerCase() === 'nft';
+    if (isNFTFinalCheck) {
+      if (userFull.totalNFTPublies >= userFull.limiteNFT) {
+        return res.status(403).json({ error: `Limite NFT atteinte (${userFull.limiteNFT}). Passe en ${userFull.forfait === 'gratuit' ? 'PRO à 7 USD (4.200 FCFA)' : 'GALERIE PRIVEE à 50 USD (30.000 FCFA)'}.`, forfait: userFull.forfait, limite: userFull.limiteNFT });
+      }
+    } else {
+      if (userFull.totalOeuvresPubliees >= userFull.limiteOeuvres) {
+        return res.status(403).json({ error: `Limite œuvres atteinte (${userFull.limiteOeuvres}). Passe en ${userFull.forfait === 'gratuit' ? 'PRO à 7 USD (4.200 FCFA)' : 'GALERIE PRIVEE à 50 USD (30.000 FCFA)'}.`, forfait: userFull.forfait, limite: userFull.limiteOeuvres });
+      }
+    }
+
     const azmId = await getNextAZM();
     const isNFTFinal = Boolean(isNFT) || String(categorieFinale).toLowerCase() === 'nft';
     const blockchainFinal = isNFTFinal ? 'polygon' : undefined;
     const artwork = await Artwork.create({
       titre: titre.trim(), description: typeof description === 'string' ? description.trim().slice(0, 10000) : '', prix: prixNumber, images: listeImages, categorie: categorieFinale, ville: typeof ville === 'string' && ville.trim() ? ville.trim().slice(0, 100) : req.user.ville || 'Abomey-Calavi', artiste: req.user._id, statut: 'en_attente', azmId, certifId: azmId.replace('AZM','AZC'), dimensions: dimensions || '80 x 120 cm', technique: technique || categorieFinale, isNFT: isNFTFinal, blockchain: blockchainFinal, blockchainMinted: false, ipfsHash: ipfsHash || '', imageIPFS: imageIPFS || '', royalties: isNFTFinal ? { primaire: { artiste: 85, plateforme: 15 }, secondaire: { vendeur: 85, artiste: 10, plateforme: 5 } } : undefined, expositions: [], isEnExpoActuelle: false
     });
-    await User.findByIdAndUpdate(req.user._id, { $inc: { totalOeuvres: 1 } });
+    // INCREMENT COMPTEUR FORFAIT
+    if (isNFTFinal) {
+      await User.findByIdAndUpdate(req.user._id, { $inc: { totalOeuvres: 1, totalNFTPublies: 1 } });
+    } else {
+      await User.findByIdAndUpdate(req.user._id, { $inc: { totalOeuvres: 1, totalOeuvresPubliees: 1 } });
+    }
     if(req.user.email){ sendEmail(req.user.email, `Œuvre reçue ${azmId}`, `<div style="font-family:Arial;padding:20px"><h3>Œuvre reçue</h3><p>Bonjour ${req.user.nom_artiste}, ton œuvre <b>${titre}</b> est en attente de validation.</p><p>Certificat: <b>${artwork.certifId}</b><br>IPFS: ${ipfsHash||'en cours'}</p></div>`); }
     return res.status(201).json({ success: true, message: isNFTFinal ? 'NFT enregistré en galerie. Fixé IPFS, mint Polygon requis.' : 'Œuvre enregistrée pour validation.', artwork, azmId });
   } catch (e) { next(e); }
@@ -182,7 +203,13 @@ router.delete('/:id', authenticateToken, async (req, res, next) => {
     const isOwner = artwork.artiste.toString() === req.user._id.toString(); const isAdmin = req.user.role === 'admin';
     if (!isOwner && !isAdmin) return res.status(403).json({ error: 'Non autorisé.' });
     if (artwork.statut === 'vendue') return res.status(409).json({ error: 'Vendue, suppression impossible.' });
-    await Artwork.deleteOne({ _id: artwork._id }); await User.findByIdAndUpdate(artwork.artiste, { $inc: { totalOeuvres: -1 } });
+    await Artwork.deleteOne({ _id: artwork._id }); 
+    // DECREMENT FORFAIT
+    if (artwork.isNFT) {
+      await User.findByIdAndUpdate(artwork.artiste, { $inc: { totalOeuvres: -1, totalNFTPublies: -1 } });
+    } else {
+      await User.findByIdAndUpdate(artwork.artiste, { $inc: { totalOeuvres: -1, totalOeuvresPubliees: -1 } });
+    }
     return res.json({ success: true, message: 'Supprimée.' });
   } catch (e) { next(e); }
 });
@@ -199,5 +226,56 @@ router.post('/:id/preuve-paiement', authenticateToken, async (req, res, next) =>
     return res.json({ success: true, message: `Preuve reçue. Admin va vérifier sur ${ADRESSES.mtn} / ${ADRESSES.moov} / ${ADRESSES.usdt_trc20} et valider. WhatsApp ${ADRESSES.whatsapp}`, artwork });
   } catch (e) { next(e); }
 });
+
+// =================================================
+// BOOST 48H - 2 USD = 1200 FCFA
+// =================================================
+router.post('/:id/boost', authenticateToken, async (req, res, next) => {
+  try {
+    if (!validObjectId(req.params.id)) return res.status(400).json({ error: 'ID invalide.' });
+    const artwork = await Artwork.findById(req.params.id);
+    if (!artwork) return res.status(404).json({ error: 'Œuvre non trouvée.' });
+    if (artwork.artiste.toString() !== req.user._id.toString() && req.user.role !== 'admin') return res.status(403).json({ error: 'Non autorisé.' });
+    // 2 USD = 1200 FCFA pour 48h
+    artwork.isBoosted = true;
+    artwork.boostExpireAt = new Date(Date.now() + 48 * 60 * 60 * 1000);
+    artwork.boostPrixUSD = 2;
+    artwork.boostPrixFCFA = 1200;
+    await artwork.save();
+    return res.json({ success: true, message: 'Boost activé 48h pour 2 USD (1.200 FCFA). Œuvre remontée en haut.', artwork });
+  } catch (e) { next(e); }
+});
+
+// =================================================
+// COMMISSION - VENTE 15% GALERIE / 20% ENCHERE
+// =================================================
+router.post('/:id/vendre', authenticateToken, requireAdmin, async (req, res, next) => {
+  try {
+    if (!validObjectId(req.params.id)) return res.status(400).json({ error: 'ID invalide.' });
+    const { prixVendu, typeVente, acheteurId } = req.body;
+    const artwork = await Artwork.findById(req.params.id).populate('artiste');
+    if (!artwork) return res.status(404).json({ error: 'Œuvre non trouvée.' });
+    const montant = Number(prixVendu);
+    if (!Number.isFinite(montant) || montant <= 0) return res.status(400).json({ error: 'Prix vendu invalide.' });
+    const type = typeVente === 'enchere' ? 'enchere' : 'galerie';
+    const rate = type === 'enchere' ? 20 : 15;
+    const commission = (montant * rate) / 100;
+    const pourArtiste = montant - commission;
+    artwork.prixVendu = montant;
+    artwork.typeVente = type;
+    artwork.commissionRate = rate;
+    artwork.montantCommission = commission;
+    artwork.montantArtiste = pourArtiste;
+    artwork.statut = 'vendue';
+    artwork.statutPaiement = 'verifie';
+    artwork.dateVente = new Date();
+    if (acheteurId && validObjectId(acheteurId)) artwork.acheteur = acheteurId;
+    await artwork.save();
+    // Crédit solde artiste
+    await User.findByIdAndUpdate(artwork.artiste._id, { $inc: { solde: pourArtiste, totalVentes: 1 } });
+    return res.json({ success: true, message: `Vendue ${type} ${rate}%. Commission ${commission} pour Art-Zedmo, ${pourArtiste} pour l'artiste.`, artwork, commission: { rate, commission, pourArtiste } });
+  } catch (e) { next(e); }
+});
+
 router.post('/:id/vote', (req, res) => { return res.status(410).json({ error: 'Route désactivée, utilisez /api/votes.' }); });
 export default router;
