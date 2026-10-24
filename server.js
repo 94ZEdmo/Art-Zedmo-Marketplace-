@@ -77,18 +77,16 @@ app.post('/api/upload', authenticateToken, upload.single('image'), async (req, r
     const imageUrl = `https://gateway.pinata.cloud/ipfs/${cid}`;
     return res.status(201).json({ success: true, url: imageUrl, image: imageUrl, cid });
   } catch (e) {
-    const ext = '.jpg';
-    const filename = `${Date.now()}-${crypto.randomUUID()}${ext}`;
+    const filename = `${Date.now()}-${crypto.randomUUID()}.jpg`;
     fs.writeFileSync(path.join(uploadDir, filename), req.file.buffer);
     return res.status(201).json({ success: true, url: `/uploads/${filename}`, storage: 'local' });
   }
 });
 
-// STATIC - IMPORTANT: avant les routes API, mais avec index false
 app.use('/uploads', express.static(uploadDir));
 app.use(express.static(path.join(__dirname, 'public')));
 
-// API ROUTES
+// API ROUTES DE BASE
 app.use('/api/auth', authRoutes);
 app.use('/api/artworks', artworkRoutes);
 app.use('/api/expositions', expoRoutes);
@@ -97,10 +95,55 @@ app.use('/api/encheres', enchereRoutes);
 app.use('/api/annonces', annonceRoutes);
 app.use('/api/galeries-privees', galeriesPriveesRoutes);
 
-// ADRESSES OFFICIELLES
+// ================= FIX 404 FORFAITS - C'EST CA QUI MANQUAIT =================
+// Le front appelle /api/forfaits/acheter, on le branche sur la même logique que auth
+const UserModel = () => mongoose.model('User');
+
+async function acheterForfait(req,res,next){
+  try{
+    const { forfait, type, preuve, transactionId } = req.body;
+    const forfaitDemande = (forfait || type || '').toLowerCase();
+    const preuveFinal = (preuve || transactionId || '').toString().trim();
+    if (!['pro','galerie_privee'].includes(forfaitDemande)) return res.status(400).json({ error: 'Forfait invalide: pro ou galerie_privee' });
+    if (!preuveFinal || preuveFinal.length < 4) return res.status(400).json({ error: 'ID transaction obligatoire - min 4 caractères' });
+    const User = UserModel();
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ error: 'Utilisateur introuvable' });
+    user.forfaitTypeDemande = forfaitDemande;
+    user.forfaitStatut = 'en_attente';
+    user.forfaitPreuve = preuveFinal;
+    user.forfaitDateDemande = new Date();
+    await user.save();
+    console.log(`💰 FORFAIT EN ATTENTE: ${forfaitDemande} - ${user.nom_artiste} - ${preuveFinal}`);
+    return res.json({ success: true, message: `Forfait ${forfaitDemande} en attente admin - 1 mois après validation` });
+  }catch(e){ next(e) }
+}
+app.post('/api/forfaits/acheter', authenticateToken, acheterForfait);
+app.post('/api/forfait/acheter', authenticateToken, acheterForfait);
+app.post('/api/forfaits', authenticateToken, acheterForfait);
+
+app.get('/api/forfaits', authenticateToken, requireAdmin, async (req,res,next)=>{
+  try{
+    const User = UserModel();
+    const pending = await User.find({forfaitStatut:'en_attente'}).sort({updatedAt:-1}).lean();
+    const result = pending.map(u=>({
+      _id: u._id, user: u, userId: u._id, type: u.forfaitTypeDemande||u.forfait,
+      preuve: u.forfaitPreuve, statut: u.forfaitStatut, createdAt: u.updatedAt
+    }));
+    res.json(result);
+  }catch(e){next(e)}
+});
+app.get('/api/forfaits/admin/all', authenticateToken, requireAdmin, async (req,res,next)=>{
+  try{
+    const User = UserModel();
+    const pending = await User.find({forfaitStatut:'en_attente'}).lean();
+    res.json(pending.map(u=>({ _id: u._id, user: u, type: u.forfaitTypeDemande||u.forfait, preuve: u.forfaitPreuve, statut: u.forfaitStatut })));
+  }catch(e){next(e)}
+});
+// ============================================================================
+
 const ADRESSES_OFFICIELLES = {
-  momo: '+2290196587303',
-  moov: '+2290194655238',
+  momo: '+2290196587303', moov: '+2290194655238',
   usdt: 'TFXZSyJaC6mdCva8kAJBMMvKYhyhpzpHn2',
   pi: 'GAF62KXAV7IUM3H5HQ3T16EFMIDSGII2EVEZFXTXGMH5D2EDPA6RVAM'
 };
@@ -115,21 +158,18 @@ app.get('/api/settings/paiements', async (req,res,next)=>{
   }catch(e){next(e)}
 });
 
-// ADMIN HTML - FIXE TON PROBLEME DE LIEN
+// ADMIN - DOIT ETRE AVANT LE *
 app.get('/admin', (req,res)=>{ res.sendFile(path.join(__dirname, 'public', 'admin.html')); });
 app.get('/admin.html', (req,res)=>{ res.sendFile(path.join(__dirname, 'public', 'admin.html')); });
 
-// NFT / HEALTH etc...
 const nftSchema = new mongoose.Schema({ titre: String, description: String, azmId: { type: String, unique: true, sparse: true }, artiste: { type: mongoose.Schema.Types.ObjectId, ref: 'User' } }, { strict: false, timestamps: true });
 const NFT = mongoose.models.NFT || mongoose.model('NFT', nftSchema);
 app.get('/api/health', (req,res)=>{ res.json({ status: mongoose.connection.readyState===1?'LIVE':'DOWN' }); });
 app.get('/api/nft', async (req,res,next)=>{ try{ const nfts = await NFT.find().sort({createdAt:-1}).limit(100).lean(); res.json(nfts);}catch(e){next(e)} });
 
-// FRONT - TOUJOURS EN DERNIER, APRES ADMIN
+// FRONT EN DERNIER
 app.get('*', (req,res)=>{
-  // Si c'est /api, on ne sert pas index.html
-  if (req.path.startsWith('/api/')) return res.status(404).json({ error: 'Route introuvable.' });
-  // Sinon on sert l'app
+  if (req.path.startsWith('/api/')) return res.status(404).json({ error: 'Route introuvable: ' + req.path });
   const indexPath = path.join(__dirname, 'public', 'index.html');
   if (fs.existsSync(indexPath)) return res.sendFile(indexPath);
   return res.status(404).send('index.html manquant');
