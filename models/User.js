@@ -28,12 +28,19 @@ const userSchema = new mongoose.Schema(
     forfait: { type: String, enum: ['gratuit','pro','galerie_privee'], default: 'gratuit' },
     // === LES 4 CHAMPS QUI MANQUAIENT POUR ADMIN ===
     forfaitStatut: { type: String, enum: ['en_attente','valide','refuse', null], default: null },
-    forfaitPreuve: { type: String, default: null }, // ID MTN/Moov/USDT/Pi
+    forfaitPreuve: { type: String, default: null },
     forfaitTypeDemande: { type: String, enum: ['pro','galerie_privee', null], default: null },
     forfaitDateDemande: { type: Date, default: null },
+    // === AJOUT POUR DOUBLE FORFAIT SIMULTANE - PRO ET PRIVEE INDEPENDANTS ===
+    forfaitProStatut: { type: String, enum: ['gratuit','en_attente','valide','refuse'], default: 'gratuit' },
+    forfaitProExpire: { type: Date, default: null },
+    forfaitProPreuve: { type: String, default: null },
+    forfaitPriveeStatut: { type: String, enum: ['gratuit','en_attente','valide','refuse'], default: 'gratuit' },
+    forfaitPriveeExpire: { type: Date, default: null },
+    forfaitPriveePreuve: { type: String, default: null },
     // ==============================================
     forfaitExpireAt: { type: Date, default: null },
-    limiteOeuvres: { type: Number, default: 5 }, // 5 gratuit, 10 pro, 50 galerie_privee
+    limiteOeuvres: { type: Number, default: 5 },
     limiteNFT: { type: Number, default: 3 },
     forfaitPrixUSD: { type: Number, default: 0 },
     forfaitPrixFCFA: { type: Number, default: 0 },
@@ -46,6 +53,8 @@ const userSchema = new mongoose.Schema(
 userSchema.index({ email: 1 }, { unique: true, sparse: true });
 userSchema.index({ forfait: 1 });
 userSchema.index({ forfaitStatut: 1 });
+userSchema.index({ forfaitProStatut: 1 });
+userSchema.index({ forfaitPriveeStatut: 1 });
 userSchema.index({ forfaitExpireAt: 1 });
 
 userSchema.set('toJSON', {
@@ -58,19 +67,49 @@ userSchema.set('toJSON', {
 
 userSchema.pre('save', async function () {
   if (!this.isModified('password')) {
-    if (this.forfait === 'gratuit') {
-      if (this.forfaitStatut !== 'en_attente') { this.limiteOeuvres = 5; this.limiteNFT = 3; }
-      this.forfaitPrixUSD = 0; this.forfaitPrixFCFA = 0;
-    } else if (this.forfait === 'pro') {
-      // Ne change limite que si validé, pas en attente
-      if (this.forfaitStatut === 'valide') { this.limiteOeuvres = 10; this.limiteNFT = 10; }
-      this.forfaitPrixUSD = 7; this.forfaitPrixFCFA = 4200;
-    } else if (this.forfait === 'galerie_privee') {
-      if (this.forfaitStatut === 'valide') { this.limiteOeuvres = 50; this.limiteNFT = 50; }
-      this.forfaitPrixUSD = 50; this.forfaitPrixFCFA = 30000;
+    const now = new Date();
+    // Expiration indépendante PRO / PRIVEE
+    if (this.forfaitProExpire && this.forfaitProExpire < now) {
+      this.forfaitProStatut = 'gratuit';
+      this.forfaitProExpire = null;
     }
-    if (this.forfaitExpireAt && this.forfaitExpireAt < new Date() && this.forfait !== 'gratuit') {
+    if (this.forfaitPriveeExpire && this.forfaitPriveeExpire < now) {
+      this.forfaitPriveeStatut = 'gratuit';
+      this.forfaitPriveeExpire = null;
+    }
+    if (this.forfaitExpireAt && this.forfaitExpireAt < now && this.forfait !== 'gratuit' && this.forfaitProStatut !== 'valide' && this.forfaitPriveeStatut !== 'valide') {
       this.forfait = 'gratuit'; this.limiteOeuvres = 5; this.limiteNFT = 3; this.forfaitStatut = null;
+    }
+
+    // LOGIQUE DOUBLE FORFAIT SIMULTANE - LE MAX GAGNE
+    const proValide = this.forfaitProStatut === 'valide' && (!this.forfaitProExpire || this.forfaitProExpire > now);
+    const priveeValide = this.forfaitPriveeStatut === 'valide' && (!this.forfaitPriveeExpire || this.forfaitPriveeExpire > now);
+
+    if (priveeValide) {
+      this.forfait = 'galerie_privee';
+      this.limiteOeuvres = 50; this.limiteNFT = 50;
+      this.forfaitPrixUSD = 50; this.forfaitPrixFCFA = 30000;
+      if (this.forfaitProStatut === 'valide') {
+        // Les deux actifs - on garde 50 mais PRO reste valide aussi
+        this.forfaitStatut = 'valide';
+      }
+    } else if (proValide) {
+      this.forfait = 'pro';
+      this.limiteOeuvres = 10; this.limiteNFT = 10;
+      this.forfaitPrixUSD = 7; this.forfaitPrixFCFA = 4200;
+      this.forfaitStatut = 'valide';
+    } else {
+      // Aucun valide - regarde ancien système pour compat
+      if (this.forfait === 'gratuit') {
+        if (this.forfaitStatut !== 'en_attente' && this.forfaitProStatut !== 'en_attente' && this.forfaitPriveeStatut !== 'en_attente') { 
+          this.limiteOeuvres = 5; this.limiteNFT = 3; 
+        }
+        this.forfaitPrixUSD = 0; this.forfaitPrixFCFA = 0;
+      } else if (this.forfait === 'pro') {
+        if (this.forfaitStatut === 'valide') { this.limiteOeuvres = 10; this.limiteNFT = 10; }
+      } else if (this.forfait === 'galerie_privee') {
+        if (this.forfaitStatut === 'valide') { this.limiteOeuvres = 50; this.limiteNFT = 50; }
+      }
     }
     return;
   }
