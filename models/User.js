@@ -3,99 +3,49 @@ import bcrypt from 'bcryptjs';
 
 const userSchema = new mongoose.Schema(
   {
-    nom: {
-      type: String,
-      required: [true, 'Le nom complet est obligatoire'],
-      trim: true,
-      minlength: 2,
-      maxlength: 100
-    },
-    nom_artiste: {
-      type: String,
-      trim: true,
-      default: '',
-      maxlength: 100
-    },
-    whatsapp: {
-      type: String,
-      required: [true, 'Le numéro WhatsApp est obligatoire'],
-      unique: true,
-      trim: true,
-      minlength: 6,
-      maxlength: 25
-    },
-    // ✅ FIX 1 - Pas de default '', pas de sparse dans le field
+    nom: { type: String, required: true, trim: true, minlength: 2, maxlength: 100 },
+    nom_artiste: { type: String, trim: true, default: '', maxlength: 100 },
+    whatsapp: { type: String, required: true, unique: true, trim: true, minlength: 6, maxlength: 25 },
     email: {
-      type: String,
-      trim: true,
-      lowercase: true,
-      maxlength: 254,
+      type: String, trim: true, lowercase: true, maxlength: 254,
       match: [/^[^\s@]+@[^\s@]+\.[^\s@]+$/, 'Adresse e-mail invalide'],
       default: undefined
     },
-    password: {
-      type: String,
-      required: [true, 'Le mot de passe est obligatoire'],
-      minlength: 10
-      // ✅ FIX 2 - On enlève select:false pour éviter le bug de login
-    },
-    role: {
-      type: String,
-      enum: ['artiste', 'acheteur', 'admin'],
-      default: 'artiste',
-      required: true
-    },
-    ville: {
-      type: String,
-      trim: true,
-      default: 'Abomey-Calavi',
-      maxlength: 100
-    },
+    password: { type: String, required: true, minlength: 10 },
+    role: { type: String, enum: ['artiste', 'acheteur', 'admin'], default: 'artiste', required: true },
+    ville: { type: String, trim: true, default: 'Abomey-Calavi', maxlength: 100 },
     bio: { type: String, trim: true, maxlength: 1000, default: '' },
     avatar: { type: String, default: '' },
-    
-    // ✅ FIX 3 - On enlève le validator du schéma, on le fait dans auth.js
-    // TRC20 / PI / MTN Moov - +2290196587303 / TFXZ... / GAF62...
-    adresseReception: {
-      type: String,
-      trim: true,
-      default: '',
-      maxlength: 200
-    },
-    statut: {
-      type: String,
-      enum: ['en_attente', 'valide', 'refuse'],
-      default: 'en_attente',
-      required: true
-    },
+    adresseReception: { type: String, trim: true, default: '', maxlength: 200 },
+    statut: { type: String, enum: ['en_attente', 'valide', 'refuse'], default: 'en_attente', required: true },
     estVerifie: { type: Boolean, default: false },
-    totalOeuvres: { type: Number, default: 0, min: 0 },
-    totalVentes: { type: Number, default: 0, min: 0 },
-    totalVotesRecus: { type: Number, default: 0, min: 0 },
-    solde: { type: Number, default: 0, min: 0 },
+    totalOeuvres: { type: Number, default: 0 },
+    totalVentes: { type: Number, default: 0 },
+    totalVotesRecus: { type: Number, default: 0 },
+    solde: { type: Number, default: 0 },
 
-    // =================================================
-    // FORFAITS ART-ZEDMO - GRATUIT / PRO / GALERIE PRIVEE
-    // =================================================
-    forfait: {
-      type: String,
-      enum: ['gratuit','pro','galerie_privee'],
-      default: 'gratuit'
-    },
+    // FORFAITS - 10 / 50 / 1 mois + BOOST 48h
+    forfait: { type: String, enum: ['gratuit','pro','galerie_privee'], default: 'gratuit' },
+    // === LES 4 CHAMPS QUI MANQUAIENT POUR ADMIN ===
+    forfaitStatut: { type: String, enum: ['en_attente','valide','refuse', null], default: null },
+    forfaitPreuve: { type: String, default: null }, // ID MTN/Moov/USDT/Pi
+    forfaitTypeDemande: { type: String, enum: ['pro','galerie_privee', null], default: null },
+    forfaitDateDemande: { type: Date, default: null },
+    // ==============================================
     forfaitExpireAt: { type: Date, default: null },
-    limiteOeuvres: { type: Number, default: 5 }, // 5 gratuit, 10 pro, 9999 galerie
-    limiteNFT: { type: Number, default: 3 }, // 3 NFT gratuit
-    forfaitPrixUSD: { type: Number, default: 0 }, // 0, 7, 50
-    forfaitPrixFCFA: { type: Number, default: 0 }, // 0, 4200, 30000
-    totalOeuvresPubliees: { type: Number, default: 0, min: 0 },
-    totalNFTPublies: { type: Number, default: 0, min: 0 }
+    limiteOeuvres: { type: Number, default: 5 }, // 5 gratuit, 10 pro, 50 galerie_privee
+    limiteNFT: { type: Number, default: 3 },
+    forfaitPrixUSD: { type: Number, default: 0 },
+    forfaitPrixFCFA: { type: Number, default: 0 },
+    totalOeuvresPubliees: { type: Number, default: 0 },
+    totalNFTPublies: { type: Number, default: 0 }
   },
   { timestamps: true }
 );
 
-// ✅ Un seul index, pas de doublon
 userSchema.index({ email: 1 }, { unique: true, sparse: true });
 userSchema.index({ forfait: 1 });
+userSchema.index({ forfaitStatut: 1 });
 userSchema.index({ forfaitExpireAt: 1 });
 
 userSchema.set('toJSON', {
@@ -108,51 +58,23 @@ userSchema.set('toJSON', {
 
 userSchema.pre('save', async function () {
   if (!this.isModified('password')) {
-    // LOGIQUE FORFAITS - AUTO-SET LIMITES
     if (this.forfait === 'gratuit') {
-      this.limiteOeuvres = 5;
-      this.limiteNFT = 3;
-      this.forfaitPrixUSD = 0;
-      this.forfaitPrixFCFA = 0;
+      if (this.forfaitStatut !== 'en_attente') { this.limiteOeuvres = 5; this.limiteNFT = 3; }
+      this.forfaitPrixUSD = 0; this.forfaitPrixFCFA = 0;
     } else if (this.forfait === 'pro') {
-      this.limiteOeuvres = 10;
-      this.limiteNFT = 10;
-      this.forfaitPrixUSD = 7;
-      this.forfaitPrixFCFA = 4200;
+      // Ne change limite que si validé, pas en attente
+      if (this.forfaitStatut === 'valide') { this.limiteOeuvres = 10; this.limiteNFT = 10; }
+      this.forfaitPrixUSD = 7; this.forfaitPrixFCFA = 4200;
     } else if (this.forfait === 'galerie_privee') {
-      this.limiteOeuvres = 9999; // illimité, 50 minimum autorisé mais pas bloqué
-      this.limiteNFT = 9999;
-      this.forfaitPrixUSD = 50;
-      this.forfaitPrixFCFA = 30000;
+      if (this.forfaitStatut === 'valide') { this.limiteOeuvres = 50; this.limiteNFT = 50; }
+      this.forfaitPrixUSD = 50; this.forfaitPrixFCFA = 30000;
     }
-
-    // AUTO-EXPIRE FORFAIT -> retour gratuit
     if (this.forfaitExpireAt && this.forfaitExpireAt < new Date() && this.forfait !== 'gratuit') {
-      this.forfait = 'gratuit';
-      this.limiteOeuvres = 5;
-      this.limiteNFT = 3;
+      this.forfait = 'gratuit'; this.limiteOeuvres = 5; this.limiteNFT = 3; this.forfaitStatut = null;
     }
     return;
   }
   this.password = await bcrypt.hash(this.password, 12);
-
-  // LOGIQUE FORFAITS - AUTO-SET LIMITES (si password modifié aussi)
-  if (this.forfait === 'gratuit') {
-    this.limiteOeuvres = 5;
-    this.limiteNFT = 3;
-    this.forfaitPrixUSD = 0;
-    this.forfaitPrixFCFA = 0;
-  } else if (this.forfait === 'pro') {
-    this.limiteOeuvres = 10;
-    this.limiteNFT = 10;
-    this.forfaitPrixUSD = 7;
-    this.forfaitPrixFCFA = 4200;
-  } else if (this.forfait === 'galerie_privee') {
-    this.limiteOeuvres = 9999;
-    this.limiteNFT = 9999;
-    this.forfaitPrixUSD = 50;
-    this.forfaitPrixFCFA = 30000;
-  }
 });
 
 userSchema.methods.comparePassword = async function (pwd) {
@@ -161,9 +83,7 @@ userSchema.methods.comparePassword = async function (pwd) {
 };
 
 userSchema.methods.peutPublier = function(isNFT = false) {
-  if (isNFT) {
-    return this.totalNFTPublies < this.limiteNFT;
-  }
+  if (isNFT) return this.totalNFTPublies < this.limiteNFT;
   return this.totalOeuvresPubliees < this.limiteOeuvres;
 };
 
