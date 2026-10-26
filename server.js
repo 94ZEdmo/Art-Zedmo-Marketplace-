@@ -86,7 +86,6 @@ app.post('/api/upload', authenticateToken, upload.single('image'), async (req, r
 app.use('/uploads', express.static(uploadDir));
 app.use(express.static(path.join(__dirname, 'public')));
 
-// API ROUTES DE BASE
 app.use('/api/auth', authRoutes);
 app.use('/api/artworks', artworkRoutes);
 app.use('/api/expositions', expoRoutes);
@@ -95,27 +94,25 @@ app.use('/api/encheres', enchereRoutes);
 app.use('/api/annonces', annonceRoutes);
 app.use('/api/galeries-privees', galeriesPriveesRoutes);
 
-// ================= FIX 404 FORFAITS - C'EST CA QUI MANQUAIT =================
-// Le front appelle /api/forfaits/acheter, on le branche sur la même logique que auth
 const UserModel = () => mongoose.model('User');
-
 async function acheterForfait(req,res,next){
   try{
     const { forfait, type, preuve, transactionId } = req.body;
     const forfaitDemande = (forfait || type || '').toLowerCase();
     const preuveFinal = (preuve || transactionId || '').toString().trim();
-    if (!['pro','galerie_privee'].includes(forfaitDemande)) return res.status(400).json({ error: 'Forfait invalide: pro ou galerie_privee' });
-    if (!preuveFinal || preuveFinal.length < 4) return res.status(400).json({ error: 'ID transaction obligatoire - min 4 caractères' });
+    if (!['pro','galerie_privee'].includes(forfaitDemande)) return res.status(400).json({ error: 'Forfait invalide' });
+    if (!preuveFinal || preuveFinal.length < 4) return res.status(400).json({ error: 'ID transaction obligatoire' });
     const User = UserModel();
     const user = await User.findById(req.user.id);
     if (!user) return res.status(404).json({ error: 'Utilisateur introuvable' });
+    if(forfaitDemande==='pro'){ user.forfaitProStatut='en_attente'; user.forfaitProPreuve=preuveFinal; }
+    else { user.forfaitPriveeStatut='en_attente'; user.forfaitPriveePreuve=preuveFinal; }
     user.forfaitTypeDemande = forfaitDemande;
     user.forfaitStatut = 'en_attente';
     user.forfaitPreuve = preuveFinal;
     user.forfaitDateDemande = new Date();
     await user.save();
-    console.log(`💰 FORFAIT EN ATTENTE: ${forfaitDemande} - ${user.nom_artiste} - ${preuveFinal}`);
-    return res.json({ success: true, message: `Forfait ${forfaitDemande} en attente admin - 1 mois après validation` });
+    return res.json({ success: true, message: `Forfait ${forfaitDemande} en attente` });
   }catch(e){ next(e) }
 }
 app.post('/api/forfaits/acheter', authenticateToken, acheterForfait);
@@ -125,32 +122,21 @@ app.post('/api/forfaits', authenticateToken, acheterForfait);
 app.get('/api/forfaits', authenticateToken, requireAdmin, async (req,res,next)=>{
   try{
     const User = UserModel();
-    const pending = await User.find({forfaitStatut:'en_attente'}).sort({updatedAt:-1}).lean();
-    const result = pending.map(u=>({
-      _id: u._id, user: u, userId: u._id, type: u.forfaitTypeDemande||u.forfait,
-      preuve: u.forfaitPreuve, statut: u.forfaitStatut, createdAt: u.updatedAt
-    }));
-    res.json(result);
+    const pending = await User.find({ $or: [{forfaitStatut:'en_attente'},{forfaitProStatut:'en_attente'},{forfaitPriveeStatut:'en_attente'}] }).sort({updatedAt:-1}).lean();
+    res.json(pending);
   }catch(e){next(e)}
 });
-app.get('/api/forfaits/admin/all', authenticateToken, requireAdmin, async (req,res,next)=>{
-  try{
-    const User = UserModel();
-    const pending = await User.find({forfaitStatut:'en_attente'}).lean();
-    res.json(pending.map(u=>({ _id: u._id, user: u, type: u.forfaitTypeDemande||u.forfait, preuve: u.forfaitPreuve, statut: u.forfaitStatut })));
-  }catch(e){next(e)}
-});
-// ============================================================================
 
+// ADRESSES - GARDE TES VRAIES ICI
 const ADRESSES_OFFICIELLES = {
-  momo: '+2290196587303', moov: '+2290194655238',
-  usdt: 'TFXZSyJaC6mdCva8kAJBMMvKYhyhpzpHn2',
-  pi: 'GAF62KXAV7IUM3H5HQ3T16EFMIDSGII2EVEZFXTXGMH5D2EDPA6RVAM'
+  momo: process.env.ADRESSE_MOMO || '+2290196587303',
+  moov: process.env.ADRESSE_MOOV || '+2290194655238',
+  usdt: process.env.ADRESSE_USDT || 'TON_USDT_ICI',
+  pi: process.env.ADRESSE_PI || 'TON_PI_ICI'
 };
 
 const settingsSchema = new mongoose.Schema({ _id: String, momo: String, moov: String, usdt: String, pi: String, updatedAt: Date });
 const Settings = mongoose.models.Settings || mongoose.model('Settings', settingsSchema);
-
 app.get('/api/settings/paiements', async (req,res,next)=>{
   try{
     const s = await Settings.findById('paiements').lean();
@@ -158,7 +144,6 @@ app.get('/api/settings/paiements', async (req,res,next)=>{
   }catch(e){next(e)}
 });
 
-// ADMIN - DOIT ETRE AVANT LE *
 app.get('/admin', (req,res)=>{ res.sendFile(path.join(__dirname, 'public', 'admin.html')); });
 app.get('/admin.html', (req,res)=>{ res.sendFile(path.join(__dirname, 'public', 'admin.html')); });
 
@@ -167,7 +152,29 @@ const NFT = mongoose.models.NFT || mongoose.model('NFT', nftSchema);
 app.get('/api/health', (req,res)=>{ res.json({ status: mongoose.connection.readyState===1?'LIVE':'DOWN' }); });
 app.get('/api/nft', async (req,res,next)=>{ try{ const nfts = await NFT.find().sort({createdAt:-1}).limit(100).lean(); res.json(nfts);}catch(e){next(e)} });
 
-// FRONT EN DERNIER
+// === FIX GLOBAL POUR TOUS LES UTILISATEURS ===
+async function fixAllCompteursGlobal() {
+  try {
+    const User = mongoose.model('User');
+    const Artwork = mongoose.model('Artwork');
+    const users = await User.find({});
+    console.log(`🔧 Fix global ${users.length} users...`);
+    let fixed = 0;
+    for (const u of users) {
+      const countReel = await Artwork.countDocuments({ artiste: u._id, statut: { $nin: ['rejetee','supprime'] } });
+      const countNFT = await Artwork.countDocuments({ artiste: u._id, isNFT: true, statut: { $nin: ['rejetee','supprime'] } });
+      let limite = 5, limiteNFT = 3;
+      if (u.forfaitProStatut === 'valide' || u.forfait === 'pro') { limite = 10; limiteNFT = 10; }
+      if (u.forfaitPriveeStatut === 'valide' || u.forfait === 'galerie_privee') { limite = 50; limiteNFT = 50; }
+      if (u.totalOeuvresPubliees !== countReel || u.limiteOeuvres !== limite) {
+        await User.updateOne({ _id: u._id }, { $set: { totalOeuvres: countReel, totalOeuvresPubliees: countReel, totalNFTPublies: countNFT, limiteOeuvres: limite, limiteNFT: limiteNFT } });
+        fixed++;
+      }
+    }
+    console.log(`✅ Fix global terminé: ${fixed} comptes corrigés sur ${users.length} - Tous débloqués`);
+  } catch (e) { console.error("Fix global error:", e.message); }
+}
+
 app.get('*', (req,res)=>{
   if (req.path.startsWith('/api/')) return res.status(404).json({ error: 'Route introuvable: ' + req.path });
   const indexPath = path.join(__dirname, 'public', 'index.html');
@@ -183,6 +190,7 @@ app.use((err,req,res,next)=>{
 async function startServer(){
   await mongoose.connect(MONGO_URL);
   console.log('MongoDB OK - Adresses:', ADRESSES_OFFICIELLES);
+  await fixAllCompteursGlobal(); // <--- CORRIGE TOUS LES USERS AU DEMARRAGE
   app.listen(PORT, '0.0.0.0', ()=>{ console.log(`ART-ZEDMO sur ${PORT}`); });
 }
 startServer();
