@@ -40,7 +40,7 @@ async function authenticateToken(req, res, next) {
     let decoded;
     try { decoded = jwt.verify(token, JWT_SECRET, { algorithms: ['HS256'] }); } catch { return res.status(401).json({ error: 'Jeton invalide ou expiré.' }); }
     if (!decoded.id || !mongoose.Types.ObjectId.isValid(decoded.id)) return res.status(401).json({ error: 'Identifiant invalide.' });
-    const user = await User.findById(decoded.id).select('_id nom nom_artiste role statut email ville adresseReception forfait limiteOeuvres limiteNFT forfaitExpireAt totalOeuvresPubliees totalNFTPublies');
+    const user = await User.findById(decoded.id).select('_id nom nom_artiste role statut email ville adresseReception forfait limiteOeuvres limiteNFT forfaitExpireAt totalOeuvresPubliees totalNFTPublies forfaitProStatut forfaitPriveeStatut forfaitProExpire forfaitPriveeExpire');
     if (!user) return res.status(401).json({ error: 'Utilisateur introuvable.' });
     if (user.statut !== 'valide') return res.status(403).json({ error: 'Compte non autorisé.' });
     req.user = user; req.auth = decoded; next();
@@ -61,7 +61,6 @@ async function getNextAZM() {
 }
 function escapeRegex(v) { return v.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
 
-// ✅ CORRIGÉ - MEMES ADRESSES REALES QUE FORFAIT
 const ADRESSES = {
   usdt_trc20: 'TFXZSyJaC6mdCva8kAJBMMvKYhyhpzpHn2',
   pi: 'GAF62KXAV7IUM3HSHQ3TI6EFMIDSGII2EVEZXFTXGMH5D2EDPA6RVAM',
@@ -130,6 +129,7 @@ router.get('/:id', async (req, res, next) => {
     return res.json(artwork);
   } catch (e) { next(e); }
 });
+
 router.post('/', authenticateToken, async (req, res, next) => {
   try {
     const { titre, description, prix, images, image, categorie, ville, isNFT, ipfsHash, imageIPFS, dimensions, technique } = req.body;
@@ -140,17 +140,33 @@ router.post('/', authenticateToken, async (req, res, next) => {
     const categorieFinale = categoriesAutorisees.includes(categorie) ? categorie : 'Autre';
     let listeImages = []; if (Array.isArray(images)) listeImages = images; else if (typeof image === 'string' && image.trim()) listeImages = [image.trim()];
     if (listeImages.length > 10 || listeImages.some(i => typeof i !== 'string' || i.length > 2048)) return res.status(400).json({ error: 'Images invalides.' });
+    
+    // === FIX BUG LIMITE 5 OEUVRES - COMPTE REEL EN BASE ===
     const userFull = await User.findById(req.user._id);
     const isNFTFinalCheck = Boolean(isNFT) || String(categorieFinale).toLowerCase() === 'nft';
+    
     if (isNFTFinalCheck) {
-      if (userFull.totalNFTPublies >= userFull.limiteNFT) {
+      const countNFTReel = await Artwork.countDocuments({ artiste: req.user._id, isNFT: true });
+      // synchronise compteur bloqué
+      if (userFull.totalNFTPublies !== countNFTReel) {
+        await User.findByIdAndUpdate(req.user._id, { totalNFTPublies: countNFTReel });
+        userFull.totalNFTPublies = countNFTReel;
+      }
+      if (countNFTReel >= userFull.limiteNFT) {
         return res.status(403).json({ error: `Limite NFT atteinte (${userFull.limiteNFT}). Passe en ${userFull.forfait === 'gratuit' ? 'PRO à 7 USD (4.200 FCFA)' : 'GALERIE PRIVEE à 50 USD (30.000 FCFA)'}.`, forfait: userFull.forfait, limite: userFull.limiteNFT });
       }
     } else {
-      if (userFull.totalOeuvresPubliees >= userFull.limiteOeuvres) {
-        return res.status(403).json({ error: `Limite œuvres atteinte (${userFull.limiteOeuvres}). Passe en ${userFull.forfait === 'gratuit' ? 'PRO à 7 USD (4.200 FCFA)' : 'GALERIE PRIVEE à 50 USD (30.000 FCFA)'}.`, forfait: userFull.forfait, limite: userFull.limiteOeuvres });
+      const countOeuvresReel = await Artwork.countDocuments({ artiste: req.user._id, isNFT: { $ne: true } });
+      // synchronise compteur bloqué - c'est ça qui bloque ton artiste
+      if (userFull.totalOeuvresPubliees !== countOeuvresReel) {
+        await User.findByIdAndUpdate(req.user._id, { totalOeuvresPubliees: countOeuvresReel });
+        userFull.totalOeuvresPubliees = countOeuvresReel;
+      }
+      if (countOeuvresReel >= userFull.limiteOeuvres) {
+        return res.status(403).json({ error: `Limite ${userFull.limiteOeuvres} oeuvres max atteinte pour ${userFull.forfait}. Passe PRO 10 ou Privée 50.`, forfait: userFull.forfait, limite: userFull.limiteOeuvres });
       }
     }
+
     const azmId = await getNextAZM();
     const isNFTFinal = Boolean(isNFT) || String(categorieFinale).toLowerCase() === 'nft';
     const artwork = await Artwork.create({
@@ -161,6 +177,7 @@ router.post('/', authenticateToken, async (req, res, next) => {
     return res.status(201).json({ success: true, artwork, azmId });
   } catch (e) { next(e); }
 });
+
 router.put('/:id/valider', authenticateToken, requireAdmin, async (req, res, next) => {
   try {
     if (!validObjectId(req.params.id)) return res.status(400).json({ error: 'ID invalide.' });
@@ -210,26 +227,17 @@ router.post('/:id/preuve-paiement', authenticateToken, async (req, res, next) =>
   } catch (e) { next(e); }
 });
 
-// =================================================
-// BOOST 48H - PAIEMENT REEL 2 USD = 1200 FCFA
-// MEMES ADRESSES QUE FORFAIT
-// =================================================
 router.post('/:id/boost', authenticateToken, async (req, res, next) => {
   try {
     if (!validObjectId(req.params.id)) return res.status(400).json({ error: 'ID invalide.' });
     const { preuve, adresses } = req.body;
-    
-    // PAIEMENT REEL OBLIGATOIRE POUR BOOST
     if (!preuve || String(preuve).trim().length < 3) {
       return res.status(400).json({ error: `Paiement réel boost 1.200F obligatoire ! Paye sur MTN ${ADRESSES.mtn} / Moov ${ADRESSES.moov} / USDT ${ADRESSES.usdt_trc20} / Pi ${ADRESSES.pi} puis colle TxID` });
     }
-
     const artwork = await Artwork.findById(req.params.id);
     if (!artwork) return res.status(404).json({ error: 'Œuvre non trouvée.' });
     if (artwork.artiste.toString() !== req.user._id.toString() && req.user.role !== 'admin') return res.status(403).json({ error: 'Non autorisé.' });
-    
-    console.log(`🚀 BOOST REEL PAYE: ${artwork.titre} par ${req.user.nom_artiste} - Preuve: ${preuve} - MTN:${adresses?.mtn||ADRESSES.mtn} Moov:${adresses?.moov||ADRESSES.moov} USDT:${ADRESSES.usdt_trc20}`);
-
+    console.log(`🚀 BOOST REEL PAYE: ${artwork.titre} par ${req.user.nom_artiste} - Preuve: ${preuve}`);
     artwork.isBoosted = true;
     artwork.boostExpireAt = new Date(Date.now() + 48 * 60 * 60 * 1000);
     artwork.boostPrixUSD = 2;
@@ -237,10 +245,9 @@ router.post('/:id/boost', authenticateToken, async (req, res, next) => {
     artwork.boostPreuve = preuve;
     artwork.boostAdresses = adresses || ADRESSES;
     await artwork.save();
-    
     return res.json({ 
       success: true, 
-      message: `✅ Boost 48h activé après paiement réel ${preuve} (2 USD = 1.200 FCFA) sur MTN ${ADRESSES.mtn} / Moov ${ADRESSES.moov} / USDT. Œuvre remontée en haut avec badge 🔥`, 
+      message: `✅ Boost 48h activé après paiement réel ${preuve} (2 USD = 1.200 FCFA)`, 
       artwork 
     });
   } catch (e) { next(e); }
