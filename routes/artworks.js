@@ -57,7 +57,6 @@ async function getNextAZM() {
 }
 function escapeRegex(v) { return v.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
 
-// GARDE TES VRAIES ADRESSES ICI - J'AI MASQUE POUR LE FILTRE
 const ADRESSES = {
   usdt_trc20: process.env.ADRESSE_USDT || 'TON_ADRESSE_USDT',
   pi: process.env.ADRESSE_PI || 'TON_ADRESSE_PI',
@@ -70,7 +69,18 @@ function publicArtworkQuery() { return { statut: { $nin: ['en_attente', 'rejetee
 
 router.get('/', async (req, res, next) => {
   try {
-    const { tri, search, categorie, page = '1', limit = '50' } = req.query;
+    const { tri, search, categorie, page = '1', limit = '50', mine } = req.query;
+
+    if (mine === '1') {
+      const authorization = req.headers.authorization;
+      if (!authorization || !authorization.startsWith('Bearer ')) return res.status(401).json({ error: 'Authentification requise pour mine=1.' });
+      const token = authorization.slice(7);
+      let decoded;
+      try { decoded = jwt.verify(token, JWT_SECRET, { algorithms: ['HS256'] }); } catch { return res.status(401).json({ error: 'Jeton invalide ou expiré.' }); }
+      const artsMine = await Artwork.find({ artiste: decoded.id }).populate('artiste', 'nom nom_artiste ville').populate('expositions', 'titre statut').sort({ createdAt: -1 });
+      return res.json({ success: true, artworks: artsMine });
+    }
+
     const pageNumber = Math.max(1, parseInt(page, 10) || 1);
     const limitNumber = Math.min(100, Math.max(1, parseInt(limit, 10) || 50));
     const filter = publicArtworkQuery();
@@ -90,7 +100,13 @@ router.get('/admin/all', authenticateToken, requireAdmin, async (req, res, next)
   } catch (e) { next(e); }
 });
 
-// === ROUTE DE DEBLOCAGE - AJOUTEE ===
+router.get('/mine', authenticateToken, async (req, res, next) => {
+  try {
+    const arts = await Artwork.find({ artiste: req.user._id }).populate('artiste', 'nom nom_artiste ville').populate('expositions', 'titre statut').sort({ createdAt: -1 });
+    return res.json({ success: true, artworks: arts });
+  } catch (e) { next(e); }
+});
+
 router.post('/admin/fix-compteurs', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const { whatsapp } = req.body;
@@ -152,7 +168,6 @@ router.get('/:id', async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-// === POST OEUVRE CORRIGE - ANTI-BLOCAGE ===
 router.post('/', authenticateToken, async (req, res, next) => {
   try {
     const { titre, description, prix, images, image, categorie, ville, isNFT, ipfsHash, imageIPFS, dimensions, technique } = req.body;
@@ -167,7 +182,6 @@ router.post('/', authenticateToken, async (req, res, next) => {
 
     const countReel = await Artwork.countDocuments(filterCount);
 
-    // Synchronise compteur bloqué à 0
     if (isNFTFinalCheck) {
       if (userFull.totalNFTPublies !== countReel) await User.findByIdAndUpdate(req.user._id, { totalNFTPublies: countReel });
     } else {
@@ -247,6 +261,7 @@ router.post('/:id/boost', authenticateToken, async (req, res, next) => {
     if (!preuve || String(preuve).trim().length < 3) return res.status(400).json({ error: 'Preuve TxID obligatoire' });
     const artwork = await Artwork.findById(req.params.id);
     if (!artwork) return res.status(404).json({ error: 'Non trouvée.' });
+    if (artwork.artiste.toString() !== req.user._id.toString() && req.user.role !== 'admin') return res.status(403).json({ error: 'Seul le propriétaire peut booster.' });
     artwork.isBoosted = true;
     artwork.boostExpireAt = new Date(Date.now() + 48 * 60 * 60 * 1000);
     artwork.boostPreuve = preuve;
