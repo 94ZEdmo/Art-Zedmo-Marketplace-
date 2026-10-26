@@ -68,7 +68,6 @@
 <div class="modal" id="inscriptionModal"><div class="modal-content"><div class="modal-header"><h2>Créer compte</h2><button class="close-btn" onclick="fermerModal('inscriptionModal')">&times;</button></div><form id="formInscription"><div class="form-grid"><div class="form-group"><label>Nom *</label><input class="field" name="nom" required></div><div class="form-group"><label>Nom artiste</label><input class="field" name="nom_artiste"></div><div class="form-group"><label>WhatsApp *</label><input class="field" name="whatsapp" required></div><div class="form-group"><label>Email</label><input class="field" name="email" type="email"></div><div class="form-group"><label>Ville</label><input class="field" name="ville"></div><div class="form-group"><label>Type</label><select class="field" name="role" id="roleSelect" onchange="toggleAdresseReception()"><option value="artiste">Artiste</option><option value="acheteur">Acheteur</option></select></div><div class="form-group full-width" id="groupAdresseReception"><label>Adresse de réception (Wallet TRC20 / Pi Network / MTN Moov) * Artiste</label><input class="field" name="adresseReception" id="adresseReception" placeholder="Ex: +2290196587303 ou TFXZSyJaC6... ou GAF62KXAV7..."></div><div class="form-group full-width"><label>Mot de passe *</label><input class="field" name="password" type="password" required minlength="10"></div></div><button class="btn" type="submit" style="width:100%;margin-top:18px">Créer</button><div id="inscriptionMessage" class="form-message"></div></form></div></div>
 <div class="modal" id="connexionModal"><div class="modal-content"><div class="modal-header"><h2>Connexion</h2><button class="close-btn" onclick="fermerModal('connexionModal')">&times;</button></div><form id="formConnexion"><div class="form-group"><label>Identifiant</label><input class="field" name="identifiant" required></div><div class="form-group" style="margin-top:14px"><label>Mot de passe</label><input class="field" name="password" type="password" required></div><button class="btn" type="submit" style="width:100%;margin-top:18px">Se connecter</button><div id="connexionMessage" class="form-message"></div></form></div></div>
 <div class="modal" id="oeuvreModal"><div class="modal-content"><div class="modal-header"><h2>Publier œuvre / NFT</h2><button class="close-btn" onclick="fermerModal('oeuvreModal')">&times;</button></div><form id="formOeuvre"><div class="form-grid"><div class="form-group full-width"><label>Titre *</label><input class="field" name="titre" required></div><div class="form-group"><label>Catégorie *</label><select class="field" name="categorie" required><option value="peinture">Peinture</option><option value="sculpture">Sculpture</option><option value="dessin">Dessin</option><option value="photographie">Photographie</option><option value="artisanat">Artisanat</option><option value="nft">NFT</option><option value="autre">Autre</option></select></div><div class="form-group"><label>Prix FCFA</label><input class="field" name="prix" type="number" min="0" value="0"></div><div class="form-group full-width"><label>Description *</label><textarea class="field" name="description" required></textarea></div><div class="form-group full-width"><label><input type="checkbox" id="isNFT"> C'est un NFT</label></div>
-<!-- PATCH PRIVEE - AJOUT SEULEMENT -->
 <div class="form-group full-width" id="groupPrivee" style="display:none;background:#2a220f;border:1px solid var(--gold);padding:10px;border-radius:8px"><label><input type="checkbox" id="isPriveeCheck"> <i class="fas fa-store"></i> Publier dans ma galerie privée (50$ / 1 mois) - N'apparaîtra PAS dans galerie permanente</label><small class="muted">Visible uniquement sur ta page privée /galerie-privee/TonNom</small></div>
 <div class="form-group full-width"><label>Image (IPFS Pinata)</label><input class="field" name="image" type="file" accept="image/*"></div></div><button class="btn" type="submit" style="width:100%;margin-top:18px">Envoyer en galerie</button><div id="oeuvreMessage" class="form-message"></div></form></div></div>
 <div class="modal" id="paiementModal"><div class="modal-content"><div class="modal-header"><h2 id="paiementTitre">Paiement</h2><button class="close-btn" onclick="fermerModal('paiementModal')">&times;</button></div><div id="paiementContenu"></div></div></div>
@@ -100,18 +99,15 @@ document.querySelectorAll('.modal').forEach(m=>{m.addEventListener('click',e=>{i
 const ECRANS=['accueil','galerie','expositions','encheres','verification','compte','galerie-privee'];
 function allerA(id){ECRANS.forEach(e=>{document.getElementById(e)?.classList.toggle('screen-hidden',e!==id)});document.querySelectorAll('.nav-item').forEach(b=>{b.classList.toggle('active',b.dataset.target===id)});window.scrollTo({top:0,behavior:'smooth'});if(id==='galerie'&&!artworks.length)chargerGalerie();if(id==='expositions')chargerExpositions();if(id==='encheres')chargerEncheres();}
 function toggleAdresseReception(){const role=document.getElementById('roleSelect')?.value;const group=document.getElementById('groupAdresseReception');if(!group)return;group.style.display=role==='artiste'?'flex':'none';const input=document.getElementById('adresseReception');if(input)input.required=role==='artiste';}
-
-// PATCH 1 - AFFICHER CASE PRIVEE SI PAYE
 function toggleGaleriePriveeCheck(){
   const group=document.getElementById('groupPrivee');if(!group)return;
-  const isPaid=currentUser&&currentUser.forfait==='galerie_privee'&&currentUser.forfaitStatut==='valide';
-  const exp=currentUser?.forfaitExpire?new Date(currentUser.forfaitExpire):null;
+  const isPaid=currentUser&&(currentUser.forfait==='galerie_privee'&&currentUser.forfaitStatut==='valide' || currentUser.forfaitPriveeStatut==='valide');
+  const exp=currentUser?.forfaitExpire?new Date(currentUser.forfaitExpire):currentUser?.forfaitPriveeExpire?new Date(currentUser.forfaitPriveeExpire):null;
   const stillValid=!exp||exp>new Date();
   if(isPaid&&stillValid){group.style.display='block';}else{group.style.display='none';const chk=document.getElementById('isPriveeCheck');if(chk)chk.checked=false;}
 }
-
 function mettreAJourCompte(){const co=Boolean(getToken()&&currentUser);document.getElementById('compteConnecte').classList.toggle('hidden',!co);document.getElementById('compteDeconnecte').classList.toggle('hidden',co);if(co){document.getElementById('bienvenueUtilisateur').textContent='Bienvenue, '+(currentUser.nom_artiste||currentUser.nom);document.getElementById('infosUtilisateur').textContent=`Rôle:${currentUser.role} · ${currentUser.statut}`+(currentUser.adresseReception?` · Réception: ${currentUser.adresseReception}`:'');const isAcheteur=currentUser.role==='acheteur';document.getElementById('actionsArtiste')?.classList.toggle('hidden',isAcheteur);document.getElementById('actionsAcheteur')?.classList.toggle('hidden',!isAcheteur);document.getElementById('titreMesOeuvres').textContent=isAcheteur?'Mes collections / Acheter / Mes votes':'Mes œuvres / NFT en ligne - Mes vendus';const lien=`https://art-zedmo-marketplace.onrender.com/#expositions?artiste=${currentUser._id||''}`;const el=document.getElementById('monLienVote');if(el)el.value=lien;const wa=document.getElementById('btnWhatsappPartage');if(wa)wa.href=`https://wa.me/?text=${encodeURIComponent('Votez pour moi sur ART-ZEDMO : '+lien)}`;
-const fd=document.getElementById('forfaitDetails');if(fd){let txt=currentUser.forfait||'Gratuit (5 oeuvres + 3 NFT max)';if(currentUser.forfaitStatut==='en_attente')txt+=' - ⏳ En attente de vérification admin';if(currentUser.forfaitStatut==='valide')txt+=' - ✅ Validé';fd.innerHTML=`Actuel: <strong style="color:var(--gold)">${escapeHTML(txt)}</strong>`;}
+const fd=document.getElementById('forfaitDetails');if(fd){let txt=currentUser.forfait||'Gratuit (5 oeuvres + 3 NFT max)';if(currentUser.forfaitStatut==='en_attente' || currentUser.forfaitProStatut==='en_attente' || currentUser.forfaitPriveeStatut==='en_attente')txt+=' - ⏳ En attente de vérification admin';if(currentUser.forfaitStatut==='valide' || currentUser.forfaitProStatut==='valide' || currentUser.forfaitPriveeStatut==='valide')txt+=' - ✅ Validé';fd.innerHTML=`Actuel: <strong style="color:var(--gold)">${escapeHTML(txt)} - ${currentUser.limiteOeuvres||5} oeuvres max</strong>`;}
 toggleGaleriePriveeCheck();
 chargerMesOeuvres();}}
 async function chargerMesOeuvres(){const cont=document.getElementById('mesOeuvresList');if(!getToken()||!currentUser){cont.innerHTML='<div class="empty">Connecte-toi</div>';return;}cont.innerHTML='<div class="empty"><span class="spinner"></span> Chargement</div>';try{let list=artworks.filter(o=>String(o.artiste?._id||o.artiste)===String(currentUser._id));if(!list.length){try{const r=await apiFetch('/artworks?mine=1');list=r.artworks||r||[];}catch{}}if(!list.length){cont.innerHTML='<div class="empty">Pas encore d\'oeuvres</div>';return;}cont.innerHTML=list.map(o=>{const id=String(o._id||'');const titre=escapeHTML(o.titre||'Sans titre');const prix=prixFCFA(o.prix);const img=(o.images&&o.images[0])||o.image||'';const imgHTML=img?`<img class="art-image" src="${escapeHTML(img)}" style="height:160px">`:`<div class="art-image placeholder" style="height:160px"><i class="fas fa-palette"></i></div>`;const boostBadge=o.isBoosted?`<div class="badge-boost"><i class="fas fa-rocket"></i> BOOSTÉ</div>`:(o.boostStatut==='en_attente'?`<div class="badge-boost" style="background:orange">En attente vérif</div>`:'');const priveBadge=o.isGaleriePrivee?`<div class="badge-privee">PRIVÉE</div>`:'';
@@ -121,8 +117,6 @@ document.getElementById('formConnexion').addEventListener('submit',async e=>{e.p
 function seDeconnecter(){localStorage.removeItem('AZ_TOKEN');localStorage.removeItem('AZ_USER');currentUser=null;mettreAJourCompte()}
 function demarrerPublication(){if(!getToken()){ouvrirModal('connexionModal');return}toggleGaleriePriveeCheck();ouvrirModal('oeuvreModal')}
 async function chargerMesInfos(){if(!getToken()){ouvrirModal('connexionModal');return}try{const r=await apiFetch('/auth/me');currentUser=r.user||r;localStorage.setItem('AZ_USER',JSON.stringify(currentUser));mettreAJourCompte()}catch(e){alert(e.message)}}
-
-// PATCH 2 - BOOST REMONTE EN HAUT 48H
 async function chargerGalerie(){
   const c=document.getElementById('galerieOeuvres');c.innerHTML='<div class="empty"><span class="spinner"></span> Chargement</div>';
   try{
@@ -142,8 +136,6 @@ async function chargerGalerie(){
   }catch(e){c.textContent=e.message}
 }
 function obtenirImage(o){if(typeof o.image==='string'&&o.image.trim())return o.image;if(Array.isArray(o.images)&&o.images[0])return typeof o.images[0]==='string'?o.images[0]:o.images[0].url||'';return''}
-
-// PATCH 3 - GALERIE PERMANENTE SANS PRIVEES
 function afficherGalerieFiltre(){
   const cont=document.getElementById('galerieOeuvres');
   const rech=document.getElementById('rechercheGalerie').value.toLowerCase();
@@ -171,7 +163,6 @@ function afficherGalerieFiltre(){
     return `<article class="card">${badgeExpo}${boostBadge}${imgHTML}<div class="card-body"><h3 style="margin-top:10px">${titre}</h3><p>${desc.slice(0,100)}</p><div class="card-meta"><span><i class="fas fa-user"></i> ${artiste}</span><span><i class="fas fa-certificate"></i> ${escapeHTML(o.azmId||o._id||'')}</span></div><div class="price">${escapeHTML(prix)}</div><div class="card-actions"><button class="btn btn-small" onclick="acheterOeuvre('${id}','${escapeHTML(o.titre)}',${o.prix||0})"><i class="fas fa-shopping-cart"></i> Acheter</button><button class="btn btn-outline btn-small" style="background:#fff;color:#111" onclick="chargerGaleriePrivee('${escapeHTML(artisteRaw)}')"><i class="fas fa-store"></i> Galerie ${artiste}</button><button class="btn btn-outline btn-small" onclick="openCert('${id}')"><i class="fas fa-certificate"></i> Certif</button></div></div></article>`
   }).join('');
 }
-
 function estProprietaireOeuvre(art){if(!currentUser || !art) return false;const artisteId = art.artiste?._id || art.artiste;return String(artisteId) === String(currentUser._id);}
 function openCert(id){const art=artworks.find(a=>String(a._id)===String(id));if(!art) return;document.getElementById('cOeuvre').textContent=art.titre||'';document.getElementById('cArtiste').textContent=art.artiste?.nom_artiste||art.artiste?.nom||'';document.getElementById('cId').textContent=art.azmId||art._id||'';const qr=document.getElementById('cQR'); qr.innerHTML='';new QRCode(qr,{text:`https://art-zedmo.com/verify/${art.azmId||art._id}`,width:110,height:110});const btnDL=document.getElementById('btnDownloadCert');const info=document.getElementById('certInfo');if(estProprietaireOeuvre(art)){btnDL.style.display='flex';btnDL.disabled=false;info.textContent='Vous êtes propriétaire - téléchargement autorisé';info.style.color='var(--success)';} else {btnDL.style.display='none';info.textContent='Aperçu seul - téléchargement réservé au propriétaire';info.style.color='var(--muted)';}ouvrirModal('certModal');}
 function downloadCert(){const idText=document.getElementById('cId').textContent;const art=artworks.find(a=>String(a.azmId)===String(idText)||String(a._id)===String(idText));if(!art){ alert('Œuvre introuvable'); return; }if(!estProprietaireOeuvre(art)){alert('⛔ Téléchargement réservé au propriétaire de cette œuvre. Connecte-toi avec le compte propriétaire.');return;}if(!getToken()){alert('Connecte-toi avec le compte propriétaire pour télécharger');ouvrirModal('connexionModal');return;}html2canvas(document.getElementById('certBox'),{backgroundColor:'#0a0a0a',scale:2}).then(c=>{const a=document.createElement('a');a.download=(document.getElementById('cId').textContent||'cert')+'.png';a.href=c.toDataURL();a.click();})}
@@ -199,9 +190,9 @@ async function chargerGaleriePrivee(nomArtiste){
   let hasPaid=false;
   let expireDate=null;
   if(currentUser && (currentUser.nom_artiste===nom || currentUser.nom===nom)){
-    if(currentUser.forfait==='galerie_privee' && currentUser.forfaitStatut==='valide'){
-      const exp=new Date(currentUser.forfaitExpire||0);
-      if(!currentUser.forfaitExpire || exp>new Date()){ hasPaid=true; expireDate=exp; }
+    if((currentUser.forfait==='galerie_privee' && currentUser.forfaitStatut==='valide') || currentUser.forfaitPriveeStatut==='valide'){
+      const exp=new Date(currentUser.forfaitExpire||currentUser.forfaitPriveeExpire||0);
+      if(!currentUser.forfaitExpire && !currentUser.forfaitPriveeExpire || exp>new Date()){ hasPaid=true; expireDate=exp; }
     }
   } else {
     if(!artworks.length){
@@ -211,7 +202,7 @@ async function chargerGaleriePrivee(nomArtiste){
       const a=o.artiste||{}; return (a.nom_artiste||'').toLowerCase()===nom.toLowerCase() || (a.nom||'').toLowerCase()===nom.toLowerCase();
     });
     if(oeuvresArt.length){
-      if(oeuvresArt[0].artiste?.forfait==='galerie_privee' || oeuvresArt.some(o=>o.isGaleriePrivee)){ hasPaid=true; }
+      if(oeuvresArt[0].artiste?.forfait==='galerie_privee' || oeuvresArt[0].artiste?.forfaitPriveeStatut==='valide' || oeuvresArt.some(o=>o.isGaleriePrivee)){ hasPaid=true; }
       if(oeuvresArt[0].artiste?.forfaitExpire) expireDate=new Date(oeuvresArt[0].artiste.forfaitExpire);
     }
   }
@@ -255,43 +246,47 @@ async function soumettreExpo(expoId,artId){try{await apiFetch(`/expositions/${ex
 async function chargerEncheres(){const c=document.getElementById('listeEncheres');c.innerHTML='<div class="empty"><span class="spinner"></span> Chargement...</div>';try{const r=await apiFetch('/encheres');encheres=Array.isArray(r)?r:r.encheres||[];document.getElementById('statEncheres').textContent=nombre(encheres.length);if(!encheres.length){c.innerHTML='<div class="empty">Aucune enchère</div>';return;}c.innerHTML=encheres.map(e=>{const id=e._id;const o=e.artwork||{};const img=obtenirImage(o)||o.image||e.image||'';const imgHTML=img?`<img class="art-image" src="${escapeHTML(img)}" alt="${escapeHTML(o.titre||'Œuvre')}" loading="lazy">`:`<div class="art-image placeholder"><i class="fas fa-palette"></i></div>`;const artiste=escapeHTML(o.artiste?.nom_artiste||o.artiste?.nom||e.artiste||'Artiste');const azm=escapeHTML(o.azmId||'');return `<article class="card">${imgHTML}<div class="card-body"><h3>${escapeHTML(o.titre||'Œuvre')}</h3><p class="muted"><i class="fas fa-user"></i> ${artiste} · <i class="fas fa-certificate"></i> ${azm}</p><div class="price">Actuelle: ${prixFCFA(e.enchereActuelle||e.prixDepart)}</div><div class="price" style="font-size:13px;margin-top:4px;color:var(--muted)">Départ: ${prixFCFA(e.prixDepart)} · Fin: ${e.dateFin?new Date(e.dateFin).toLocaleString('fr-FR'):'—'}</div><div style="margin-top:12px"><input id="nom_${id}" class="field" placeholder="Nom acheteur"><input id="mont_${id}" class="field" type="number" placeholder="Montant" style="margin-top:6px"><button class="btn" style="width:100%;margin-top:8px" onclick="encherir('${id}')"><i class="fas fa-gavel"></i> Enchérir</button></div></div></article>`}).join('');}catch(e){c.innerHTML=`<div class="notice error">${escapeHTML(e.message)}</div>`;}}
 async function encherir(enchereId){const nom=document.getElementById('nom_'+enchereId)?.value.trim();const mont=Number(document.getElementById('mont_'+enchereId)?.value);if(!nom||!mont)return alert('Nom et montant requis');try{await apiFetch(`/encheres/${enchereId}/encherir`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({nomAcheteur:nom,montant:mont})});alert(`Enchère: ${nom} - ${mont}`);await chargerEncheres();}catch(err){alert(err.message)}}
 
-// PATCH 4 - LIMITES 5/3 - 10 - 50
+// PATCH 4 CORRIGÉ - LIMITES 5/3 - 10 - 50 + DOUBLE FORFAIT + COMPTE REEL
 document.getElementById('formOeuvre').addEventListener('submit',async e=>{
   e.preventDefault();
   if(!getToken()){afficherMessage('oeuvreMessage','Connecte-toi');return}
   const f=e.currentTarget;
   const isNFTCheck=document.getElementById('isNFT').checked||f.categorie.value==='nft';
   const isPriveeCheck=document.getElementById('isPriveeCheck')?.checked||false;
+
   if(currentUser){
-    let mesOeuvres=artworks.filter(o=>String(o.artiste?._id||o.artiste)===String(currentUser._id));
-    if(!mesOeuvres.length){
-      try{ const r=await apiFetch('/artworks?mine=1'); mesOeuvres=r.artworks||r||[]; }catch{}
-    }
-    const totalCount=mesOeuvres.length;
-    const nftCount=mesOeuvres.filter(o=>o.isNFT||o.categorie==='nft').length;
+    // utilise directement les limites du backend
+    let limite = currentUser.limiteOeuvres || 5;
+    let limiteNFT = currentUser.limiteNFT || 3;
     const forfait=currentUser.forfait||'gratuit';
-    const statut=currentUser.forfaitStatut||'';
-    const isValid=statut==='valide';
-    const exp=currentUser.forfaitExpire?new Date(currentUser.forfaitExpire):null;
-    const stillValid=!exp||exp>new Date();
-    let limite=5, limiteNFT=3;
-    if(forfait==='pro'&&isValid&&stillValid){limite=10;limiteNFT=10;}
-    if(forfait==='galerie_privee'&&isValid&&stillValid){limite=50;limiteNFT=50;}
-    if(isPriveeCheck && !(forfait==='galerie_privee'&&isValid&&stillValid)){
+
+    if(isPriveeCheck && !(currentUser.forfait==='galerie_privee' && currentUser.forfaitStatut==='valide' || currentUser.forfaitPriveeStatut==='valide')){
       afficherMessage('oeuvreMessage','⛔ Galerie privée requiert forfait 50$ validé');
       alert('Tu dois payer Galerie Privée 50$ / 1 mois pour publier en privé');
       return;
     }
+
+    // compte REEL via API
+    let mesOeuvres = [];
+    try{ 
+      const r=await apiFetch('/artworks?mine=1'); 
+      mesOeuvres=r.artworks||r||[]; 
+    }catch{
+      mesOeuvres=artworks.filter(o=>String(o.artiste?._id||o.artiste)===String(currentUser._id));
+    }
+    const totalCount=mesOeuvres.filter(o=>!o.isNFT).length;
+    const nftCount=mesOeuvres.filter(o=>o.isNFT).length;
+
     if(isNFTCheck){
       if(nftCount>=limiteNFT){
         afficherMessage('oeuvreMessage',`⛔ Limite ${limiteNFT} NFT max atteinte pour ${forfait}. Passe supérieur.`);
-        alert(`Limite ${limiteNFT} NFT max atteinte pour ${forfait}. PRO=10, Privée=50.`);
+        alert(`Limite ${limiteNFT} NFT max atteinte pour ${forfait}. PRO=10, Privée=50. Actuel: ${nftCount}/${limiteNFT}`);
         return;
       }
     } else {
       if(totalCount>=limite){
-        afficherMessage('oeuvreMessage',`⛔ Limite ${limite} oeuvres max atteinte pour ${forfait}. Passe PRO 10 ou Privée 50.`);
-        alert(`Limite ${limite} oeuvres max atteinte pour ${forfait}. PRO=10 oeuvres, Privée=50 oeuvres.`);
+        afficherMessage('oeuvreMessage',`⛔ Limite ${limite} oeuvres max atteinte pour ${forfait}.`);
+        alert(`Limite ${limite} oeuvres max atteinte pour ${forfait}. PRO=10 oeuvres, Privée=50 oeuvres. Actuel: ${totalCount}/${limite}`);
         return;
       }
     }
