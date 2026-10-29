@@ -69,7 +69,6 @@ router.post('/register', async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-// LOGIN - CORRIGÉ ICI
 router.post('/login', async (req, res, next) => {
   try {
     const id = String(req.body.identifiant || req.body.email || req.body.whatsapp || '').trim();
@@ -79,7 +78,7 @@ router.post('/login', async (req, res, next) => {
     if (id.includes('@')) cond.push({ email: id.toLowerCase() });
     const user = await User.findOne({ $or: cond }).select('+password');
     if (!user) return res.status(404).json({ error: 'Compte introuvable' });
-    if (!user.password) return res.status(500).json({ error: 'Compte ancien sans mot de passe, fais mot de passe oublié' });
+    if (!user.password) return res.status(500).json({ error: 'Ancien compte - fais mot de passe oublié' });
     const ok = await bcrypt.compare(password, user.password);
     if (!ok) return res.status(400).json({ error: 'Mot de passe incorrect' });
     const token = jwt.sign({ _id: user._id, role: user.role, whatsapp: user.whatsapp }, JWT_SECRET, { expiresIn: '30d' });
@@ -174,8 +173,11 @@ router.post('/reset-password', async (req, res, next) => {
     if (!token || !newPassword) return res.status(400).json({ error: 'Token et nouveau mot de passe requis' });
     if (newPassword.length < 10) return res.status(400).json({ error: '10 caractères minimum' });
     let user;
-    if (userId) { user = await User.findOne({ _id: userId, resetPasswordToken: token, resetPasswordExpire: { $gt: new Date() } }); }
-    else { user = await User.findOne({ resetPasswordToken: token, resetPasswordExpire: { $gt: new Date() } }); }
+    if (userId) { 
+      user = await User.findOne({ _id: userId, resetPasswordToken: token, resetPasswordExpire: { $gt: new Date() } }).select('+password +resetPasswordToken +resetPasswordExpire'); 
+    } else { 
+      user = await User.findOne({ resetPasswordToken: token, resetPasswordExpire: { $gt: new Date() } }).select('+password +resetPasswordToken +resetPasswordExpire'); 
+    }
     if (!user) return res.status(400).json({ error: 'Lien expiré ou invalide' });
     user.password = await bcrypt.hash(newPassword, 10);
     user.resetPasswordToken = undefined; user.resetPasswordExpire = undefined;
