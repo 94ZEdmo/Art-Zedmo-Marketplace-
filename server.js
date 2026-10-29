@@ -176,6 +176,22 @@ app.get('/api/settings/paiements', async (req,res,next)=>{
 app.get('/admin', (req,res)=>{ res.sendFile(path.join(__dirname, 'public', 'admin.html')); });
 app.get('/admin.html', (req,res)=>{ res.sendFile(path.join(__dirname, 'public', 'admin.html')); });
 
+// ✅ FIX NFT - C'EST ÇA QUI MANQUAIT SUR TON SCREENSHOT
+app.get('/api/nft', async (req,res,next)=>{
+  try{
+    const Artwork = mongoose.model('Artwork');
+    const nfts = await Artwork.find({ isNFT: true }).sort({createdAt:-1}).limit(100).lean().catch(()=>[]);
+    res.json({ success: true, nfts, data: nfts });
+  }catch(e){ res.json([]); }
+});
+app.get('/api/nfts', async (req,res,next)=>{
+  try{
+    const Artwork = mongoose.model('Artwork');
+    const nfts = await Artwork.find({ isNFT: true }).sort({createdAt:-1}).limit(100).lean().catch(()=>[]);
+    res.json({ success: true, nfts, data: nfts });
+  }catch(e){ res.json([]); }
+});
+
 app.get('/api/health', (req,res)=>{ res.json({ status: mongoose.connection.readyState===1?'LIVE':'DOWN' }); });
 
 async function fixAllCompteursGlobal() {
