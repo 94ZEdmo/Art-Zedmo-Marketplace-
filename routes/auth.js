@@ -1,6 +1,7 @@
 import express from 'express';
 import jwt from 'jsonwebtoken';
 import mongoose from 'mongoose';
+import crypto from 'crypto';
 import User from '../models/User.js';
 import GaleriePrivee from '../models/GaleriePrivee.js';
 
@@ -66,7 +67,6 @@ function publicUser(user) {
     forfaitStatut: user.forfaitStatut || null,
     forfaitPreuve: user.forfaitPreuve || null,
     forfaitTypeDemande: user.forfaitTypeDemande || null,
-    // === AJOUT SEULEMENT - DOUBLE FORFAIT SIMULTANE ===
     forfaitProStatut: user.forfaitProStatut || 'gratuit',
     forfaitProExpire: user.forfaitProExpire || null,
     forfaitProPreuve: user.forfaitProPreuve || null,
@@ -85,6 +85,7 @@ function createToken(user) {
   return jwt.sign({ id: user._id.toString(), role: user.role }, JWT_SECRET, { algorithm: 'HS256', expiresIn: user.role === 'admin' ? '8h' : '7d' });
 }
 
+// === INSCRIPTION AUTO-VALIDEE ===
 router.post('/register', async (req, res, next) => {
   try {
     const { nom, nom_artiste, whatsapp, email, password, ville, role, adresseReception } = req.body;
@@ -102,10 +103,11 @@ router.post('/register', async (req, res, next) => {
     const user = await User.create({ 
       nom: nomNettoye, nom_artiste: artisteNettoye, whatsapp: whatsappNettoye, email: emailNettoye, password, 
       ville: ville||'Abomey-Calavi', role: roleAutorise, adresseReception: adresseNettoyee,
-      statut: 'en_attente', forfait: 'gratuit', limiteOeuvres: 5, limiteNFT: 3,
+      statut: 'valide', estVerifie: true, forfait: 'gratuit', limiteOeuvres: 5, limiteNFT: 3,
       forfaitProStatut: 'gratuit', forfaitPriveeStatut: 'gratuit'
     });
-    return res.status(201).json({ success: true, message: 'En attente validation admin.', user: publicUser(user) });
+    const token = createToken(user);
+    return res.status(201).json({ success: true, token, user: publicUser(user) });
   } catch (error) { next(error); }
 });
 
@@ -117,11 +119,44 @@ router.post('/login', async (req, res, next) => {
     if (loginId.includes('@')) conditions.push({ email: loginId.toLowerCase() });
     const user = await User.findOne({ $or: conditions }).select('+password');
     if (!user || !(await user.comparePassword(password))) return res.status(401).json({ error: 'Identifiants invalides.' });
-    if (user.statut === 'en_attente') return res.status(403).json({ error: 'En attente de validation.' });
-    if (user.statut !== 'valide') return res.status(403).json({ error: 'Compte non autorisé.' });
+    if (user.statut === 'refuse') return res.status(403).json({ error: 'Compte refusé.' });
     const token = createToken(user);
     return res.json({ success: true, token, user: publicUser(user) });
   } catch (error) { next(error); }
+});
+
+// === MOT DE PASSE OUBLIE - CORRIGE TON 404 ===
+router.post('/forgot-password', async (req, res, next) => {
+  try {
+    const id = String(req.body.identifiant || req.body.email || req.body.whatsapp || '').trim();
+    if (!id) return res.status(400).json({ error: 'WhatsApp ou Email requis.' });
+    const conditions = [{ whatsapp: id }];
+    if (id.includes('@')) conditions.push({ email: id.toLowerCase() });
+    const user = await User.findOne({ $or: conditions });
+    if (!user) return res.status(404).json({ error: 'Compte introuvable.' });
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    user.resetPasswordToken = resetToken;
+    user.resetPasswordExpire = new Date(Date.now() + 60*60*1000);
+    await user.save();
+    console.log(`RESET TOKEN ${user.email}: ${resetToken}`);
+    return res.json({ success: true, message: 'Lien valable 1h', resetToken, userId: user._id });
+  } catch (e) { next(e); }
+});
+
+router.post('/reset-password', async (req, res, next) => {
+  try {
+    const finalToken = req.body.token || req.body.resetToken;
+    const finalPassword = req.body.password || req.body.newPassword;
+    if (!finalToken || !finalPassword) return res.status(400).json({ error: 'Token et mot de passe requis.' });
+    if (finalPassword.length < 10) return res.status(400).json({ error: '10 caractères minimum.' });
+    const user = await User.findOne({ resetPasswordToken: finalToken, resetPasswordExpire: { $gt: new Date() } });
+    if (!user) return res.status(400).json({ error: 'Lien expiré ou invalide.' });
+    user.password = finalPassword;
+    user.resetPasswordToken = null;
+    user.resetPasswordExpire = null;
+    await user.save();
+    return res.json({ success: true, message: 'Mot de passe changé.' });
+  } catch (e) { next(e); }
 });
 
 router.get('/me', authenticateToken, async (req, res, next) => {
@@ -175,7 +210,6 @@ router.get('/forfaits/list', async (req, res) => {
   });
 });
 
-// ACHAT FORFAIT - DOUBLE ACTIF POSSIBLE
 async function acheterForfaitHandler(req,res,next){
   try{
     const { forfait, type, preuve, transactionId } = req.body;
@@ -185,7 +219,6 @@ async function acheterForfaitHandler(req,res,next){
     if (!preuveFinal || preuveFinal.length < 4) return res.status(400).json({ error: `ID transaction obligatoire MTN ${ADRESSES.MTN} / Moov ${ADRESSES.MOOV} / USDT ${ADRESSES.USDT} / Pi ${ADRESSES.PI}` });
     const user = await User.findById(req.auth.id);
     if (!user) return res.status(404).json({ error: 'Utilisateur introuvable.' });
-    // === LOGIQUE DOUBLE FORFAIT - N'ECRASE PAS L'AUTRE ===
     if(forfaitDemande==='pro'){
       user.forfaitProStatut='en_attente';
       user.forfaitProPreuve=preuveFinal;
@@ -198,78 +231,4 @@ async function acheterForfaitHandler(req,res,next){
     user.forfaitPreuve = preuveFinal;
     user.forfaitDateDemande = new Date();
     await user.save();
-    console.log(`💰 FORFAIT EN ATTENTE: ${forfaitDemande} par ${user.nom_artiste} - Preuve: ${preuveFinal}`);
-    return res.json({ success: true, message: `Forfait ${forfaitDemande} en attente - admin va valider 1 mois. Preuve: ${preuveFinal}`, user: publicUser(user) });
-  }catch(e){next(e)}
-}
-router.post('/forfait/acheter', authenticateToken, acheterForfaitHandler);
-router.post('/forfaits/acheter', authenticateToken, acheterForfaitHandler);
-router.post('/forfaits', authenticateToken, acheterForfaitHandler);
-
-// VALIDATION FORFAIT PAR ADMIN - GARDE L'AUTRE FORFAIT ACTIF
-async function validerForfaitHandler(req,res,next){
-  try{
-    const user = await User.findById(req.params.id);
-    if (!user) return res.status(404).json({ error: 'Utilisateur introuvable.' });
-    const typeDemande = (req.body.type || req.body.forfait || user.forfaitTypeDemande || user.forfait || 'pro').toLowerCase();
-    const type = ['pro','galerie_privee'].includes(typeDemande) ? typeDemande : 'pro';
-    const dureeMois = Number(req.body.dureeMois||1);
-    const expire = new Date(); expire.setMonth(expire.getMonth()+dureeMois);
-
-    if (type === 'pro') {
-      user.forfaitProStatut='valide';
-      user.forfaitProExpire=expire;
-      user.forfaitPrixUSD = 7; user.forfaitPrixFCFA = 4200;
-    } else {
-      user.forfaitPriveeStatut='valide';
-      user.forfaitPriveeExpire=expire;
-      user.forfaitPrixUSD = 50; user.forfaitPrixFCFA = 30000;
-      let galerie = await GaleriePrivee.findOne({ proprietaire: user._id });
-      if (!galerie) {
-        const baseSlug = (user.nom_artiste || user.nom).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '').slice(0,30);
-        galerie = await GaleriePrivee.create({ proprietaire: user._id, nomGalerie: `Galerie de ${user.nom_artiste}`, slug: `${baseSlug}-${user._id.toString().slice(-6)}`, whatsapp: user.whatsapp, isActive: true });
-      }
-    }
-    // NE PAS ECRASER L'AUTRE FORFAIT - CALCUL LIMITE MAX
-    const now = new Date();
-    const proValide = user.forfaitProStatut==='valide' && (!user.forfaitProExpire || user.forfaitProExpire>now);
-    const priveeValide = user.forfaitPriveeStatut==='valide' && (!user.forfaitPriveeExpire || user.forfaitPriveeExpire>now);
-    if(priveeValide){ user.forfait='galerie_privee'; user.limiteOeuvres=50; user.limiteNFT=50; }
-    else if(proValide){ user.forfait='pro'; user.limiteOeuvres=10; user.limiteNFT=10; }
-    else { user.forfait='gratuit'; user.limiteOeuvres=5; user.limiteNFT=3; }
-    
-    user.forfaitStatut = 'valide';
-    user.forfaitExpireAt = priveeValide ? user.forfaitPriveeExpire : user.forfaitProExpire;
-    user.forfaitTypeDemande = null;
-    await user.save();
-    return res.json({ success: true, message: `✅ ${type} validé 1 mois - ${priveeValide&&proValide?'PRO+PRIVEE actifs 50 oeuvres':type==='pro'?'10 oeuvres':'50 oeuvres + galerie privée'}`, user: publicUser(user) });
-  }catch(e){next(e)}
-}
-router.put('/:id/forfait/valider', authenticateToken, requireAdmin, validerForfaitHandler);
-router.put('/:id/forfaits/:id/valider', authenticateToken, requireAdmin, validerForfaitHandler);
-router.put('/forfaits/:id/valider', authenticateToken, requireAdmin, async (req,res,next)=>{
-  req.params.id = req.params.id; return validerForfaitHandler(req,res,next);
-});
-router.put('/forfaits/:id/validate', authenticateToken, requireAdmin, async (req,res,next)=>{
-  req.params.id = req.params.id; return validerForfaitHandler(req,res,next);
-});
-
-async function validateUserHandler(req, res, next) {
-  try {
-    const user = await User.findById(req.params.id);
-    if (!user) return res.status(404).json({ error: 'Introuvable.' });
-    user.statut = 'valide'; user.estVerifie = true; await user.save();
-    await sendValidationEmail(user);
-    return res.json({ success: true, message: 'Compte validé.', user: publicUser(user) });
-  } catch (error) { next(error); }
-}
-router.put('/:id/valider', authenticateToken, requireAdmin, validateUserHandler);
-router.put('/users/:id/valider', authenticateToken, requireAdmin, validateUserHandler);
-router.put('/:id/refuser', authenticateToken, requireAdmin, async (req, res, next) => {
-  try { const user = await User.findById(req.params.id); if (!user) return res.status(404).json({ error: 'Introuvable.' }); user.statut = 'refuse'; await user.save(); return res.json({ success: true, message: 'Refusé.' }); } catch (e) { next(e); }
-});
-router.delete('/:id', authenticateToken, requireAdmin, async (req, res, next) => {
-  try { if (req.params.id === req.auth.id) return res.status(400).json({ error: 'Pas ton propre compte.' }); await User.deleteOne({ _id: req.params.id }); return res.json({ success: true, message: 'Supprimé.' }); } catch (e) { next(e); }
-});
-
-export default router;
+    return
