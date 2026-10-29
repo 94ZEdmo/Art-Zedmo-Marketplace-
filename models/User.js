@@ -18,7 +18,6 @@ const userSchema = new mongoose.Schema(
     avatar: { type: String, default: '' },
     adresseReception: { type: String, trim: true, default: '', maxlength: 200 },
     
-    // INSCRIPTION AUTO-VALIDÉE
     statut: { type: String, enum: ['en_attente', 'valide', 'refuse'], default: 'valide', required: true },
     estVerifie: { type: Boolean, default: true },
     
@@ -27,11 +26,9 @@ const userSchema = new mongoose.Schema(
     totalVotesRecus: { type: Number, default: 0 },
     solde: { type: Number, default: 0 },
 
-    // RESET PASSWORD
     resetPasswordToken: { type: String, default: null, select: false },
     resetPasswordExpire: { type: Date, default: null, select: false },
 
-    // FORFAITS
     forfait: { type: String, enum: ['gratuit','pro','galerie_privee'], default: 'gratuit' },
     forfaitStatut: { type: String, enum: ['en_attente','valide','refuse', null], default: null },
     forfaitPreuve: { type: String, default: null },
@@ -67,34 +64,40 @@ userSchema.set('toJSON', {
   }
 });
 
+// FIX: évite le double hashage
 userSchema.pre('save', async function () {
-  if (!this.isModified('password')) {
-    const now = new Date();
-    if (this.forfaitProExpire && this.forfaitProExpire < now) {
-      this.forfaitProStatut = 'gratuit';
-      this.forfaitProExpire = null;
+  if (this.isModified('password')) {
+    // Si déjà hashé (commence par $2a$ ou $2b$), on ne re-hash pas
+    if (this.password && this.password.startsWith('$2')) {
+      // déjà hashé dans auth.js
+    } else {
+      this.password = await bcrypt.hash(this.password, 12);
     }
-    if (this.forfaitPriveeExpire && this.forfaitPriveeExpire < now) {
-      this.forfaitPriveeStatut = 'gratuit';
-      this.forfaitPriveeExpire = null;
-    }
-    if (this.forfaitExpireAt && this.forfaitExpireAt < now && this.forfait !== 'gratuit' && this.forfaitProStatut !== 'valide' && this.forfaitPriveeStatut !== 'valide') {
-      this.forfait = 'gratuit'; this.limiteOeuvres = 5; this.limiteNFT = 3; this.forfaitStatut = null;
-    }
-    const proValide = this.forfaitProStatut === 'valide' && (!this.forfaitProExpire || this.forfaitProExpire > now);
-    const priveeValide = this.forfaitPriveeStatut === 'valide' && (!this.forfaitPriveeExpire || this.forfaitPriveeExpire > now);
-    if (priveeValide) {
-      this.forfait = 'galerie_privee';
-      this.limiteOeuvres = 50; this.limiteNFT = 50;
-      this.forfaitPrixUSD = 50; this.forfaitPrixFCFA = 30000;
-    } else if (proValide) {
-      this.forfait = 'pro';
-      this.limiteOeuvres = 10; this.limiteNFT = 10;
-      this.forfaitPrixUSD = 7; this.forfaitPrixFCFA = 4200;
-    }
-    return;
   }
-  this.password = await bcrypt.hash(this.password, 12);
+
+  const now = new Date();
+  if (this.forfaitProExpire && this.forfaitProExpire < now) {
+    this.forfaitProStatut = 'gratuit';
+    this.forfaitProExpire = null;
+  }
+  if (this.forfaitPriveeExpire && this.forfaitPriveeExpire < now) {
+    this.forfaitPriveeStatut = 'gratuit';
+    this.forfaitPriveeExpire = null;
+  }
+  if (this.forfaitExpireAt && this.forfaitExpireAt < now && this.forfait !== 'gratuit' && this.forfaitProStatut !== 'valide' && this.forfaitPriveeStatut !== 'valide') {
+    this.forfait = 'gratuit'; this.limiteOeuvres = 5; this.limiteNFT = 3; this.forfaitStatut = null;
+  }
+  const proValide = this.forfaitProStatut === 'valide' && (!this.forfaitProExpire || this.forfaitProExpire > now);
+  const priveeValide = this.forfaitPriveeStatut === 'valide' && (!this.forfaitPriveeExpire || this.forfaitPriveeExpire > now);
+  if (priveeValide) {
+    this.forfait = 'galerie_privee';
+    this.limiteOeuvres = 50; this.limiteNFT = 50;
+    this.forfaitPrixUSD = 50; this.forfaitPrixFCFA = 30000;
+  } else if (proValide) {
+    this.forfait = 'pro';
+    this.limiteOeuvres = 10; this.limiteNFT = 10;
+    this.forfaitPrixUSD = 7; this.forfaitPrixFCFA = 4200;
+  }
 });
 
 userSchema.methods.comparePassword = async function (pwd) {
