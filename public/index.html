@@ -56,7 +56,7 @@
 <button class="btn btn-small" onclick="acheterForfait('pro')"><i class="fas fa-star"></i> PRO 7$ (4.200 FCFA) - 10 oeuvres / 1 mois</button>
 <button class="btn btn-small" style="background:#fff;color:#111;border-color:#fff" onclick="acheterForfait('galerie_privee')"><i class="fas fa-store"></i> Galerie Privée 50$ (30.000 FCFA) - 50 oeuvres / 1 mois</button>
 </div>
-<p class="muted" style="font-size:11px;margin-top:8px">Paiement: MTN +2290196587303 / Moov +2290194655238 / USDT / Pi - Statut: En attente de vérification admin</p>
+<p class="muted" style="font-size:11px;margin-top:8px">Paiement: MTN +2290196587303 / Moov +2290194655238 / USDT / Pi - Validé automatiquement</p>
 </div>
 <div class="account-actions" id="actionsArtiste"><button class="btn" onclick="demarrerPublication()"><i class="fas fa-plus"></i> Publier œuvre / NFT</button><button class="btn btn-outline" onclick="chargerMesInfos()">Actualiser</button><button class="btn btn-outline" onclick="seDeconnecter()">Déconnexion</button></div><div class="account-actions hidden" id="actionsAcheteur"><button class="btn" onclick="allerA('galerie')"><i class="fas fa-shopping-cart"></i> Acheter</button><button class="btn btn-outline" onclick="allerA('expositions')"><i class="fas fa-vote-yea"></i> Mes votes</button><button class="btn btn-outline" onclick="seDeconnecter()">Déconnexion</button></div></div><div id="compteDeconnecte" class="panel"><h3>Rejoignez</h3><p class="muted">Connectez-vous pour publier.</p><div class="account-actions"><button class="btn" onclick="ouvrirModal('connexionModal')">Connexion</button><button class="btn btn-outline" onclick="ouvrirModal('inscriptionModal')">Inscription</button></div></div>
 <div id="compteDetails" class="panel" style="margin-top:18px"><h3 style="font-size:22px"><i class="fas fa-palette"></i> <span id="titreMesOeuvres">Mes œuvres / NFT en ligne - Mes vendus</span></h3><div id="mesOeuvresList" class="grid" style="margin-top:15px"><div class="empty">Connecte-toi pour voir tes œuvres</div></div><div id="blocPartageVote" style="margin-top:28px;padding:22px;background:linear-gradient(135deg,#1d1a10,#2a220f);border-radius:16px;border:2px solid var(--gold)"><h3 style="margin:0 0 8px;color:var(--gold);font-size:22px"><i class="fas fa-share-alt"></i> Partager mon lien pour les votes</h3><p class="muted" style="font-size:15px">Partage ce lien à tes clients / statut WhatsApp pour avoir plus de votes.</p><div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:16px"><input id="monLienVote" class="field" readonly style="font-size:16px;font-weight:700;flex:1;min-width:220px"><button class="btn" onclick="navigator.clipboard.writeText(document.getElementById('monLienVote').value);alert('Lien copié !')"><i class="fas fa-copy"></i> Copier</button><a id="btnWhatsappPartage" target="_blank" class="btn" style="background:#25D366;border-color:#25D366;color:#111"><i class="fab fa-whatsapp"></i> WhatsApp</a></div></div></div>
@@ -66,7 +66,13 @@
 <nav class="bottom-nav"><button class="nav-item active" data-target="accueil" onclick="allerA('accueil')"><i class="fas fa-house"></i><span>Accueil</span></button><button class="nav-item" data-target="galerie" onclick="allerA('galerie')"><i class="fas fa-images"></i><span>Galerie</span></button><button class="nav-item" data-target="expositions" onclick="allerA('expositions')"><i class="fas fa-landmark"></i><span>Expos</span></button><button class="nav-item" data-target="encheres" onclick="allerA('encheres')"><i class="fas fa-gavel"></i><span>Enchères</span></button><button class="nav-item" data-target="verification" onclick="allerA('verification')"><i class="fas fa-certificate"></i><span>Vérif</span></button><button class="nav-item" data-target="compte" onclick="allerA('compte')"><i class="fas fa-user"></i><span>Compte</span></button></nav>
 
 <div class="modal" id="inscriptionModal"><div class="modal-content"><div class="modal-header"><h2>Créer compte</h2><button class="close-btn" onclick="fermerModal('inscriptionModal')">&times;</button></div><form id="formInscription"><div class="form-grid"><div class="form-group"><label>Nom *</label><input class="field" name="nom" required></div><div class="form-group"><label>Nom artiste</label><input class="field" name="nom_artiste"></div><div class="form-group"><label>WhatsApp *</label><input class="field" name="whatsapp" required></div><div class="form-group"><label>Email</label><input class="field" name="email" type="email"></div><div class="form-group"><label>Ville</label><input class="field" name="ville"></div><div class="form-group"><label>Type</label><select class="field" name="role" id="roleSelect" onchange="toggleAdresseReception()"><option value="artiste">Artiste</option><option value="acheteur">Acheteur</option></select></div><div class="form-group full-width" id="groupAdresseReception"><label>Adresse de réception (Wallet TRC20 / Pi Network / MTN Moov) * Artiste</label><input class="field" name="adresseReception" id="adresseReception" placeholder="Ex: +2290196587303 ou TFXZSyJaC6... ou GAF62KXAV7..."></div><div class="form-group full-width"><label>Mot de passe *</label><input class="field" name="password" type="password" required minlength="10"></div></div><button class="btn" type="submit" style="width:100%;margin-top:18px">Créer</button><div id="inscriptionMessage" class="form-message"></div></form></div></div>
-<div class="modal" id="connexionModal"><div class="modal-content"><div class="modal-header"><h2>Connexion</h2><button class="close-btn" onclick="fermerModal('connexionModal')">&times;</button></div><form id="formConnexion"><div class="form-group"><label>Identifiant</label><input class="field" name="identifiant" required></div><div class="form-group" style="margin-top:14px"><label>Mot de passe</label><input class="field" name="password" type="password" required></div><button class="btn" type="submit" style="width:100%;margin-top:18px">Se connecter</button><div id="connexionMessage" class="form-message"></div></form></div></div>
+
+<div class="modal" id="connexionModal"><div class="modal-content"><div class="modal-header"><h2>Connexion</h2><button class="close-btn" onclick="fermerModal('connexionModal')">&times;</button></div><form id="formConnexion"><div class="form-group"><label>Identifiant</label><input class="field" name="identifiant" required placeholder="WhatsApp ou Email"></div><div class="form-group" style="margin-top:14px"><label>Mot de passe</label><input class="field" name="password" type="password" required></div><button class="btn" type="submit" style="width:100%;margin-top:18px">Se connecter</button><p style="text-align:center;margin-top:12px"><a href="#" onclick="fermerModal('connexionModal');ouvrirModal('forgotModal');return false;" style="color:var(--gold);font-size:13px"><i class="fas fa-key"></i> Mot de passe oublié ?</a></p><div id="connexionMessage" class="form-message"></div></form></div></div>
+
+<div class="modal" id="forgotModal"><div class="modal-content"><div class="modal-header"><h2>Mot de passe oublié</h2><button class="close-btn" onclick="fermerModal('forgotModal')">&times;</button></div><form id="formForgot"><div class="form-group"><label>WhatsApp ou Email de ton compte *</label><input class="field" name="identifiant" required placeholder="+229019... ou email"></div><button class="btn" type="submit" style="width:100%;margin-top:14px">Envoyer le lien de réinitialisation</button><div id="forgotMessage" class="form-message"></div><div class="notice" style="margin-top:12px;font-size:12px">Tu recevras un lien valable 1h pour créer un nouveau mot de passe. Si tu ne reçois pas, contacte WhatsApp 0194655238</div></form></div></div>
+
+<div class="modal" id="resetModal"><div class="modal-content"><div class="modal-header"><h2>Nouveau mot de passe</h2><button class="close-btn" onclick="fermerModal('resetModal')">&times;</button></div><form id="formReset"><input type="hidden" id="resetUserId"><input type="hidden" id="resetToken"><div class="form-group"><label>Nouveau mot de passe * (min 10 caractères)</label><input class="field" type="password" id="newPassword" required minlength="10"></div><div class="form-group" style="margin-top:10px"><label>Confirmer mot de passe *</label><input class="field" type="password" id="confirmPassword" required minlength="10"></div><button class="btn" type="submit" style="width:100%;margin-top:14px">Réinitialiser mon mot de passe</button><div id="resetMessage" class="form-message"></div></form></div></div>
+
 <div class="modal" id="oeuvreModal"><div class="modal-content"><div class="modal-header"><h2>Publier œuvre / NFT</h2><button class="close-btn" onclick="fermerModal('oeuvreModal')">&times;</button></div><form id="formOeuvre"><div class="form-grid"><div class="form-group full-width"><label>Titre *</label><input class="field" name="titre" required></div><div class="form-group"><label>Catégorie *</label><select class="field" name="categorie" required><option value="peinture">Peinture</option><option value="sculpture">Sculpture</option><option value="dessin">Dessin</option><option value="photographie">Photographie</option><option value="artisanat">Artisanat</option><option value="nft">NFT</option><option value="autre">Autre</option></select></div><div class="form-group"><label>Prix FCFA</label><input class="field" name="prix" type="number" min="0" value="0"></div><div class="form-group full-width"><label>Description *</label><textarea class="field" name="description" required></textarea></div><div class="form-group full-width"><label><input type="checkbox" id="isNFT"> C'est un NFT</label></div>
 <div class="form-group full-width" id="groupPrivee" style="display:none;background:#2a220f;border:1px solid var(--gold);padding:10px;border-radius:8px"><label><input type="checkbox" id="isPriveeCheck"> <i class="fas fa-store"></i> Publier dans ma galerie privée (50$ / 1 mois) - N'apparaîtra PAS dans galerie permanente</label><small class="muted">Visible uniquement sur ta page privée /galerie-privee/TonNom</small></div>
 <div class="form-group full-width"><label>Image (IPFS Pinata)</label><input class="field" name="image" type="file" accept="image/*"></div></div><button class="btn" type="submit" style="width:100%;margin-top:18px">Envoyer en galerie</button><div id="oeuvreMessage" class="form-message"></div></form></div></div>
@@ -111,13 +117,83 @@ const fd=document.getElementById('forfaitDetails');if(fd){let txt=currentUser.fo
 toggleGaleriePriveeCheck();
 chargerMesOeuvres();}}
 
-// CORRIGE - utilise /mine direct, plus de filter global qui affichait les autres
 async function chargerMesOeuvres(){const cont=document.getElementById('mesOeuvresList');if(!getToken()||!currentUser){cont.innerHTML='<div class="empty">Connecte-toi</div>';return;}cont.innerHTML='<div class="empty"><span class="spinner"></span> Chargement</div>';try{let list=[];try{const r=await apiFetch('/artworks/mine');list=r.artworks||r||[];}catch(e1){try{const r2=await apiFetch('/artworks?mine=1');list=r2.artworks||r2||[];}catch(e2){list=[];}}if(!list.length){cont.innerHTML='<div class="empty">Pas encore d\'oeuvres - Publie ta première œuvre</div>';return;}cont.innerHTML=list.map(o=>{const id=String(o._id||'');const titre=escapeHTML(o.titre||'Sans titre');const prix=prixFCFA(o.prix);const img=(o.images&&o.images[0])||o.image||'';const imgHTML=img?`<img class="art-image" src="${escapeHTML(img)}" style="height:160px">`:`<div class="art-image placeholder" style="height:160px"><i class="fas fa-palette"></i></div>`;const boostBadge=o.isBoosted?`<div class="badge-boost"><i class="fas fa-rocket"></i> BOOSTÉ</div>`:(o.boostStatut==='en_attente'?`<div class="badge-boost" style="background:orange">En attente vérif</div>`:'');const priveBadge=o.isGaleriePrivee?`<div class="badge-privee">PRIVÉE</div>`:'';
 return `<article class="card">${imgHTML}${boostBadge}${priveBadge}<div class="card-body"><h3>${titre}</h3><div class="price">${escapeHTML(prix)}</div><div class="card-meta"><span>${escapeHTML(o.statut||'')}</span><span>${nombre(o.votesCount||0)} votes</span></div><div class="card-actions"><button class="btn btn-small" onclick="openCert('${id}')"><i class="fas fa-certificate"></i> Certificat</button><button class="btn btn-small" style="background:#ff3b30;border-color:#ff3b30" onclick="acheterBoost('${id}','${titre.replace(/'/g,"")}')"><i class="fas fa-rocket"></i> Booster 1.200F / 48h</button></div></div></article>`;}).join('');}catch(e){cont.innerHTML='<div class="empty">Erreur: '+escapeHTML(e.message)+'</div>';}}
 
-document.getElementById('formInscription').addEventListener('submit',async e=>{e.preventDefault();const f=e.currentTarget;const b=f.querySelector('button[type="submit"]');b.disabled=true;afficherMessage('inscriptionMessage','Création...');const roleVal=f.role.value;const d={nom:f.nom.value.trim(),nom_artiste:f.nom_artiste.value.trim(),whatsapp:f.whatsapp.value.trim(),email:f.email.value.trim(),ville:f.ville.value.trim(),role:roleVal,adresseReception:f.adresseReception?.value.trim()||'',password:f.password.value};if(roleVal==='artiste'&&!d.adresseReception){afficherMessage('inscriptionMessage','Adresse de réception obligatoire pour artiste');b.disabled=false;return;}try{const r=await apiFetch('/auth/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)});afficherMessage('inscriptionMessage',r.message||'Créé - en attente validation');f.reset();toggleAdresseReception();}catch(err){afficherMessage('inscriptionMessage',err.message)}finally{b.disabled=false}});
+// INSCRIPTION AUTO-VALIDEE
+document.getElementById('formInscription').addEventListener('submit',async e=>{
+  e.preventDefault();
+  const f=e.currentTarget;
+  const b=f.querySelector('button[type="submit"]');
+  b.disabled=true;
+  afficherMessage('inscriptionMessage','Création du compte...');
+  const roleVal=f.role.value;
+  const d={nom:f.nom.value.trim(),nom_artiste:f.nom_artiste.value.trim(),whatsapp:f.whatsapp.value.trim(),email:f.email.value.trim(),ville:f.ville.value.trim(),role:roleVal,adresseReception:f.adresseReception?.value.trim()||'',password:f.password.value};
+  if(roleVal==='artiste'&&!d.adresseReception){afficherMessage('inscriptionMessage','Adresse de réception obligatoire pour artiste');b.disabled=false;return;}
+  try{
+    const r=await apiFetch('/auth/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)});
+    if(r.token){
+      localStorage.setItem('AZ_TOKEN',r.token);
+      localStorage.setItem('AZ_USER',JSON.stringify(r.user));
+      currentUser=r.user;
+      mettreAJourCompte();
+      fermerModal('inscriptionModal');
+      f.reset();
+      allerA('compte');
+      alert('✅ Compte créé et validé automatiquement ! Bienvenue sur ART-ZEDMO');
+    }else{
+      afficherMessage('inscriptionMessage',r.message||'Compte créé - vous pouvez vous connecter');
+      f.reset();
+      fermerModal('inscriptionModal');
+      ouvrirModal('connexionModal');
+    }
+    toggleAdresseReception();
+  }catch(err){afficherMessage('inscriptionMessage',err.message)}
+  finally{b.disabled=false}
+});
+
 document.getElementById('formConnexion').addEventListener('submit',async e=>{e.preventDefault();const f=e.currentTarget;const b=f.querySelector('button[type="submit"]');b.disabled=true;try{const r=await apiFetch('/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({identifiant:f.identifiant.value.trim(),password:f.password.value})});localStorage.setItem('AZ_TOKEN',r.token);localStorage.setItem('AZ_USER',JSON.stringify(r.user));currentUser=r.user;mettreAJourCompte();fermerModal('connexionModal');allerA('compte')}catch(err){afficherMessage('connexionMessage',err.message)}finally{b.disabled=false}});
-function seDeconnecter(){localStorage.removeItem('AZ_TOKEN');localStorage.removeItem('AZ_USER');currentUser=null;mettreAJourCompte()}
+
+// MOT DE PASSE OUBLIE
+document.getElementById('formForgot')?.addEventListener('submit', async e=>{
+  e.preventDefault();
+  const id=e.currentTarget.identifiant.value.trim();
+  afficherMessage('forgotMessage','Envoi du lien...');
+  try{
+    const r=await apiFetch('/auth/forgot-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({identifiant:id})});
+    afficherMessage('forgotMessage','✅ Lien envoyé ! Si compte existe, tu recevras le lien. Pour test: '+ (r.resetLink||'vérifie WhatsApp'));
+    if(r.resetLink){
+      try{
+        const url=new URL(r.resetLink);
+        const token=url.searchParams.get('token')||r.resetLink.split('token=')[1]?.split('&')[0]||'';
+        const uid=url.searchParams.get('id')||r.resetLink.split('id=')[1]||'';
+        document.getElementById('resetUserId').value=uid;
+        document.getElementById('resetToken').value=token;
+      }catch{
+        const m=r.resetLink.match(/token=([^&]+)/); const m2=r.resetLink.match(/id=([^&]+)/);
+        if(m) document.getElementById('resetToken').value=m[1];
+        if(m2) document.getElementById('resetUserId').value=m2[1];
+      }
+    }
+  }catch(err){afficherMessage('forgotMessage',err.message)}
+});
+
+document.getElementById('formReset')?.addEventListener('submit', async e=>{
+  e.preventDefault();
+  const userId=document.getElementById('resetUserId').value;
+  const token=document.getElementById('resetToken').value;
+  const newPassword=document.getElementById('newPassword').value;
+  const confirm=document.getElementById('confirmPassword').value;
+  if(newPassword!==confirm){afficherMessage('resetMessage','Les mots de passe ne correspondent pas');return;}
+  afficherMessage('resetMessage','Réinitialisation...');
+  try{
+    const r=await apiFetch('/auth/reset-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({userId,token,newPassword})});
+    afficherMessage('resetMessage','✅ '+r.message);
+    setTimeout(()=>{fermerModal('resetModal');ouvrirModal('connexionModal');},1500);
+  }catch(err){afficherMessage('resetMessage',err.message)}
+});
+
+function seDeconnecter(){localStorage.removeItem('AZ_TOKEN');localStorage.removeItem('AZ_USER');currentUser=null;mettreAJourCompte();allerA('accueil')}
 function demarrerPublication(){if(!getToken()){ouvrirModal('connexionModal');return}toggleGaleriePriveeCheck();ouvrirModal('oeuvreModal')}
 async function chargerMesInfos(){if(!getToken()){ouvrirModal('connexionModal');return}try{const r=await apiFetch('/auth/me');currentUser=r.user||r;localStorage.setItem('AZ_USER',JSON.stringify(currentUser));mettreAJourCompte()}catch(e){alert(e.message)}}
 async function chargerGalerie(){
@@ -175,10 +251,10 @@ function acheterForfait(type){
   if(!getToken()){ouvrirModal('connexionModal');return}
   const lib=type==='pro'?'PRO 7 USD (4.200 FCFA) - 10 oeuvres / 1 MOIS':'Galerie Privée 50 USD (30.000 FCFA) - 50 oeuvres + Page perso / 1 MOIS';
   document.getElementById('paiementTitre').textContent='Acheter forfait '+type.toUpperCase()+' - 1 MOIS';
-  document.getElementById('paiementContenu').innerHTML=`<p><strong>${lib}</strong></p><p class="notice" style="border:2px solid #d4af37">Après paiement, statut passe en "En attente de vérification" pour admin. Actif 1 mois après validation.</p><div class="payment-box"><strong>USDT TRC20</strong><br><code style="word-break:break-all">${ADRESSES_PAIEMENT.usdt_trc20}</code> <button class="btn btn-small copy-btn" onclick="navigator.clipboard.writeText('${ADRESSES_PAIEMENT.usdt_trc20}');alert('Copié')">Copier</button></div><div class="payment-box"><strong>Pi Network</strong><br><code style="word-break:break-all;font-size:11px">${ADRESSES_PAIEMENT.pi}</code> <button class="btn btn-small copy-btn" onclick="navigator.clipboard.writeText('${ADRESSES_PAIEMENT.pi}');alert('Copié')">Copier</button></div><div class="payment-box" style="border:2px solid var(--gold)"><strong>MTN: ${ADRESSES_PAIEMENT.mtn}</strong> <button class="btn btn-small copy-btn" onclick="navigator.clipboard.writeText('${ADRESSES_PAIEMENT.mtn}')">Copier</button><br><strong>Moov: ${ADRESSES_PAIEMENT.moov}</strong> <button class="btn btn-small copy-btn" onclick="navigator.clipboard.writeText('${ADRESSES_PAIEMENT.moov}')">Copier</button></div><div class="notice" style="border:2px solid #d4af37"><strong>Preuve sur WhatsApp :</strong><br><a href="https://wa.me/${ADRESSES_PAIEMENT.whatsapp}?text=${encodeURIComponent('Preuve forfait '+type+' 1 mois')}" target="_blank" style="font-size:20px;color:#25D366">${ADRESSES_PAIEMENT.whatsapp} <i class="fab fa-whatsapp"></i></a><br><button class="btn" style="width:100%;margin-top:10px" onclick="confirmerForfait('${type}')"><i class="fas fa-check"></i> J'ai payé - Envoyer preuve</button></div>`;
+  document.getElementById('paiementContenu').innerHTML=`<p><strong>${lib}</strong></p><p class="notice" style="border:2px solid #d4af37">Après paiement, actif 1 mois directement (auto-validé).</p><div class="payment-box"><strong>USDT TRC20</strong><br><code style="word-break:break-all">${ADRESSES_PAIEMENT.usdt_trc20}</code> <button class="btn btn-small copy-btn" onclick="navigator.clipboard.writeText('${ADRESSES_PAIEMENT.usdt_trc20}');alert('Copié')">Copier</button></div><div class="payment-box"><strong>Pi Network</strong><br><code style="word-break:break-all;font-size:11px">${ADRESSES_PAIEMENT.pi}</code> <button class="btn btn-small copy-btn" onclick="navigator.clipboard.writeText('${ADRESSES_PAIEMENT.pi}');alert('Copié')">Copier</button></div><div class="payment-box" style="border:2px solid var(--gold)"><strong>MTN: ${ADRESSES_PAIEMENT.mtn}</strong> <button class="btn btn-small copy-btn" onclick="navigator.clipboard.writeText('${ADRESSES_PAIEMENT.mtn}')">Copier</button><br><strong>Moov: ${ADRESSES_PAIEMENT.moov}</strong> <button class="btn btn-small copy-btn" onclick="navigator.clipboard.writeText('${ADRESSES_PAIEMENT.moov}')">Copier</button></div><div class="notice" style="border:2px solid #d4af37"><strong>Preuve sur WhatsApp :</strong><br><a href="https://wa.me/${ADRESSES_PAIEMENT.whatsapp}?text=${encodeURIComponent('Preuve forfait '+type+' 1 mois')}" target="_blank" style="font-size:20px;color:#25D366">${ADRESSES_PAIEMENT.whatsapp} <i class="fab fa-whatsapp"></i></a><br><button class="btn" style="width:100%;margin-top:10px" onclick="confirmerForfait('${type}')"><i class="fas fa-check"></i> J'ai payé - Envoyer preuve</button></div>`;
   ouvrirModal('paiementModal');
 }
-async function confirmerForfait(type){const preuve=prompt('ID transaction '+type+':');if(!preuve)return;try{await apiFetch('/auth/forfaits/acheter',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type,preuve,forfait:type,adresses:ADRESSES_PAIEMENT})});alert('Forfait '+type+' envoyé - En attente de vérification admin');fermerModal('paiementModal');chargerMesInfos();}catch(e){alert(e.message)}}
+async function confirmerForfait(type){const preuve=prompt('ID transaction '+type+':');if(!preuve)return;try{await apiFetch('/auth/forfaits/acheter',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type,preuve,forfait:type,adresses:ADRESSES_PAIEMENT})});alert('Forfait '+type+' envoyé - Activé après vérif');fermerModal('paiementModal');chargerMesInfos();}catch(e){alert(e.message)}}
 function acheterBoost(id,titre){if(!getToken()){ouvrirModal('connexionModal');return}document.getElementById('paiementTitre').textContent='Booster: '+titre;document.getElementById('paiementContenu').innerHTML=`<p><strong>Boost 2 USD (1.200 FCFA) / 48h - Remonte en tête galerie</strong></p><div class="payment-box"><strong>USDT</strong> ${ADRESSES_PAIEMENT.usdt_trc20} <button class="btn btn-small copy-btn" onclick="navigator.clipboard.writeText('${ADRESSES_PAIEMENT.usdt_trc20}')">Copier</button></div><div class="payment-box"><strong>Pi</strong> ${ADRESSES_PAIEMENT.pi}</div><div class="payment-box" style="border:2px solid var(--gold)"><strong>MTN ${ADRESSES_PAIEMENT.mtn} / Moov ${ADRESSES_PAIEMENT.moov}</strong></div><div class="notice"><a href="https://wa.me/${ADRESSES_PAIEMENT.whatsapp}?text=${encodeURIComponent('Boost '+id)}" target="_blank" style="font-size:20px;color:#25D366">${ADRESSES_PAIEMENT.whatsapp}</a><br><button class="btn" style="width:100%;margin-top:10px" onclick="confirmerBoost('${id}')"><i class="fas fa-rocket"></i> J'ai payé le boost</button></div>`;ouvrirModal('paiementModal');}
 async function confirmerBoost(id){const preuve=prompt('ID transaction boost:');if(!preuve)return;try{await apiFetch('/artworks/'+id+'/boost',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({preuve,adresses:ADRESSES_PAIEMENT})});alert('Boost envoyé - En attente vérification admin');fermerModal('paiementModal')}catch(e){alert(e.message)}}
 async function chargerGaleriePrivee(nomArtiste){
@@ -195,7 +271,6 @@ async function chargerGaleriePrivee(nomArtiste){
   if(currentUser && (currentUser.nom_artiste===nom || currentUser.nom===nom)){
     const forfait=currentUser.forfait;
     const statut=currentUser.forfaitStatut;
-    const proStatut=currentUser.forfaitProStatut;
     const priveeStatut=currentUser.forfaitPriveeStatut;
     if((forfait==='galerie_privee' && statut==='valide') || priveeStatut==='valide'){
       const exp=new Date(currentUser.forfaitExpireAt||currentUser.forfaitPriveeExpire||0);
@@ -260,28 +335,19 @@ document.getElementById('formOeuvre').addEventListener('submit',async e=>{
   const f=e.currentTarget;
   const isNFTCheck=document.getElementById('isNFT').checked||f.categorie.value==='nft';
   const isPriveeCheck=document.getElementById('isPriveeCheck')?.checked||false;
-
   if(currentUser){
     let limite = currentUser.limiteOeuvres || 5;
     let limiteNFT = currentUser.limiteNFT || 3;
     const forfait=currentUser.forfait||'gratuit';
-
     if(isPriveeCheck && !((currentUser.forfait==='galerie_privee' && currentUser.forfaitStatut==='valide') || currentUser.forfaitPriveeStatut==='valide')){
       afficherMessage('oeuvreMessage','⛔ Galerie privée requiert forfait 50$ validé');
       alert('Tu dois payer Galerie Privée 50$ / 1 mois pour publier en privé');
       return;
     }
-
     let mesOeuvres = [];
-    try{ 
-      const r=await apiFetch('/artworks/mine'); 
-      mesOeuvres=r.artworks||r||[]; 
-    }catch{
-      mesOeuvres=[];
-    }
+    try{ const r=await apiFetch('/artworks/mine'); mesOeuvres=r.artworks||r||[]; }catch{ mesOeuvres=[]; }
     const totalCount=mesOeuvres.filter(o=>!o.isNFT).length;
     const nftCount=mesOeuvres.filter(o=>o.isNFT).length;
-
     if(isNFTCheck){
       if(nftCount>=limiteNFT){
         afficherMessage('oeuvreMessage',`⛔ Limite ${limiteNFT} NFT max atteinte pour ${forfait}.`);
@@ -302,7 +368,16 @@ document.getElementById('formOeuvre').addEventListener('submit',async e=>{
 async function verifierOeuvre(){const id=document.getElementById('verificationArtworkId').value.trim();const z=document.getElementById('verificationResultat');if(!id){z.textContent='ID AZM requis';return}z.innerHTML='<p class="muted"><span class="spinner"></span> Vérification...</p>';try{let r;try{r=await apiFetch('/artworks/verifier/'+encodeURIComponent(id));}catch(e1){r=await apiFetch('/artworks/verifier',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({azmId:id})});}const art=r.artwork||r;z.innerHTML=`<div class="notice success"><h3>✓ Authentique</h3><p><strong>${escapeHTML(art.titre||'Œuvre')}</strong><br>AZM: ${escapeHTML(art.azmId||id)}<br>Artiste: ${escapeHTML(art.artiste?.nom_artiste||'')}<br>Prix: ${prixFCFA(art.prix)}</p></div>`;}catch(e){z.innerHTML=`<div class="notice error">Identifiant invalide: ${escapeHTML(id)}<br>${escapeHTML(e.message)}</div>`;}}
 async function chargerAnnonces(){try{const r=await apiFetch('/annonces');const ann=Array.isArray(r)?r:r.annonces||[];if(ann.length)document.getElementById('annoncePrincipale').innerHTML=`<div class="notice"><strong>${escapeHTML(ann[0].titre)}</strong><p>${escapeHTML(ann[0].message)}</p></div>`}catch{}}
 async function actualiserTout(){await Promise.allSettled([chargerGalerie(),chargerExpositions(),chargerEncheres(),chargerAnnonces()])}
-async function initialiser(){mettreAJourCompte();allerA('accueil');await actualiserTout();if(getToken()){try{const r=await apiFetch('/auth/me');currentUser=r.user||r;localStorage.setItem('AZ_USER',JSON.stringify(currentUser));mettreAJourCompte()}catch{}}toggleAdresseReception();}
+async function initialiser(){mettreAJourCompte();allerA('accueil');await actualiserTout();if(getToken()){try{const r=await apiFetch('/auth/me');currentUser=r.user||r;localStorage.setItem('AZ_USER',JSON.stringify(currentUser));mettreAJourCompte()}catch{}}toggleAdresseReception();
+// auto-detect lien reset #reset?token=...&id=...
+if(location.hash.includes('reset')){
+  try{
+    const params=new URLSearchParams(location.hash.split('?')[1]);
+    document.getElementById('resetUserId').value=params.get('id')||'';
+    document.getElementById('resetToken').value=params.get('token')||'';
+    if(params.get('token')) ouvrirModal('resetModal');
+  }catch{}
+}}
 document.addEventListener('DOMContentLoaded',initialiser);
 </script>
 </body>
