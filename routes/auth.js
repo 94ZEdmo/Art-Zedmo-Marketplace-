@@ -149,7 +149,7 @@ router.post('/reset-password', async (req, res, next) => {
     const finalPassword = req.body.password || req.body.newPassword;
     if (!finalToken || !finalPassword) return res.status(400).json({ error: 'Token et mot de passe requis.' });
     if (finalPassword.length < 10) return res.status(400).json({ error: '10 caractères minimum.' });
-    const user = await User.findOne({ resetPasswordToken: finalToken, resetPasswordExpire: { $gt: new Date() } });
+    const user = await User.findOne({ resetPasswordToken: finalToken, resetPasswordExpire: { $gt: new Date() } }).select('+resetPasswordToken +resetPasswordExpire +password');
     if (!user) return res.status(400).json({ error: 'Lien expiré ou invalide.' });
     user.password = finalPassword;
     user.resetPasswordToken = null;
