@@ -58,14 +58,15 @@ async function getNextAZM() {
 function escapeRegex(v) { return v.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
 
 const ADRESSES = {
-  usdt_trc20: process.env.ADRESSE_USDT || 'TON_ADRESSE_USDT',
-  pi: process.env.ADRESSE_PI || 'TON_ADRESSE_PI',
-  mtn: process.env.ADRESSE_MTN || '+2290196587303',
-  moov: process.env.ADRESSE_MOOV || '+2290194655238',
+  usdt_trc20: process.env.ADRESSE_USDT || 'TFXZSyJaC6mdCva8kAJBMMvKYhyhpzpHn2',
+  pi: process.env.ADRESSE_PI || 'GAF62KXAV7IUM3H5HQ3T16EFMIDSGII2EVEZFXTXGMH5D2EDPA6RVAM',
+  mtn: process.env.ADRESSE_MTN || '0194655238',
+  moov: process.env.ADRESSE_MOOV || '0194655238',
   whatsapp: '2290194655238'
 };
 
-function publicArtworkQuery() { return { statut: { $nin: ['en_attente', 'rejetee'] } }; }
+// ✅ FIX PUBLICATION DIRECTE - PUBLIC = TOUT SAUF REJETEE
+function publicArtworkQuery() { return { statut: { $nin: ['rejetee', 'supprime'] } }; }
 
 router.get('/', async (req, res, next) => {
   try {
@@ -154,7 +155,7 @@ router.get('/:id', async (req, res, next) => {
     if (!validObjectId(req.params.id)) return res.status(400).json({ error: 'ID invalide.' });
     const artwork = await Artwork.findById(req.params.id).populate('artiste', 'nom nom_artiste ville bio').populate('expositions', 'titre statut');
     if (!artwork) return res.status(404).json({ error: 'Œuvre non trouvée.' });
-    const isPublic = !['en_attente', 'rejetee'].includes(artwork.statut);
+    const isPublic = !['rejetee'].includes(artwork.statut);
     if (!isPublic) {
       const auth = req.headers.authorization; if (!auth?.startsWith('Bearer ')) return res.status(404).json({ error: 'Non trouvée.' });
       let decoded; try { decoded = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); } catch { return res.status(401).json({ error: 'Jeton invalide.' }); }
@@ -170,7 +171,7 @@ router.get('/:id', async (req, res, next) => {
 
 router.post('/', authenticateToken, async (req, res, next) => {
   try {
-    const { titre, description, prix, images, image, categorie, ville, isNFT, ipfsHash, imageIPFS, dimensions, technique } = req.body;
+    const { titre, description, prix, images, image, categorie, ville, isNFT, ipfsHash, imageIPFS, dimensions, technique, isGaleriePrivee } = req.body;
     if (typeof titre !== 'string' || !titre.trim()) return res.status(400).json({ error: 'Titre obligatoire.' });
     const prixNumber = Number(prix); if (!Number.isFinite(prixNumber) || prixNumber < 0) return res.status(400).json({ error: 'Prix invalide.' });
 
@@ -196,13 +197,30 @@ router.post('/', authenticateToken, async (req, res, next) => {
     const azmId = await getNextAZM();
     const listeImages = Array.isArray(images) ? images : (typeof image === 'string' && image.trim() ? [image.trim()] : []);
 
+    // ✅ PUBLICATION DIRECTE VALIDEE
     const artwork = await Artwork.create({
-      titre: titre.trim(), description: typeof description === 'string' ? description.trim().slice(0, 10000) : '', prix: prixNumber, images: listeImages, categorie: categorie || 'Autre', ville: typeof ville === 'string' && ville.trim() ? ville.trim().slice(0, 100) : req.user.ville || 'Abomey-Calavi', artiste: req.user._id, statut: 'en_attente', azmId, certifId: azmId.replace('AZM','AZC'), dimensions: dimensions || '80 x 120 cm', technique: technique || categorie, isNFT: isNFTFinalCheck, blockchain: isNFTFinalCheck ? 'polygon' : undefined, ipfsHash: ipfsHash || '', imageIPFS: imageIPFS || ''
+      titre: titre.trim(), 
+      description: typeof description === 'string' ? description.trim().slice(0, 10000) : '', 
+      prix: prixNumber, 
+      images: listeImages, 
+      categorie: categorie || 'Autre', 
+      ville: typeof ville === 'string' && ville.trim() ? ville.trim().slice(0, 100) : req.user.ville || 'Abomey-Calavi', 
+      artiste: req.user._id, 
+      statut: 'validee',
+      isGaleriePrivee: Boolean(isGaleriePrivee),
+      azmId, 
+      certifId: azmId.replace('AZM','AZC'), 
+      dimensions: dimensions || '80 x 120 cm', 
+      technique: technique || categorie, 
+      isNFT: isNFTFinalCheck, 
+      blockchain: isNFTFinalCheck ? 'polygon' : undefined, 
+      ipfsHash: ipfsHash || '', 
+      imageIPFS: imageIPFS || ''
     });
 
     if (isNFTFinalCheck) { await User.findByIdAndUpdate(req.user._id, { $inc: { totalOeuvres: 1, totalNFTPublies: 1 } }); } else { await User.findByIdAndUpdate(req.user._id, { $inc: { totalOeuvres: 1, totalOeuvresPubliees: 1 } }); }
 
-    return res.status(201).json({ success: true, artwork, azmId });
+    return res.status(201).json({ success: true, artwork, azmId, message: 'Publié directement en galerie !' });
   } catch (e) { next(e); }
 });
 
@@ -222,10 +240,11 @@ router.put('/:id', authenticateToken, async (req, res, next) => {
     const artwork = await Artwork.findById(req.params.id); if (!artwork) return res.status(404).json({ error: 'Non trouvée.' });
     const isOwner = artwork.artiste.toString() === req.user._id.toString(); const isAdmin = req.user.role === 'admin';
     if (!isOwner && !isAdmin) return res.status(403).json({ error: 'Non autorisé.' });
-    const champs = ['titre', 'description', 'prix', 'images', 'categorie', 'ville', 'ipfsHash', 'imageIPFS', 'dimensions', 'technique'];
+    const champs = ['titre', 'description', 'prix', 'images', 'categorie', 'ville', 'ipfsHash', 'imageIPFS', 'dimensions', 'technique', 'isGaleriePrivee'];
     for (const c of champs) if (req.body[c] !== undefined) artwork[c] = req.body[c];
-    if (!isAdmin && ['validee'].includes(artwork.statut)) artwork.statut = 'en_attente';
-    await artwork.save(); return res.json({ success: true, artwork });
+    // ✅ FIX: ON NE REPASSE PLUS EN ATTENTE
+    await artwork.save(); 
+    return res.json({ success: true, artwork });
   } catch (e) { next(e); }
 });
 
