@@ -39,7 +39,14 @@ function authenticateToken(req, res, next) {
   const authorization = req.headers.authorization;
   if (!authorization || !authorization.startsWith('Bearer ')) return res.status(401).json({ error: 'Authentification requise.' });
   const token = authorization.slice(7);
-  try { req.user = jwt.verify(token, JWT_SECRET); next(); } catch { return res.status(401).json({ error: 'Jeton invalide.' }); }
+  try { 
+    const decoded = jwt.verify(token, JWT_SECRET, { algorithms: ['HS256'] });
+    const rawId = decoded.id || decoded._id || decoded.userId || decoded.user_id;
+    req.user = decoded;
+    req.user.id = String(rawId);
+    req.user._id = String(rawId);
+    next(); 
+  } catch { return res.status(401).json({ error: 'Jeton invalide.' }); }
 }
 function requireAdmin(req, res, next) {
   if (!req.user || req.user.role !== 'admin') return res.status(403).json({ error: 'Admin seulement.' });
@@ -86,15 +93,38 @@ app.post('/api/upload', authenticateToken, upload.single('image'), async (req, r
 app.use('/uploads', express.static(uploadDir));
 app.use(express.static(path.join(__dirname, 'public')));
 
-app.use('/api/auth', authRoutes);
 app.use('/api/artworks', artworkRoutes);
 app.use('/api/expositions', expoRoutes);
 app.use('/api/votes', voteRoutes);
 app.use('/api/encheres', enchereRoutes);
 app.use('/api/annonces', annonceRoutes);
 app.use('/api/galeries-privees', galeriesPriveesRoutes);
+app.use('/api/auth', authRoutes);
 
 const UserModel = () => mongoose.model('User');
+
+app.get('/api/auth/all', authenticateToken, requireAdmin, async (req,res,next)=>{
+  try{
+    const User = UserModel();
+    const users = await User.find().sort({createdAt:-1}).lean();
+    res.json({ success: true, comptes: users, users, total: users.length });
+  }catch(e){next(e)}
+});
+app.get('/api/users', authenticateToken, requireAdmin, async (req,res,next)=>{
+  try{
+    const User = UserModel();
+    const users = await User.find().sort({createdAt:-1}).lean();
+    res.json({ success: true, comptes: users, users, total: users.length });
+  }catch(e){next(e)}
+});
+app.get('/api/users/all', authenticateToken, requireAdmin, async (req,res,next)=>{
+  try{
+    const User = UserModel();
+    const users = await User.find().sort({createdAt:-1}).lean();
+    res.json({ success: true, comptes: users, users, total: users.length });
+  }catch(e){next(e)}
+});
+
 async function acheterForfait(req,res,next){
   try{
     const { forfait, type, preuve, transactionId } = req.body;
@@ -118,7 +148,6 @@ async function acheterForfait(req,res,next){
 app.post('/api/forfaits/acheter', authenticateToken, acheterForfait);
 app.post('/api/forfait/acheter', authenticateToken, acheterForfait);
 app.post('/api/forfaits', authenticateToken, acheterForfait);
-
 app.get('/api/forfaits', authenticateToken, requireAdmin, async (req,res,next)=>{
   try{
     const User = UserModel();
@@ -127,12 +156,12 @@ app.get('/api/forfaits', authenticateToken, requireAdmin, async (req,res,next)=>
   }catch(e){next(e)}
 });
 
-// ADRESSES - GARDE TES VRAIES ICI
 const ADRESSES_OFFICIELLES = {
-  momo: process.env.ADRESSE_MOMO || '+2290196587303',
-  moov: process.env.ADRESSE_MOOV || '+2290194655238',
-  usdt: process.env.ADRESSE_USDT || 'TON_USDT_ICI',
-  pi: process.env.ADRESSE_PI || 'TON_PI_ICI'
+  momo: process.env.ADRESSE_MOMO || '0194655238',
+  moov: process.env.ADRESSE_MOOV || '0194655238',
+  usdt: process.env.ADRESSE_USDT || 'TFXZSyJaC6mdCva8kAJBMMvKYhyhpzpHn2',
+  pi: process.env.ADRESSE_PI || 'GAF62KXAV7IUM3HSHQ3TI6EFMIDSGII2EVEZXFTXGMH5D2EDPA6RVAM',
+  whatsapp: '2290194655238'
 };
 
 const settingsSchema = new mongoose.Schema({ _id: String, momo: String, moov: String, usdt: String, pi: String, updatedAt: Date });
@@ -140,25 +169,20 @@ const Settings = mongoose.models.Settings || mongoose.model('Settings', settings
 app.get('/api/settings/paiements', async (req,res,next)=>{
   try{
     const s = await Settings.findById('paiements').lean();
-    res.json({ momo: s?.momo || ADRESSES_OFFICIELLES.momo, moov: s?.moov || ADRESSES_OFFICIELLES.moov, usdt: s?.usdt || ADRESSES_OFFICIELLES.usdt, pi: s?.pi || ADRESSES_OFFICIELLES.pi });
+    res.json({ momo: s?.momo || ADRESSES_OFFICIELLES.momo, moov: s?.moov || ADRESSES_OFFICIELLES.moov, usdt: s?.usdt || ADRESSES_OFFICIELLES.usdt, pi: s?.pi || ADRESSES_OFFICIELLES.pi, whatsapp: ADRESSES_OFFICIELLES.whatsapp });
   }catch(e){next(e)}
 });
 
 app.get('/admin', (req,res)=>{ res.sendFile(path.join(__dirname, 'public', 'admin.html')); });
 app.get('/admin.html', (req,res)=>{ res.sendFile(path.join(__dirname, 'public', 'admin.html')); });
 
-const nftSchema = new mongoose.Schema({ titre: String, description: String, azmId: { type: String, unique: true, sparse: true }, artiste: { type: mongoose.Schema.Types.ObjectId, ref: 'User' } }, { strict: false, timestamps: true });
-const NFT = mongoose.models.NFT || mongoose.model('NFT', nftSchema);
 app.get('/api/health', (req,res)=>{ res.json({ status: mongoose.connection.readyState===1?'LIVE':'DOWN' }); });
-app.get('/api/nft', async (req,res,next)=>{ try{ const nfts = await NFT.find().sort({createdAt:-1}).limit(100).lean(); res.json(nfts);}catch(e){next(e)} });
 
-// === FIX GLOBAL POUR TOUS LES UTILISATEURS ===
 async function fixAllCompteursGlobal() {
   try {
     const User = mongoose.model('User');
     const Artwork = mongoose.model('Artwork');
     const users = await User.find({});
-    console.log(`🔧 Fix global ${users.length} users...`);
     let fixed = 0;
     for (const u of users) {
       const countReel = await Artwork.countDocuments({ artiste: u._id, statut: { $nin: ['rejetee','supprime'] } });
@@ -171,7 +195,7 @@ async function fixAllCompteursGlobal() {
         fixed++;
       }
     }
-    console.log(`✅ Fix global terminé: ${fixed} comptes corrigés sur ${users.length} - Tous débloqués`);
+    console.log(`✅ Fix global: ${fixed} comptes`);
   } catch (e) { console.error("Fix global error:", e.message); }
 }
 
@@ -190,7 +214,7 @@ app.use((err,req,res,next)=>{
 async function startServer(){
   await mongoose.connect(MONGO_URL);
   console.log('MongoDB OK - Adresses:', ADRESSES_OFFICIELLES);
-  await fixAllCompteursGlobal(); // <--- CORRIGE TOUS LES USERS AU DEMARRAGE
+  await fixAllCompteursGlobal();
   app.listen(PORT, '0.0.0.0', ()=>{ console.log(`ART-ZEDMO sur ${PORT}`); });
 }
 startServer();
