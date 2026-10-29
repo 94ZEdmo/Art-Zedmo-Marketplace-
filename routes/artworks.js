@@ -28,20 +28,29 @@ async function sendEmail(to, subject, html) {
   } catch (e) { console.error('Email error', e.message); return false; }
 }
 
+// ✅ FIX DEFINITIF - ACCEPTE id, _id, userId
 async function authenticateToken(req, res, next) {
   try {
     const authorization = req.headers.authorization;
     if (!authorization || !authorization.startsWith('Bearer ')) return res.status(401).json({ error: 'Authentification requise.' });
     const token = authorization.slice(7);
     let decoded;
-    try { decoded = jwt.verify(token, JWT_SECRET, { algorithms: ['HS256'] }); } catch { return res.status(401).json({ error: 'Jeton invalide ou expiré.' }); }
-    if (!decoded.id || !mongoose.Types.ObjectId.isValid(decoded.id)) return res.status(401).json({ error: 'Identifiant invalide.' });
-    const user = await User.findById(decoded.id).select('_id nom nom_artiste role statut email ville adresseReception forfait limiteOeuvres limiteNFT forfaitExpireAt totalOeuvresPubliees totalNFTPublies forfaitProStatut forfaitPriveeStatut forfaitProExpire forfaitPriveeExpire');
+    try { 
+      decoded = jwt.verify(token, JWT_SECRET, { algorithms: ['HS256'] }); 
+    } catch(e) { 
+      return res.status(401).json({ error: 'Jeton invalide ou expiré.' }); 
+    }
+    const rawId = decoded.id || decoded._id || decoded.userId || decoded.user_id;
+    if (!rawId) return res.status(401).json({ error: 'Identifiant invalide.' });
+    const idStr = String(rawId);
+    if (!mongoose.Types.ObjectId.isValid(idStr)) return res.status(401).json({ error: 'Identifiant invalide.' });
+    const user = await User.findById(idStr).select('_id nom nom_artiste role statut email ville adresseReception forfait limiteOeuvres limiteNFT forfaitExpireAt totalOeuvresPubliees totalNFTPublies forfaitProStatut forfaitPriveeStatut forfaitProExpire forfaitPriveeExpire');
     if (!user) return res.status(401).json({ error: 'Utilisateur introuvable.' });
     if (user.statut !== 'valide') return res.status(403).json({ error: 'Compte non autorisé.' });
     req.user = user; req.auth = decoded; next();
   } catch (error) { next(error); }
 }
+
 function requireAdmin(req, res, next) {
   if (!req.user || req.user.role !== 'admin') return res.status(403).json({ error: 'Opération réservée à admin.' });
   next();
@@ -59,13 +68,12 @@ function escapeRegex(v) { return v.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
 
 const ADRESSES = {
   usdt_trc20: process.env.ADRESSE_USDT || 'TFXZSyJaC6mdCva8kAJBMMvKYhyhpzpHn2',
-  pi: process.env.ADRESSE_PI || 'GAF62KXAV7IUM3H5HQ3T16EFMIDSGII2EVEZFXTXGMH5D2EDPA6RVAM',
+  pi: process.env.ADRESSE_PI || 'GAF62KXAV7IUM3HSHQ3TI6EFMIDSGII2EVEZXFTXGMH5D2EDPA6RVAM',
   mtn: process.env.ADRESSE_MTN || '0194655238',
   moov: process.env.ADRESSE_MOOV || '0194655238',
   whatsapp: '2290194655238'
 };
 
-// ✅ FIX PUBLICATION DIRECTE - PUBLIC = TOUT SAUF REJETEE
 function publicArtworkQuery() { return { statut: { $nin: ['rejetee', 'supprime'] } }; }
 
 router.get('/', async (req, res, next) => {
@@ -78,7 +86,8 @@ router.get('/', async (req, res, next) => {
       const token = authorization.slice(7);
       let decoded;
       try { decoded = jwt.verify(token, JWT_SECRET, { algorithms: ['HS256'] }); } catch { return res.status(401).json({ error: 'Jeton invalide ou expiré.' }); }
-      const artsMine = await Artwork.find({ artiste: decoded.id }).populate('artiste', 'nom nom_artiste ville').populate('expositions', 'titre statut').sort({ createdAt: -1 });
+      const rawId = decoded.id || decoded._id || decoded.userId || decoded.user_id;
+      const artsMine = await Artwork.find({ artiste: rawId }).populate('artiste', 'nom nom_artiste ville').populate('expositions', 'titre statut').sort({ createdAt: -1 });
       return res.json({ success: true, artworks: artsMine });
     }
 
@@ -155,15 +164,6 @@ router.get('/:id', async (req, res, next) => {
     if (!validObjectId(req.params.id)) return res.status(400).json({ error: 'ID invalide.' });
     const artwork = await Artwork.findById(req.params.id).populate('artiste', 'nom nom_artiste ville bio').populate('expositions', 'titre statut');
     if (!artwork) return res.status(404).json({ error: 'Œuvre non trouvée.' });
-    const isPublic = !['rejetee'].includes(artwork.statut);
-    if (!isPublic) {
-      const auth = req.headers.authorization; if (!auth?.startsWith('Bearer ')) return res.status(404).json({ error: 'Non trouvée.' });
-      let decoded; try { decoded = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); } catch { return res.status(401).json({ error: 'Jeton invalide.' }); }
-      const requester = await User.findById(decoded.id).select('_id role statut');
-      const ownerId = artwork.artiste?._id?.toString() || artwork.artiste?.toString();
-      const isOwner = ownerId === requester?._id.toString(); const isAdmin = requester?.role === 'admin' && requester?.statut === 'valide';
-      if (!requester || requester.statut !== 'valide' || (!isOwner && !isAdmin)) return res.status(404).json({ error: 'Non trouvée.' });
-    }
     await Artwork.updateOne({ _id: artwork._id }, { $inc: { vues: 1 } });
     return res.json(artwork);
   } catch (e) { next(e); }
@@ -197,7 +197,6 @@ router.post('/', authenticateToken, async (req, res, next) => {
     const azmId = await getNextAZM();
     const listeImages = Array.isArray(images) ? images : (typeof image === 'string' && image.trim() ? [image.trim()] : []);
 
-    // ✅ PUBLICATION DIRECTE VALIDEE
     const artwork = await Artwork.create({
       titre: titre.trim(), 
       description: typeof description === 'string' ? description.trim().slice(0, 10000) : '', 
@@ -242,7 +241,6 @@ router.put('/:id', authenticateToken, async (req, res, next) => {
     if (!isOwner && !isAdmin) return res.status(403).json({ error: 'Non autorisé.' });
     const champs = ['titre', 'description', 'prix', 'images', 'categorie', 'ville', 'ipfsHash', 'imageIPFS', 'dimensions', 'technique', 'isGaleriePrivee'];
     for (const c of champs) if (req.body[c] !== undefined) artwork[c] = req.body[c];
-    // ✅ FIX: ON NE REPASSE PLUS EN ATTENTE
     await artwork.save(); 
     return res.json({ success: true, artwork });
   } catch (e) { next(e); }
