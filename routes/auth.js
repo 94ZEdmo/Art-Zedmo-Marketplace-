@@ -232,3 +232,31 @@ async function acheterForfaitHandler(req,res,next){
     user.forfaitDateDemande = new Date();
     await user.save();
     return
+    return res.json({ success: true, message: 'Demande envoyée en attente validation admin.', user: publicUser(user) });
+  } catch(e){ next(e); }
+}
+
+router.post('/forfaits/acheter', authenticateToken, acheterForfaitHandler);
+router.post('/acheter-forfait', authenticateToken, acheterForfaitHandler);
+
+router.post('/forfaits/valider', authenticateToken, requireAdmin, async (req,res,next)=>{
+  try{
+    const { userId, type, forfait } = req.body;
+    const typeFinal = (type || forfait || '').toLowerCase();
+    const user = await User.findById(userId);
+    if(!user) return res.status(404).json({ error: 'User introuvable' });
+    const expire = new Date(Date.now() + 30*24*60*60*1000);
+    if(typeFinal==='pro'){
+      user.forfaitProStatut='valide'; user.forfaitProExpire=expire;
+    } else {
+      user.forfaitPriveeStatut='valide'; user.forfaitPriveeExpire=expire;
+    }
+    user.forfaitStatut='valide';
+    user.forfaitExpireAt=expire;
+    await user.save();
+    await sendValidationEmail(user);
+    res.json({ success: true, user: publicUser(user) });
+  } catch(e){ next(e); }
+});
+
+export default router;
