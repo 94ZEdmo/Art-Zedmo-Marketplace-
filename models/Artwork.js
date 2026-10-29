@@ -4,10 +4,9 @@ import crypto from 'crypto';
 const preuvePaiementSchema = new mongoose.Schema({
   user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   preuve: { type: String, required: true },
-  // AJOUT polygon + corrigé
   method: { type: String, enum: ['mtn','moov','usdt_trc20','pi','polygon','fedapay','manual'], default: 'manual' },
   transactionId: { type: String, default: '' },
-  nomAcheteur: { type: String, default: '' }, // pour enchère x2
+  nomAcheteur: { type: String, default: '' },
   montant: { type: Number, min: 0 },
   prixDouble: { type: Number, min: 0 },
   date: { type: Date, default: Date.now },
@@ -44,17 +43,17 @@ const artworkSchema = new mongoose.Schema(
     expositions: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Exposition' }],
     isEnExpoActuelle: { type: Boolean, default: false },
 
+    // ✅ FIX PUBLICATION DIRECTE - PAS EN ATTENTE
     statut: {
       type: String,
       enum: ['en_attente','validee','en_expo','en_enchere','vendue','rejetee'],
-      default: 'en_attente',
+      default: 'validee',
       required: true
     },
 
     votesCount: { type: Number, default: 0, min: 0 },
     vues: { type: Number, default: 0, min: 0 },
 
-    // IDs - EXACT COMME TA PHOTO
     azmId: { type: String, unique: true, sparse: true, trim: true, immutable: true },
     certifId: { type: String, trim: true, default: '' },
     hash: { type: String, default: '' },
@@ -63,23 +62,16 @@ const artworkSchema = new mongoose.Schema(
     technique: { type: String, default: 'Acrylique' },
     proprietaireActuel: { type: String, default: 'XXXXXXXX' },
 
-    // =================================================
-    // IPFS PINATA (PROBLÈME 4)
-    // =================================================
     ipfsHash: { type: String, default: '' },
-    imageIPFS: { type: String, default: '' }, // ipfs://...
-    gatewayUrl: { type: String, default: '' }, // https://gateway.pinata...
+    imageIPFS: { type: String, default: '' },
+    gatewayUrl: { type: String, default: '' },
 
-    // =================================================
-    // NFT - POLYGON + MODEL B POURCENTAGES SANS PRIX FIXE
-    // =================================================
     isNFT: { type: Boolean, default: false },
     blockchain: { type: String, enum: ['pi','Pi','Ethereum','Core','Sidra','polygon','Polygon','Autre'], default: 'polygon' },
     blockchainMinted: { type: Boolean, default: false },
     tokenId: { type: String, default: '' },
     contractAddress: { type: String, default: '' },
     
-    // CORRIGÉ: ROYALTIES AVEC % SANS PRIX FIXE
     royalties: { 
       type: Object, 
       default: {
@@ -87,7 +79,7 @@ const artworkSchema = new mongoose.Schema(
         secondaire: { vendeur: 85, artiste: 10, plateforme: 5 }
       }
     },
-    royaltiesPercent: { type: Number, default: 10, min: 0, max: 20 }, // fallback ancien
+    royaltiesPercent: { type: Number, default: 10, min: 0, max: 20 },
     
     edition: { type: String, trim: true, default: '1/1' },
     proprietaireWallet: { type: String, trim: true, default: '' },
@@ -97,17 +89,11 @@ const artworkSchema = new mongoose.Schema(
     prixVendu: { type: Number, min: 0 },
     acheteur: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
 
-    // =================================================
-    // COMMISSION ART-ZEDMO - 15% GALERIE / 20% ENCHERE
-    // =================================================
     typeVente: { type: String, enum: ['galerie','enchere'], default: 'galerie' },
     commissionRate: { type: Number, default: 15 },
     montantCommission: { type: Number, min: 0, default: 0 },
     montantArtiste: { type: Number, min: 0, default: 0 },
 
-    // =================================================
-    // BOOST 48H - 2 USD = 1200 FCFA
-    // =================================================
     isBoosted: { type: Boolean, default: false },
     boostExpireAt: { type: Date, default: null },
     boostPrixUSD: { type: Number, default: 2 },
@@ -120,7 +106,6 @@ const artworkSchema = new mongoose.Schema(
     },
     preuvesPaiement: [preuvePaiementSchema],
 
-    // ADRESSES CORRIGÉES 0194655238 (PROBLÈME 2)
     adressesPaiement: {
       usdt_trc20: { type: String, default: 'TFXZSyJaC6mdCva8kAJBMMvKYhyhpzpHn2' },
       pi: { type: String, default: 'GAF62KXAV7IUM3HSHQ3TI6EFMIDSGII2EVEZXFTXGMH5D2EDPA6RVAM' },
@@ -164,15 +149,12 @@ artworkSchema.pre('validate', function () {
     });
     this.hash = crypto.createHash('sha256').update(ref).digest('hex');
   }
-  // CORRIGÉ: NFT Polygon par défaut (plus Pi)
   if (this.isNFT && !this.blockchain) this.blockchain = 'polygon';
   
-  // Certificat ID auto
   if(!this.certifId && this.azmId){
     this.certifId = this.azmId.replace('AZM','AZC');
   }
 
-  // AUTO-CALCUL COMMISSION
   if (this.prixVendu) {
     if (this.typeVente === 'enchere') {
       this.commissionRate = 20;
@@ -183,9 +165,13 @@ artworkSchema.pre('validate', function () {
     this.montantArtiste = this.prixVendu - this.montantCommission;
   }
 
-  // AUTO-EXPIRE BOOST
   if (this.isBoosted && this.boostExpireAt && this.boostExpireAt < new Date()) {
     this.isBoosted = false;
+  }
+
+  // ✅ FORCE VALIDEE DIRECT
+  if(this.isNew){
+    this.statut = 'validee';
   }
 });
 
