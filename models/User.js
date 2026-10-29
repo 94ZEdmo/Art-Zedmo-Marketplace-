@@ -17,28 +17,29 @@ const userSchema = new mongoose.Schema(
     bio: { type: String, trim: true, maxlength: 1000, default: '' },
     avatar: { type: String, default: '' },
     adresseReception: { type: String, trim: true, default: '', maxlength: 200 },
-    statut: { type: String, enum: ['en_attente', 'valide', 'refuse'], default: 'en_attente', required: true },
-    estVerifie: { type: Boolean, default: false },
+    statut: { type: String, enum: ['en_attente', 'valide', 'refuse'], default: 'valide', required: true },
+    estVerifie: { type: Boolean, default: true },
     totalOeuvres: { type: Number, default: 0 },
     totalVentes: { type: Number, default: 0 },
     totalVotesRecus: { type: Number, default: 0 },
     solde: { type: Number, default: 0 },
 
+    // RESET PASSWORD - AJOUT SEULEMENT
+    resetPasswordToken: { type: String, default: null },
+    resetPasswordExpire: { type: Date, default: null },
+
     // FORFAITS - 10 / 50 / 1 mois + BOOST 48h
     forfait: { type: String, enum: ['gratuit','pro','galerie_privee'], default: 'gratuit' },
-    // === LES 4 CHAMPS QUI MANQUAIENT POUR ADMIN ===
     forfaitStatut: { type: String, enum: ['en_attente','valide','refuse', null], default: null },
     forfaitPreuve: { type: String, default: null },
     forfaitTypeDemande: { type: String, enum: ['pro','galerie_privee', null], default: null },
     forfaitDateDemande: { type: Date, default: null },
-    // === AJOUT POUR DOUBLE FORFAIT SIMULTANE - PRO ET PRIVEE INDEPENDANTS ===
     forfaitProStatut: { type: String, enum: ['gratuit','en_attente','valide','refuse'], default: 'gratuit' },
     forfaitProExpire: { type: Date, default: null },
     forfaitProPreuve: { type: String, default: null },
     forfaitPriveeStatut: { type: String, enum: ['gratuit','en_attente','valide','refuse'], default: 'gratuit' },
     forfaitPriveeExpire: { type: Date, default: null },
     forfaitPriveePreuve: { type: String, default: null },
-    // ==============================================
     forfaitExpireAt: { type: Date, default: null },
     limiteOeuvres: { type: Number, default: 5 },
     limiteNFT: { type: Number, default: 3 },
@@ -68,7 +69,6 @@ userSchema.set('toJSON', {
 userSchema.pre('save', async function () {
   if (!this.isModified('password')) {
     const now = new Date();
-    // Expiration indépendante PRO / PRIVEE
     if (this.forfaitProExpire && this.forfaitProExpire < now) {
       this.forfaitProStatut = 'gratuit';
       this.forfaitProExpire = null;
@@ -80,17 +80,13 @@ userSchema.pre('save', async function () {
     if (this.forfaitExpireAt && this.forfaitExpireAt < now && this.forfait !== 'gratuit' && this.forfaitProStatut !== 'valide' && this.forfaitPriveeStatut !== 'valide') {
       this.forfait = 'gratuit'; this.limiteOeuvres = 5; this.limiteNFT = 3; this.forfaitStatut = null;
     }
-
-    // LOGIQUE DOUBLE FORFAIT SIMULTANE - LE MAX GAGNE
     const proValide = this.forfaitProStatut === 'valide' && (!this.forfaitProExpire || this.forfaitProExpire > now);
     const priveeValide = this.forfaitPriveeStatut === 'valide' && (!this.forfaitPriveeExpire || this.forfaitPriveeExpire > now);
-
     if (priveeValide) {
       this.forfait = 'galerie_privee';
       this.limiteOeuvres = 50; this.limiteNFT = 50;
       this.forfaitPrixUSD = 50; this.forfaitPrixFCFA = 30000;
       if (this.forfaitProStatut === 'valide') {
-        // Les deux actifs - on garde 50 mais PRO reste valide aussi
         this.forfaitStatut = 'valide';
       }
     } else if (proValide) {
@@ -99,7 +95,6 @@ userSchema.pre('save', async function () {
       this.forfaitPrixUSD = 7; this.forfaitPrixFCFA = 4200;
       this.forfaitStatut = 'valide';
     } else {
-      // Aucun valide - regarde ancien système pour compat
       if (this.forfait === 'gratuit') {
         if (this.forfaitStatut !== 'en_attente' && this.forfaitProStatut !== 'en_attente' && this.forfaitPriveeStatut !== 'en_attente') { 
           this.limiteOeuvres = 5; this.limiteNFT = 3; 
