@@ -11,24 +11,27 @@ const userSchema = new mongoose.Schema(
       match: [/^[^\s@]+@[^\s@]+\.[^\s@]+$/, 'Adresse e-mail invalide'],
       default: undefined
     },
-    password: { type: String, required: true, minlength: 10 },
+    password: { type: String, required: true, minlength: 10, select: false },
     role: { type: String, enum: ['artiste', 'acheteur', 'admin'], default: 'artiste', required: true },
     ville: { type: String, trim: true, default: 'Abomey-Calavi', maxlength: 100 },
     bio: { type: String, trim: true, maxlength: 1000, default: '' },
     avatar: { type: String, default: '' },
     adresseReception: { type: String, trim: true, default: '', maxlength: 200 },
+    
+    // INSCRIPTION AUTO-VALIDÉE
     statut: { type: String, enum: ['en_attente', 'valide', 'refuse'], default: 'valide', required: true },
     estVerifie: { type: Boolean, default: true },
+    
     totalOeuvres: { type: Number, default: 0 },
     totalVentes: { type: Number, default: 0 },
     totalVotesRecus: { type: Number, default: 0 },
     solde: { type: Number, default: 0 },
 
-    // RESET PASSWORD - AJOUT SEULEMENT
-    resetPasswordToken: { type: String, default: null },
-    resetPasswordExpire: { type: Date, default: null },
+    // RESET PASSWORD
+    resetPasswordToken: { type: String, default: null, select: false },
+    resetPasswordExpire: { type: Date, default: null, select: false },
 
-    // FORFAITS - 10 / 50 / 1 mois + BOOST 48h
+    // FORFAITS
     forfait: { type: String, enum: ['gratuit','pro','galerie_privee'], default: 'gratuit' },
     forfaitStatut: { type: String, enum: ['en_attente','valide','refuse', null], default: null },
     forfaitPreuve: { type: String, default: null },
@@ -52,15 +55,13 @@ const userSchema = new mongoose.Schema(
 );
 
 userSchema.index({ email: 1 }, { unique: true, sparse: true });
-userSchema.index({ forfait: 1 });
-userSchema.index({ forfaitStatut: 1 });
-userSchema.index({ forfaitProStatut: 1 });
-userSchema.index({ forfaitPriveeStatut: 1 });
-userSchema.index({ forfaitExpireAt: 1 });
+userSchema.index({ resetPasswordToken: 1 });
 
 userSchema.set('toJSON', {
   transform: function (doc, ret) {
     delete ret.password;
+    delete ret.resetPasswordToken;
+    delete ret.resetPasswordExpire;
     delete ret.__v;
     return ret;
   }
@@ -86,25 +87,10 @@ userSchema.pre('save', async function () {
       this.forfait = 'galerie_privee';
       this.limiteOeuvres = 50; this.limiteNFT = 50;
       this.forfaitPrixUSD = 50; this.forfaitPrixFCFA = 30000;
-      if (this.forfaitProStatut === 'valide') {
-        this.forfaitStatut = 'valide';
-      }
     } else if (proValide) {
       this.forfait = 'pro';
       this.limiteOeuvres = 10; this.limiteNFT = 10;
       this.forfaitPrixUSD = 7; this.forfaitPrixFCFA = 4200;
-      this.forfaitStatut = 'valide';
-    } else {
-      if (this.forfait === 'gratuit') {
-        if (this.forfaitStatut !== 'en_attente' && this.forfaitProStatut !== 'en_attente' && this.forfaitPriveeStatut !== 'en_attente') { 
-          this.limiteOeuvres = 5; this.limiteNFT = 3; 
-        }
-        this.forfaitPrixUSD = 0; this.forfaitPrixFCFA = 0;
-      } else if (this.forfait === 'pro') {
-        if (this.forfaitStatut === 'valide') { this.limiteOeuvres = 10; this.limiteNFT = 10; }
-      } else if (this.forfait === 'galerie_privee') {
-        if (this.forfaitStatut === 'valide') { this.limiteOeuvres = 50; this.limiteNFT = 50; }
-      }
     }
     return;
   }
