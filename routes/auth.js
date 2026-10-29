@@ -1,131 +1,187 @@
 import express from 'express';
+import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import mongoose from 'mongoose';
 import crypto from 'crypto';
 import User from '../models/User.js';
-import GaleriePrivee from '../models/GaleriePrivee.js';
 
 const router = express.Router();
 
-const JWT_SECRET = process.env.JWT_SECRET;
-if (!JWT_SECRET || JWT_SECRET.length < 32) {
-  throw new Error('JWT_SECRET doit être configuré dans Render avec au moins 32 caractères.');
+const JWT_SECRET = process.env.JWT_SECRET || 'zedmo_secret_2026';
+
+// Helpers
+function publicUser(user) {
+  return {
+    _id: user._id,
+    nom: user.nom,
+    nom_artiste: user.nom_artiste,
+    whatsapp: user.whatsapp,
+    email: user.email,
+    ville: user.ville,
+    role: user.role,
+    statut: user.statut,
+    adresseReception: user.adresseReception,
+    forfait: user.forfait,
+    forfaitStatut: user.forfaitStatut,
+    forfaitProStatut: user.forfaitProStatut,
+    forfaitPriveeStatut: user.forfaitPriveeStatut,
+    forfaitExpireAt: user.forfaitExpireAt,
+    forfaitProExpire: user.forfaitProExpire,
+    forfaitPriveeExpire: user.forfaitPriveeExpire,
+    limiteOeuvres: user.limiteOeuvres,
+    limiteNFT: user.limiteNFT,
+  };
 }
 
-const ADRESSES = {
-  MTN: '+2290196587303',
-  MOOV: '+2290194655238',
-  USDT: 'TFXZSyJaC6mdCva8kAJBMMvKYhyhpzpHn2',
-  PI: 'GAF62KXAV7IUM3H5HQ3T16EFMIDSGII2EVEZFXTXGMH5D2EDPA6RVAM'
-};
-
 async function sendValidationEmail(user) {
-  if (!user.email || !process.env.BREVO_API_KEY) return false;
+  if (!user.email || !process.env.BREVO_API_KEY) return;
   try {
-    const res = await fetch('https://api.brevo.com/v3/smtp/email', {
+    await fetch('https://api.brevo.com/v3/smtp/email', {
       method: 'POST',
       headers: { 'api-key': process.env.BREVO_API_KEY, 'Content-Type': 'application/json' },
       body: JSON.stringify({
         sender: { name: "ART-ZEDMO", email: "artzedmo@gmail.com" },
         to: [{ email: user.email }],
-        subject: 'Votre profil ART-ZEDMO a été validé',
-        htmlContent: `<div style="font-family:Arial;padding:24px"><h2>Félicitations ${user.nom_artiste} !</h2><p>Votre profil a été validé.</p><p><a href="https://art-zedmo-marketplace.onrender.com">Accéder</a></p></div>`
+        subject: 'ART-ZEDMO - Compte validé',
+        htmlContent: `<div style="font-family:Arial;padding:24px"><h2>Bienvenue ${user.nom_artiste || user.nom}</h2><p>Ton compte ART-ZEDMO est validé !</p></div>`
       })
     });
-    await res.json();
-    return true;
-  } catch (e) { return false; }
+  } catch(e){ console.log('Email validation error', e.message); }
 }
 
 function authenticateToken(req, res, next) {
-  const authorization = req.headers.authorization;
-  if (!authorization || !authorization.startsWith('Bearer ')) return res.status(401).json({ error: 'Authentification requise.' });
-  const token = authorization.slice(7);
+  const auth = req.headers.authorization;
+  const token = auth && auth.split(' ')[1];
+  if (!token) return res.status(401).json({ error: 'Token manquant' });
   try {
-    req.auth = jwt.verify(token, JWT_SECRET, { algorithms: ['HS256'] });
-    if (!req.auth.id) return res.status(401).json({ error: 'Jeton invalide.' });
+    const decoded = jwt.verify(token, JWT_SECRET);
+    req.user = decoded;
     next();
-  } catch { return res.status(401).json({ error: 'Jeton invalide ou expiré.' }); }
+  } catch { return res.status(401).json({ error: 'Token invalide' }); }
 }
 
-async function requireAdmin(req, res, next) {
-  try {
-    if (!mongoose.Types.ObjectId.isValid(req.auth.id)) return res.status(401).json({ error: 'ID invalide.' });
-    const admin = await User.findById(req.auth.id).select('_id role statut');
-    if (!admin || admin.role !== 'admin' || admin.statut !== 'valide') return res.status(403).json({ error: 'Accès admin seulement.' });
-    req.admin = admin;
-    next();
-  } catch (error) { next(error); }
+function requireAdmin(req, res, next) {
+  if (req.user?.role !== 'admin') return res.status(403).json({ error: 'Admin requis' });
+  next();
 }
 
-function publicUser(user) {
-  return {
-    _id: user._id, nom: user.nom, nom_artiste: user.nom_artiste, whatsapp: user.whatsapp, email: user.email,
-    role: user.role, ville: user.ville, bio: user.bio, avatar: user.avatar, statut: user.statut,
-    estVerifie: user.estVerifie, totalOeuvres: user.totalOeuvres, adresseReception: user.adresseReception,
-    forfait: user.forfait || 'gratuit',
-    forfaitStatut: user.forfaitStatut || null,
-    forfaitPreuve: user.forfaitPreuve || null,
-    forfaitTypeDemande: user.forfaitTypeDemande || null,
-    forfaitProStatut: user.forfaitProStatut || 'gratuit',
-    forfaitProExpire: user.forfaitProExpire || null,
-    forfaitProPreuve: user.forfaitProPreuve || null,
-    forfaitPriveeStatut: user.forfaitPriveeStatut || 'gratuit',
-    forfaitPriveeExpire: user.forfaitPriveeExpire || null,
-    forfaitPriveePreuve: user.forfaitPriveePreuve || null,
-    limiteOeuvres: user.limiteOeuvres ?? 5, limiteNFT: user.limiteNFT ?? 3,
-    forfaitExpireAt: user.forfaitExpireAt || user.forfaitProExpire || user.forfaitPriveeExpire || null,
-    forfaitPrixUSD: user.forfaitPrixUSD ?? 0, forfaitPrixFCFA: user.forfaitPrixFCFA ?? 0,
-    totalOeuvresPubliees: user.totalOeuvresPubliees ?? 0, totalNFTPublies: user.totalNFTPublies ?? 0,
-    createdAt: user.createdAt, updatedAt: user.updatedAt
-  };
-}
-
-function createToken(user) {
-  return jwt.sign({ id: user._id.toString(), role: user.role }, JWT_SECRET, { algorithm: 'HS256', expiresIn: user.role === 'admin' ? '8h' : '7d' });
-}
-
-// === INSCRIPTION AUTO-VALIDEE ===
+// REGISTER - AUTO VALIDÉ
 router.post('/register', async (req, res, next) => {
   try {
-    const { nom, nom_artiste, whatsapp, email, password, ville, role, adresseReception } = req.body;
-    const nomNettoye = (nom||'').trim(); const artisteNettoye = (nom_artiste||'').trim(); const whatsappNettoye = (whatsapp||'').trim(); 
-    const emailNettoye = (email||'').trim().toLowerCase();
-    const adresseNettoyee = typeof adresseReception === 'string' ? adresseReception.trim() : '';
-    if (!nomNettoye || !artisteNettoye || !whatsappNettoye || !emailNettoye || !password) return res.status(400).json({ error: 'Champs obligatoires manquants.' });
-    if (password.length < 10) return res.status(400).json({ error: 'Mot de passe 10 caractères min.' });
-    const roleAutorise = ['artiste', 'acheteur'].includes(role) ? role : 'artiste';
-    if (roleAutorise === 'artiste' && (!adresseNettoyee || adresseNettoyee.length < 8)) {
-      return res.status(400).json({ error: `Adresse réception obligatoire: ${ADRESSES.USDT} / ${ADRESSES.PI} / ${ADRESSES.MTN}` });
-    }
-    const existe = await User.findOne({ $or: [{ whatsapp: whatsappNettoye }, { email: emailNettoye }] });
-    if (existe) return res.status(409).json({ error: 'Déjà utilisé.' });
-    const user = await User.create({ 
-      nom: nomNettoye, nom_artiste: artisteNettoye, whatsapp: whatsappNettoye, email: emailNettoye, password, 
-      ville: ville||'Abomey-Calavi', role: roleAutorise, adresseReception: adresseNettoyee,
-      statut: 'valide', estVerifie: true, forfait: 'gratuit', limiteOeuvres: 5, limiteNFT: 3,
-      forfaitProStatut: 'gratuit', forfaitPriveeStatut: 'gratuit'
+    const { nom, nom_artiste, whatsapp, email, ville, role, adresseReception, password } = req.body;
+    if (!nom || !whatsapp || !password) return res.status(400).json({ error: 'Nom, WhatsApp et mot de passe requis' });
+    const existing = await User.findOne({ $or: [{ whatsapp: whatsapp.trim() }, ...(email ? [{ email: email.toLowerCase() }] : [])] });
+    if (existing) return res.status(400).json({ error: 'WhatsApp ou Email déjà utilisé' });
+    const hashed = await bcrypt.hash(password, 10);
+    const user = new User({
+      nom: nom.trim(),
+      nom_artiste: (nom_artiste || '').trim(),
+      whatsapp: whatsapp.trim(),
+      email: (email || '').toLowerCase().trim(),
+      ville: (ville || '').trim(),
+      role: role || 'artiste',
+      adresseReception: (adresseReception || '').trim(),
+      password: hashed,
+      statut: 'valide',
+      forfait: 'gratuit',
+      forfaitStatut: 'valide',
+      limiteOeuvres: 5,
+      limiteNFT: 3,
     });
-    const token = createToken(user);
-    return res.status(201).json({ success: true, token, user: publicUser(user) });
-  } catch (error) { next(error); }
+    await user.save();
+    const token = jwt.sign({ _id: user._id, role: user.role, whatsapp: user.whatsapp }, JWT_SECRET, { expiresIn: '30d' });
+    res.json({ success: true, message: 'Compte créé et validé', token, user: publicUser(user) });
+  } catch (e) { next(e); }
 });
 
+// LOGIN
 router.post('/login', async (req, res, next) => {
   try {
-    const { identifiant, password } = req.body;
-    const loginId = String(identifiant||'').trim();
-    const conditions = [{ whatsapp: loginId }];
-    if (loginId.includes('@')) conditions.push({ email: loginId.toLowerCase() });
-    const user = await User.findOne({ $or: conditions }).select('+password');
-    if (!user || !(await user.comparePassword(password))) return res.status(401).json({ error: 'Identifiants invalides.' });
-    if (user.statut === 'refuse') return res.status(403).json({ error: 'Compte refusé.' });
-    const token = createToken(user);
-    return res.json({ success: true, token, user: publicUser(user) });
-  } catch (error) { next(error); }
+    const id = String(req.body.identifiant || req.body.email || req.body.whatsapp || '').trim();
+    const password = String(req.body.password || '');
+    if (!id || !password) return res.status(400).json({ error: 'Identifiant et mot de passe requis' });
+    const cond = [{ whatsapp: id }];
+    if (id.includes('@')) cond.push({ email: id.toLowerCase() });
+    const user = await User.findOne({ $or: cond });
+    if (!user) return res.status(404).json({ error: 'Compte introuvable' });
+    const ok = await bcrypt.compare(password, user.password);
+    if (!ok) return res.status(400).json({ error: 'Mot de passe incorrect' });
+    const token = jwt.sign({ _id: user._id, role: user.role, whatsapp: user.whatsapp }, JWT_SECRET, { expiresIn: '30d' });
+    res.json({ success: true, token, user: publicUser(user) });
+  } catch (e) { next(e); }
 });
 
-// === MOT DE PASSE OUBLIE - CORRIGE TON 404 ===
+// ME
+router.get('/me', authenticateToken, async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user._id);
+    if (!user) return res.status(404).json({ error: 'User introuvable' });
+    res.json({ success: true, user: publicUser(user) });
+  } catch (e) { next(e); }
+});
+
+// FORFAITS LIST
+router.get('/forfaits/list', (req, res) => {
+  res.json([
+    { id: 'gratuit', nom: 'Gratuit', prix: 0, limite: 5 },
+    { id: 'pro', nom: 'PRO 7$', prix: 7, limite: 10 },
+    { id: 'galerie_privee', nom: 'Galerie Privée 50$', prix: 50, limite: 50 },
+  ]);
+});
+
+// ACHETER FORFAIT
+async function acheterForfaitHandler(req, res, next) {
+  try {
+    const userId = req.user._id;
+    const { type, forfait, preuve } = req.body;
+    const typeFinal = (type || forfait || '').toLowerCase();
+    if (!['pro', 'galerie_privee'].includes(typeFinal)) return res.status(400).json({ error: 'Type forfait invalide' });
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ error: 'User introuvable' });
+    const expire = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+    if (typeFinal === 'pro') {
+      user.forfaitProStatut = 'valide';
+      user.forfaitProExpire = expire;
+      user.limiteOeuvres = 10;
+      user.limiteNFT = 10;
+    } else {
+      user.forfaitPriveeStatut = 'valide';
+      user.forfaitPriveeExpire = expire;
+      user.forfait = 'galerie_privee';
+      user.forfaitStatut = 'valide';
+      user.forfaitExpireAt = expire;
+      user.limiteOeuvres = 50;
+      user.limiteNFT = 50;
+    }
+    await user.save();
+    return res.json({ success: true, message: 'Forfait activé pour 1 mois', user: publicUser(user) });
+  } catch (e) { next(e); }
+}
+
+router.post('/forfaits/acheter', authenticateToken, acheterForfaitHandler);
+router.post('/acheter-forfait', authenticateToken, acheterForfaitHandler);
+
+// VALIDER FORFAIT ADMIN
+router.post('/forfaits/valider', authenticateToken, requireAdmin, async (req, res, next) => {
+  try {
+    const { userId, type, forfait } = req.body;
+    const typeFinal = (type || forfait || '').toLowerCase();
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ error: 'User introuvable' });
+    const expire = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+    if (typeFinal === 'pro') {
+      user.forfaitProStatut = 'valide'; user.forfaitProExpire = expire;
+    } else {
+      user.forfaitPriveeStatut = 'valide'; user.forfaitPriveeExpire = expire;
+    }
+    user.forfaitStatut = 'valide';
+    user.forfaitExpireAt = expire;
+    await user.save();
+    await sendValidationEmail(user);
+    res.json({ success: true, user: publicUser(user) });
+  } catch (e) { next(e); }
+});
+
+// FORGOT PASSWORD - AVEC EMAIL BREVO + resetLink compatible index.html
 router.post('/forgot-password', async (req, res, next) => {
   try {
     const id = String(req.body.identifiant || req.body.email || req.body.whatsapp || '').trim();
@@ -136,127 +192,55 @@ router.post('/forgot-password', async (req, res, next) => {
     if (!user) return res.status(404).json({ error: 'Compte introuvable.' });
     const resetToken = crypto.randomBytes(32).toString('hex');
     user.resetPasswordToken = resetToken;
-    user.resetPasswordExpire = new Date(Date.now() + 60*60*1000);
+    user.resetPasswordExpire = new Date(Date.now() + 60 * 60 * 1000);
     await user.save();
-    console.log(`RESET TOKEN ${user.email}: ${resetToken}`);
-    return res.json({ success: true, message: 'Lien valable 1h', resetToken, userId: user._id });
+
+    const resetLink = `https://art-zedmo-marketplace.onrender.com/reset-password.html?token=${resetToken}&id=${user._id}`;
+
+    if (user.email && process.env.BREVO_API_KEY) {
+      try {
+        await fetch('https://api.brevo.com/v3/smtp/email', {
+          method: 'POST',
+          headers: { 'api-key': process.env.BREVO_API_KEY, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            sender: { name: "ART-ZEDMO", email: "artzedmo@gmail.com" },
+            to: [{ email: user.email }],
+            subject: 'Réinitialisation mot de passe ART-ZEDMO',
+            htmlContent: `<div style="font-family:Arial;padding:24px"><h2>Réinitialisation</h2><p>Clique pour changer ton mot de passe (valable 1h) :</p><p><a href="${resetLink}" style="background:#000;color:#fff;padding:12px 20px;text-decoration:none;border-radius:8px;display:inline-block">Changer mon mot de passe</a></p><p>Lien: ${resetLink}</p></div>`
+          })
+        });
+      } catch (err) { console.log('Brevo error', err.message); }
+    }
+
+    console.log(`RESET LINK ${user.email}: ${resetLink}`);
+    return res.json({ success: true, message: 'Lien envoyé par email (valable 1h)', resetLink, resetToken, userId: user._id });
   } catch (e) { next(e); }
 });
 
+// RESET PASSWORD - Compatible avec ton index.html (userId+token+newPassword) ET (token+password)
 router.post('/reset-password', async (req, res, next) => {
   try {
-    const finalToken = req.body.token || req.body.resetToken;
-    const finalPassword = req.body.password || req.body.newPassword;
-    if (!finalToken || !finalPassword) return res.status(400).json({ error: 'Token et mot de passe requis.' });
-    if (finalPassword.length < 10) return res.status(400).json({ error: '10 caractères minimum.' });
-    const user = await User.findOne({ resetPasswordToken: finalToken, resetPasswordExpire: { $gt: new Date() } }).select('+resetPasswordToken +resetPasswordExpire +password');
-    if (!user) return res.status(400).json({ error: 'Lien expiré ou invalide.' });
-    user.password = finalPassword;
-    user.resetPasswordToken = null;
-    user.resetPasswordExpire = null;
+    const token = req.body.token;
+    const userId = req.body.userId || req.body.id;
+    const newPassword = req.body.newPassword || req.body.password;
+    if (!token || !newPassword) return res.status(400).json({ error: 'Token et nouveau mot de passe requis' });
+    if (newPassword.length < 10) return res.status(400).json({ error: '10 caractères minimum' });
+
+    let user;
+    if (userId) {
+      user = await User.findOne({ _id: userId, resetPasswordToken: token, resetPasswordExpire: { $gt: new Date() } });
+    } else {
+      user = await User.findOne({ resetPasswordToken: token, resetPasswordExpire: { $gt: new Date() } });
+    }
+    if (!user) return res.status(400).json({ error: 'Lien expiré ou invalide' });
+
+    user.password = await bcrypt.hash(newPassword, 10);
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpire = undefined;
     await user.save();
-    return res.json({ success: true, message: 'Mot de passe changé.' });
+
+    res.json({ success: true, message: 'Mot de passe réinitialisé avec succès' });
   } catch (e) { next(e); }
-});
-
-router.get('/me', authenticateToken, async (req, res, next) => {
-  try {
-    const user = await User.findById(req.auth.id);
-    if (!user) return res.status(404).json({ error: 'Introuvable.' });
-    return res.json(publicUser(user));
-  } catch (error) { next(error); }
-});
-
-router.get('/', authenticateToken, requireAdmin, async (req, res, next) => {
-  try {
-    const users = await User.find().sort({ createdAt: -1 }).limit(200).lean();
-    return res.json(users.map(u => publicUser(u)));
-  } catch (error) { next(error); }
-});
-
-router.get('/forfaits', authenticateToken, requireAdmin, async (req,res,next)=>{
-  try{
-    const pending = await User.find({ $or: [{forfaitStatut:'en_attente'},{forfaitProStatut:'en_attente'},{forfaitPriveeStatut:'en_attente'}] }).sort({updatedAt:-1}).lean();
-    const result = [];
-    for(const u of pending){
-      if(u.forfaitProStatut==='en_attente') result.push({ _id: u._id, user: u, userId: u._id, type: 'pro', forfait: 'pro', preuve: u.forfaitProPreuve||u.forfaitPreuve, statut: 'en_attente', createdAt: u.updatedAt });
-      if(u.forfaitPriveeStatut==='en_attente') result.push({ _id: u._id, user: u, userId: u._id, type: 'galerie_privee', forfait: 'galerie_privee', preuve: u.forfaitPriveePreuve||u.forfaitPreuve, statut: 'en_attente', createdAt: u.updatedAt });
-      if(result.length===0 && u.forfaitStatut==='en_attente') result.push({ _id: u._id, user: u, userId: u._id, type: u.forfaitTypeDemande||u.forfait, preuve: u.forfaitPreuve, statut: u.forfaitStatut, createdAt: u.updatedAt });
-    }
-    res.json(result);
-  }catch(e){next(e)}
-});
-
-router.get('/forfaits/admin/all', authenticateToken, requireAdmin, async (req,res,next)=>{
-  try{
-    const pending = await User.find({ $or: [{forfaitStatut:'en_attente'},{forfaitProStatut:'en_attente'},{forfaitPriveeStatut:'en_attente'}] }).sort({updatedAt:-1}).lean();
-    const out=[];
-    for(const u of pending){
-      if(u.forfaitProStatut==='en_attente') out.push({ _id: u._id, user: u, type: 'pro', preuve: u.forfaitProPreuve, statut: 'en_attente' });
-      if(u.forfaitPriveeStatut==='en_attente') out.push({ _id: u._id, user: u, type: 'galerie_privee', preuve: u.forfaitPriveePreuve, statut: 'en_attente' });
-    }
-    res.json(out.length?out:pending.map(u=>({ _id: u._id, user: u, type: u.forfaitTypeDemande||u.forfait, preuve: u.forfaitPreuve, statut: u.forfaitStatut })));
-  }catch(e){next(e)}
-});
-
-router.get('/forfaits/list', async (req, res) => {
-  return res.json({
-    success: true, adresses: ADRESSES,
-    forfaits: [
-      { id: 'gratuit', nom: 'Gratuit', prixUSD: 0, prixFCFA: 0, limiteOeuvres: 5, limiteNFT: 3 },
-      { id: 'pro', nom: 'PRO 10 oeuvres / 1 mois', prixUSD: 7, prixFCFA: 4200, limiteOeuvres: 10 },
-      { id: 'galerie_privee', nom: 'Galerie Privée 50 oeuvres / 1 mois', prixUSD: 50, prixFCFA: 30000, limiteOeuvres: 50 }
-    ]
-  });
-});
-
-async function acheterForfaitHandler(req,res,next){
-  try{
-    const { forfait, type, preuve, transactionId } = req.body;
-    const forfaitDemande = (forfait || type || '').toLowerCase();
-    const preuveFinal = (preuve || transactionId || '').toString().trim();
-    if (!['pro','galerie_privee'].includes(forfaitDemande)) return res.status(400).json({ error: 'Forfait invalide: pro ou galerie_privee' });
-    if (!preuveFinal || preuveFinal.length < 4) return res.status(400).json({ error: `ID transaction obligatoire MTN ${ADRESSES.MTN} / Moov ${ADRESSES.MOOV} / USDT ${ADRESSES.USDT} / Pi ${ADRESSES.PI}` });
-    const user = await User.findById(req.auth.id);
-    if (!user) return res.status(404).json({ error: 'Utilisateur introuvable.' });
-    if(forfaitDemande==='pro'){
-      user.forfaitProStatut='en_attente';
-      user.forfaitProPreuve=preuveFinal;
-    } else {
-      user.forfaitPriveeStatut='en_attente';
-      user.forfaitPriveePreuve=preuveFinal;
-    }
-    user.forfaitTypeDemande = forfaitDemande;
-    user.forfaitStatut = 'en_attente';
-    user.forfaitPreuve = preuveFinal;
-    user.forfaitDateDemande = new Date();
-    await user.save();
-    return
-    return res.json({ success: true, message: 'Demande envoyée en attente validation admin.', user: publicUser(user) });
-  } catch(e){ next(e); }
-}
-
-router.post('/forfaits/acheter', authenticateToken, acheterForfaitHandler);
-router.post('/acheter-forfait', authenticateToken, acheterForfaitHandler);
-
-router.post('/forfaits/valider', authenticateToken, requireAdmin, async (req,res,next)=>{
-  try{
-    const { userId, type, forfait } = req.body;
-    const typeFinal = (type || forfait || '').toLowerCase();
-    const user = await User.findById(userId);
-    if(!user) return res.status(404).json({ error: 'User introuvable' });
-    const expire = new Date(Date.now() + 30*24*60*60*1000);
-    if(typeFinal==='pro'){
-      user.forfaitProStatut='valide'; user.forfaitProExpire=expire;
-    } else {
-      user.forfaitPriveeStatut='valide'; user.forfaitPriveeExpire=expire;
-    }
-    user.forfaitStatut='valide';
-    user.forfaitExpireAt=expire;
-    await user.save();
-    await sendValidationEmail(user);
-    res.json({ success: true, user: publicUser(user) });
-  } catch(e){ next(e); }
 });
 
 export default router;
