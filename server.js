@@ -8,6 +8,15 @@ import fs from 'fs';
 import multer from 'multer';
 import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
+
+// ✅ FIX 1: Charger les modèles AVANT les routes
+import './models/User.js';
+import './models/Artwork.js';
+import './models/Exposition.js';
+import './models/Vote.js';
+import './models/Enchere.js';
+import './models/Annonce.js';
+
 import authRoutes from './routes/auth.js';
 import artworkRoutes from './routes/artworks.js';
 import expoRoutes from './routes/expositions.js';
@@ -101,29 +110,13 @@ app.use('/api/annonces', annonceRoutes);
 app.use('/api/galeries-privees', galeriesPriveesRoutes);
 app.use('/api/auth', authRoutes);
 
-const UserModel = () => mongoose.model('User');
+const UserModel = () => {
+  try { return mongoose.model('User'); } 
+  catch { return mongoose.models.User; }
+};
 
-app.get('/api/auth/all', authenticateToken, requireAdmin, async (req,res,next)=>{
-  try{
-    const User = UserModel();
-    const users = await User.find().sort({createdAt:-1}).lean();
-    res.json({ success: true, comptes: users, users, total: users.length });
-  }catch(e){next(e)}
-});
-app.get('/api/users', authenticateToken, requireAdmin, async (req,res,next)=>{
-  try{
-    const User = UserModel();
-    const users = await User.find().sort({createdAt:-1}).lean();
-    res.json({ success: true, comptes: users, users, total: users.length });
-  }catch(e){next(e)}
-});
-app.get('/api/users/all', authenticateToken, requireAdmin, async (req,res,next)=>{
-  try{
-    const User = UserModel();
-    const users = await User.find().sort({createdAt:-1}).lean();
-    res.json({ success: true, comptes: users, users, total: users.length });
-  }catch(e){next(e)}
-});
+// ✅ FIX 2: J'ai supprimé les doublons /api/auth/all et /api/users qui cassaient tout
+// Tout est maintenant dans routes/auth.js
 
 async function acheterForfait(req,res,next){
   try{
@@ -176,7 +169,6 @@ app.get('/api/settings/paiements', async (req,res,next)=>{
 app.get('/admin', (req,res)=>{ res.sendFile(path.join(__dirname, 'public', 'admin.html')); });
 app.get('/admin.html', (req,res)=>{ res.sendFile(path.join(__dirname, 'public', 'admin.html')); });
 
-// ✅ FIX NFT - C'EST ÇA QUI MANQUAIT SUR TON SCREENSHOT
 app.get('/api/nft', async (req,res,next)=>{
   try{
     const Artwork = mongoose.model('Artwork');
