@@ -1,6 +1,7 @@
 import express from 'express';
 import jwt from 'jsonwebtoken';
 import mongoose from 'mongoose';
+import crypto from 'crypto';
 import User from '../models/User.js';
 import GaleriePrivee from '../models/GaleriePrivee.js';
 
@@ -66,7 +67,6 @@ function publicUser(user) {
     forfaitStatut: user.forfaitStatut || null,
     forfaitPreuve: user.forfaitPreuve || null,
     forfaitTypeDemande: user.forfaitTypeDemande || null,
-    // === AJOUT SEULEMENT - DOUBLE FORFAIT SIMULTANE ===
     forfaitProStatut: user.forfaitProStatut || 'gratuit',
     forfaitProExpire: user.forfaitProExpire || null,
     forfaitProPreuve: user.forfaitProPreuve || null,
@@ -102,10 +102,10 @@ router.post('/register', async (req, res, next) => {
     const user = await User.create({ 
       nom: nomNettoye, nom_artiste: artisteNettoye, whatsapp: whatsappNettoye, email: emailNettoye, password, 
       ville: ville||'Abomey-Calavi', role: roleAutorise, adresseReception: adresseNettoyee,
-      statut: 'en_attente', forfait: 'gratuit', limiteOeuvres: 5, limiteNFT: 3,
+      statut: 'valide', estVerifie: true, forfait: 'gratuit', limiteOeuvres: 5, limiteNFT: 3,
       forfaitProStatut: 'gratuit', forfaitPriveeStatut: 'gratuit'
     });
-    return res.status(201).json({ success: true, message: 'En attente validation admin.', user: publicUser(user) });
+    return res.status(201).json({ success: true, message: 'Compte créé et validé automatiquement.', user: publicUser(user) });
   } catch (error) { next(error); }
 });
 
@@ -117,11 +117,51 @@ router.post('/login', async (req, res, next) => {
     if (loginId.includes('@')) conditions.push({ email: loginId.toLowerCase() });
     const user = await User.findOne({ $or: conditions }).select('+password');
     if (!user || !(await user.comparePassword(password))) return res.status(401).json({ error: 'Identifiants invalides.' });
-    if (user.statut === 'en_attente') return res.status(403).json({ error: 'En attente de validation.' });
+    if (user.statut === 'refuse') return res.status(403).json({ error: 'Compte refusé.' });
     if (user.statut !== 'valide') return res.status(403).json({ error: 'Compte non autorisé.' });
     const token = createToken(user);
     return res.json({ success: true, token, user: publicUser(user) });
   } catch (error) { next(error); }
+});
+
+// === MOT DE PASSE OUBLIE - NOUVEAU ===
+router.post('/forgot-password', async (req,res,next)=>{
+ try{
+  const email = (req.body.email||'').trim().toLowerCase();
+  if(!email) return res.status(400).json({ error: 'Email requis.' });
+  const user = await User.findOne({ email });
+  if(!user) return res.json({ success: true, message: 'Si email existe, lien envoyé.' });
+  const token = crypto.randomBytes(32).toString('hex');
+  user.resetPasswordToken = token;
+  user.resetPasswordExpire = Date.now() + 3600000;
+  await user.save();
+  const resetUrl = `https://art-zedmo-marketplace.onrender.com/reset-password.html?token=${token}`;
+  await fetch('https://api.brevo.com/v3/smtp/email', {
+   method:'POST', headers:{ 'api-key': process.env.BREVO_API_KEY, 'Content-Type':'application/json' },
+   body: JSON.stringify({
+    sender:{ name:"ART-ZEDMO", email:"artzedmo@gmail.com" },
+    to:[{ email: user.email }],
+    subject:'Réinitialisation mot de passe ART-ZEDMO',
+    htmlContent:`<div style="font-family:Arial;padding:24px"><h2>Bonjour ${user.nom_artiste}</h2><p>Clique pour réinitialiser ton mot de passe:</p><p><a href="${resetUrl}" style="background:#000;color:#fff;padding:12px 20px;text-decoration:none;">Réinitialiser</a></p><p>Lien: ${resetUrl}</p><p>Expire dans 1h.</p></div>`
+   })
+  });
+  res.json({ success:true, message:'Email envoyé si compte existe.' });
+ }catch(e){ next(e) }
+});
+
+router.post('/reset-password', async (req,res,next)=>{
+ try{
+  const { token, password } = req.body;
+  if(!token || !password) return res.status(400).json({ error:'Token et mot de passe requis.' });
+  if(password.length < 10) return res.status(400).json({ error:'10 caractères min.' });
+  const user = await User.findOne({ resetPasswordToken: token, resetPasswordExpire: { $gt: Date.now() } }).select('+password');
+  if(!user) return res.status(400).json({ error:'Token invalide ou expiré.' });
+  user.password = password;
+  user.resetPasswordToken = null;
+  user.resetPasswordExpire = null;
+  await user.save();
+  res.json({ success:true, message:'Mot de passe changé avec succès.' });
+ }catch(e){ next(e) }
 });
 
 router.get('/me', authenticateToken, async (req, res, next) => {
@@ -175,7 +215,6 @@ router.get('/forfaits/list', async (req, res) => {
   });
 });
 
-// ACHAT FORFAIT - DOUBLE ACTIF POSSIBLE
 async function acheterForfaitHandler(req,res,next){
   try{
     const { forfait, type, preuve, transactionId } = req.body;
@@ -185,7 +224,6 @@ async function acheterForfaitHandler(req,res,next){
     if (!preuveFinal || preuveFinal.length < 4) return res.status(400).json({ error: `ID transaction obligatoire MTN ${ADRESSES.MTN} / Moov ${ADRESSES.MOOV} / USDT ${ADRESSES.USDT} / Pi ${ADRESSES.PI}` });
     const user = await User.findById(req.auth.id);
     if (!user) return res.status(404).json({ error: 'Utilisateur introuvable.' });
-    // === LOGIQUE DOUBLE FORFAIT - N'ECRASE PAS L'AUTRE ===
     if(forfaitDemande==='pro'){
       user.forfaitProStatut='en_attente';
       user.forfaitProPreuve=preuveFinal;
@@ -203,73 +241,4 @@ async function acheterForfaitHandler(req,res,next){
   }catch(e){next(e)}
 }
 router.post('/forfait/acheter', authenticateToken, acheterForfaitHandler);
-router.post('/forfaits/acheter', authenticateToken, acheterForfaitHandler);
-router.post('/forfaits', authenticateToken, acheterForfaitHandler);
-
-// VALIDATION FORFAIT PAR ADMIN - GARDE L'AUTRE FORFAIT ACTIF
-async function validerForfaitHandler(req,res,next){
-  try{
-    const user = await User.findById(req.params.id);
-    if (!user) return res.status(404).json({ error: 'Utilisateur introuvable.' });
-    const typeDemande = (req.body.type || req.body.forfait || user.forfaitTypeDemande || user.forfait || 'pro').toLowerCase();
-    const type = ['pro','galerie_privee'].includes(typeDemande) ? typeDemande : 'pro';
-    const dureeMois = Number(req.body.dureeMois||1);
-    const expire = new Date(); expire.setMonth(expire.getMonth()+dureeMois);
-
-    if (type === 'pro') {
-      user.forfaitProStatut='valide';
-      user.forfaitProExpire=expire;
-      user.forfaitPrixUSD = 7; user.forfaitPrixFCFA = 4200;
-    } else {
-      user.forfaitPriveeStatut='valide';
-      user.forfaitPriveeExpire=expire;
-      user.forfaitPrixUSD = 50; user.forfaitPrixFCFA = 30000;
-      let galerie = await GaleriePrivee.findOne({ proprietaire: user._id });
-      if (!galerie) {
-        const baseSlug = (user.nom_artiste || user.nom).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '').slice(0,30);
-        galerie = await GaleriePrivee.create({ proprietaire: user._id, nomGalerie: `Galerie de ${user.nom_artiste}`, slug: `${baseSlug}-${user._id.toString().slice(-6)}`, whatsapp: user.whatsapp, isActive: true });
-      }
-    }
-    // NE PAS ECRASER L'AUTRE FORFAIT - CALCUL LIMITE MAX
-    const now = new Date();
-    const proValide = user.forfaitProStatut==='valide' && (!user.forfaitProExpire || user.forfaitProExpire>now);
-    const priveeValide = user.forfaitPriveeStatut==='valide' && (!user.forfaitPriveeExpire || user.forfaitPriveeExpire>now);
-    if(priveeValide){ user.forfait='galerie_privee'; user.limiteOeuvres=50; user.limiteNFT=50; }
-    else if(proValide){ user.forfait='pro'; user.limiteOeuvres=10; user.limiteNFT=10; }
-    else { user.forfait='gratuit'; user.limiteOeuvres=5; user.limiteNFT=3; }
-    
-    user.forfaitStatut = 'valide';
-    user.forfaitExpireAt = priveeValide ? user.forfaitPriveeExpire : user.forfaitProExpire;
-    user.forfaitTypeDemande = null;
-    await user.save();
-    return res.json({ success: true, message: `✅ ${type} validé 1 mois - ${priveeValide&&proValide?'PRO+PRIVEE actifs 50 oeuvres':type==='pro'?'10 oeuvres':'50 oeuvres + galerie privée'}`, user: publicUser(user) });
-  }catch(e){next(e)}
-}
-router.put('/:id/forfait/valider', authenticateToken, requireAdmin, validerForfaitHandler);
-router.put('/:id/forfaits/:id/valider', authenticateToken, requireAdmin, validerForfaitHandler);
-router.put('/forfaits/:id/valider', authenticateToken, requireAdmin, async (req,res,next)=>{
-  req.params.id = req.params.id; return validerForfaitHandler(req,res,next);
-});
-router.put('/forfaits/:id/validate', authenticateToken, requireAdmin, async (req,res,next)=>{
-  req.params.id = req.params.id; return validerForfaitHandler(req,res,next);
-});
-
-async function validateUserHandler(req, res, next) {
-  try {
-    const user = await User.findById(req.params.id);
-    if (!user) return res.status(404).json({ error: 'Introuvable.' });
-    user.statut = 'valide'; user.estVerifie = true; await user.save();
-    await sendValidationEmail(user);
-    return res.json({ success: true, message: 'Compte validé.', user: publicUser(user) });
-  } catch (error) { next(error); }
-}
-router.put('/:id/valider', authenticateToken, requireAdmin, validateUserHandler);
-router.put('/users/:id/valider', authenticateToken, requireAdmin, validateUserHandler);
-router.put('/:id/refuser', authenticateToken, requireAdmin, async (req, res, next) => {
-  try { const user = await User.findById(req.params.id); if (!user) return res.status(404).json({ error: 'Introuvable.' }); user.statut = 'refuse'; await user.save(); return res.json({ success: true, message: 'Refusé.' }); } catch (e) { next(e); }
-});
-router.delete('/:id', authenticateToken, requireAdmin, async (req, res, next) => {
-  try { if (req.params.id === req.auth.id) return res.status(400).json({ error: 'Pas ton propre compte.' }); await User.deleteOne({ _id: req.params.id }); return res.json({ success: true, message: 'Supprimé.' }); } catch (e) { next(e); }
-});
-
-export default router;
+router.post('/forfaits/acheter
