@@ -24,11 +24,9 @@ const userSchema = new mongoose.Schema(
     totalVotesRecus: { type: Number, default: 0 },
     solde: { type: Number, default: 0 },
 
-    // RESET PASSWORD - AJOUT SEULEMENT
     resetPasswordToken: { type: String, default: null },
     resetPasswordExpire: { type: Date, default: null },
 
-    // FORFAITS - 10 / 50 / 1 mois + BOOST 48h
     forfait: { type: String, enum: ['gratuit','pro','galerie_privee'], default: 'gratuit' },
     forfaitStatut: { type: String, enum: ['en_attente','valide','refuse', null], default: null },
     forfaitPreuve: { type: String, default: null },
