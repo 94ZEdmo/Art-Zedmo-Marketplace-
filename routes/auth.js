@@ -30,14 +30,13 @@ router.post('/login', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// SIMPLE - NE PLANTE PLUS, PAS BESOIN DE BREVO
 router.post('/forgot-password', async (req, res) => {
   try {
     const { email } = req.body;
     if (!email) return res.status(400).json({ error: 'Email requis' });
     
     const user = await User.findOne({ email: email.toLowerCase().trim() });
-    if (!user) return res.json({ success: true, message: 'Si email existe, lien cree', link: '' });
+    if (!user) return res.json({ success: true, message: 'Si email existe, lien envoye' });
 
     const token = crypto.randomBytes(32).toString('hex');
     user.resetPasswordToken = token;
@@ -48,28 +47,31 @@ router.post('/forgot-password', async (req, res) => {
     
     console.log('RESET LINK FOR', email, ':', resetUrl);
 
-    // On essaie Brevo mais on ne bloque JAMAIS si ça échoue
-    try {
-      if(process.env.BREVO_API_KEY){
-        const brevo = await import('@getbrevo/brevo');
-        const api = new brevo.TransactionalEmailsApi();
-        api.setApiKey(0, process.env.BREVO_API_KEY);
-        await api.sendTransacEmail({
-          sender: { email: process.env.BREVO_SENDER, name: 'ART-ZEDMO' },
-          to: [{ email: user.email }],
-          subject: 'Reset mot de passe ART-ZEDMO',
-          htmlContent: `<p>Clique ici (1h) : <a href="${resetUrl}">${resetUrl}</a></p>`
-        });
-      }
-    } catch (brevoErr) {
-      console.log('Brevo fail, mais on continue:', brevoErr.message);
-    }
+    // ENVOI AVEC artzedmo@gmail.com - VERSION FINALE QUI MARCHE
+    const brevoRes = await fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: {
+        'accept': 'application/json',
+        'content-type': 'application/json',
+        'api-key': process.env.BREVO_API_KEY
+      },
+      body: JSON.stringify({
+        sender: { email: 'artzedmo@gmail.com', name: 'ART-ZEDMO' },
+        to: [{ email: user.email }],
+        subject: 'Reset mot de passe ART-ZEDMO',
+        htmlContent: `<html><body style="font-family:Arial;background:#111;color:#fff;padding:20px"><h2 style="color:#d4af37">ART-ZEDMO - Reset mot de passe</h2><p>Clique ici, valable 1h :</p><a href="${resetUrl}" style="background:#d4af37;color:#000;padding:14px 24px;text-decoration:none;font-weight:bold;border-radius:8px;display:inline-block">Changer mon mot de passe</a><p style="margin-top:20px;color:#888">${resetUrl}</p></body></html>`
+      })
+    });
 
-    // ON RENVOIE LE LIEN DIRECT - plus de HTTP failed
-    res.json({ success: true, message: 'Lien cree', link: resetUrl });
+    const brevoData = await brevoRes.text();
+    console.log('BREVO RESPONSE:', brevoRes.status, brevoData);
+
+    if(!brevoRes.ok) throw new Error(brevoData);
+
+    res.json({ success: true, message: 'Email envoye a '+email });
   } catch (e) { 
-    console.log(e);
-    res.status(200).json({ success: true, message: 'Si email existe, lien cree', link: '' }); 
+    console.log('FORGOT ERROR:', e.message);
+    res.status(500).json({ error: 'Brevo error: '+e.message }); 
   }
 });
 
