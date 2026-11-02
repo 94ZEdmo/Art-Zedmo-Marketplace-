@@ -242,3 +242,36 @@ async function acheterForfaitHandler(req,res,next){
 }
 router.post('/forfait/acheter', authenticateToken, acheterForfaitHandler);
 router.post('/forfaits/acheter
+router.post('/forfaits/acheter', authenticateToken, acheterForfaitHandler);
+
+router.post('/forfait/valider', authenticateToken, requireAdmin, async (req,res,next)=>{
+  try{
+    const { userId, type, forfait, action } = req.body;
+    const typeFinal = (type || forfait || '').toLowerCase();
+    const act = (action||'valider').toLowerCase();
+    const user = await User.findById(userId);
+    if(!user) return res.status(404).json({ error:'User introuvable' });
+    const expire = new Date(); expire.setMonth(expire.getMonth()+1);
+    if(act==='refuser'){
+      if(typeFinal==='pro') user.forfaitProStatut='refuse';
+      else user.forfaitPriveeStatut='refuse';
+      user.forfaitStatut='refuse';
+    }else{
+      if(typeFinal==='pro'){
+        user.forfaitProStatut='valide'; user.forfaitProExpire=expire;
+        user.forfait='pro'; user.limiteOeuvres=10; user.limiteNFT=10;
+        user.forfaitPrixUSD=7; user.forfaitPrixFCFA=4200;
+      }else{
+        user.forfaitPriveeStatut='valide'; user.forfaitPriveeExpire=expire;
+        user.forfait='galerie_privee'; user.limiteOeuvres=50; user.limiteNFT=50;
+        user.forfaitPrixUSD=50; user.forfaitPrixFCFA=30000;
+      }
+      user.forfaitStatut='valide';
+      await GaleriePrivee.findOneAndUpdate({ proprietaire:user._id }, { $setOnInsert:{ proprietaire:user._id, nom:user.nom_artiste||user.nom } }, { upsert:true });
+    }
+    await user.save();
+    res.json({ success:true, user: publicUser(user) });
+  }catch(e){ next(e) }
+});
+
+export default router;
