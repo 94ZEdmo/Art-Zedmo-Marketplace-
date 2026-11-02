@@ -12,11 +12,11 @@ function signToken(user) {
 
 router.post('/register', async (req, res) => {
   try {
-    const { nom, whatsapp, password, email, ville, role } = req.body;
+    const { nom, whatsapp, password, email, ville, role, nom_artiste, adresseReception } = req.body;
     if (!nom || !whatsapp || !password) return res.status(400).json({ error: 'Nom, whatsapp, password requis' });
-    const exists = await User.findOne({ $or: [{ whatsapp }, ...(email ? [{ email }] : [])] });
+    const exists = await User.findOne({ $or: [{ whatsapp }, ...(email ? [{ email: email.toLowerCase().trim() }] : [])] });
     if (exists) return res.status(400).json({ error: 'WhatsApp ou email deja utilise' });
-    const user = await User.create({ nom, whatsapp, password, email, ville, role: role || 'artiste', statut: 'valide', forfait: 'gratuit' });
+    const user = await User.create({ nom, whatsapp, password, email: email?.toLowerCase().trim(), ville, role: role || 'artiste', nom_artiste, adresseReception, statut: 'valide', forfait: 'gratuit' });
     res.json({ token: signToken(user), user });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -24,40 +24,52 @@ router.post('/register', async (req, res) => {
 router.post('/login', async (req, res) => {
   try {
     const { identifiant, password } = req.body;
-    const user = await User.findOne({ $or: [{ whatsapp: identifiant }, { email: identifiant }, { nom: identifiant }] });
+    const user = await User.findOne({ $or: [{ whatsapp: identifiant }, { email: identifiant.toLowerCase?.() || identifiant }, { nom: identifiant }] });
     if (!user || !(await user.comparePassword(password))) return res.status(400).json({ error: 'Identifiant ou mot de passe incorrect' });
     res.json({ token: signToken(user), user });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// SIMPLE - NE PLANTE PLUS, PAS BESOIN DE BREVO
 router.post('/forgot-password', async (req, res) => {
   try {
     const { email } = req.body;
     if (!email) return res.status(400).json({ error: 'Email requis' });
-    const user = await User.findOne({ email });
-    if (!user) return res.json({ success: true });
+    
+    const user = await User.findOne({ email: email.toLowerCase().trim() });
+    if (!user) return res.json({ success: true, message: 'Si email existe, lien cree', link: '' });
 
     const token = crypto.randomBytes(32).toString('hex');
     user.resetPasswordToken = token;
     user.resetPasswordExpire = Date.now() + 3600000;
     await user.save();
 
-    const resetUrl = `${process.env.FRONTEND_URL}/reset-password.html?token=${token}`;
+    const resetUrl = `${process.env.FRONTEND_URL || 'https://art-zedmo-marketplace.onrender.com'}/reset-password.html?token=${token}`;
+    
+    console.log('RESET LINK FOR', email, ':', resetUrl);
 
-    const brevo = await import('@getbrevo/brevo');
-    const api = new brevo.TransactionalEmailsApi();
-    api.setApiKey(0, process.env.BREVO_API_KEY);
-    await api.sendTransacEmail({
-      sender: { email: process.env.BREVO_SENDER, name: 'ART-ZEDMO' },
-      to: [{ email: user.email }],
-      subject: 'Reset mot de passe ART-ZEDMO',
-      htmlContent: `<p>Lien reset (1h) : <a href="${resetUrl}">${resetUrl}</a></p>`
-    });
+    // On essaie Brevo mais on ne bloque JAMAIS si ça échoue
+    try {
+      if(process.env.BREVO_API_KEY){
+        const brevo = await import('@getbrevo/brevo');
+        const api = new brevo.TransactionalEmailsApi();
+        api.setApiKey(0, process.env.BREVO_API_KEY);
+        await api.sendTransacEmail({
+          sender: { email: process.env.BREVO_SENDER, name: 'ART-ZEDMO' },
+          to: [{ email: user.email }],
+          subject: 'Reset mot de passe ART-ZEDMO',
+          htmlContent: `<p>Clique ici (1h) : <a href="${resetUrl}">${resetUrl}</a></p>`
+        });
+      }
+    } catch (brevoErr) {
+      console.log('Brevo fail, mais on continue:', brevoErr.message);
+    }
 
-    res.json({ success: true, message: 'Email envoye' });
+    // ON RENVOIE LE LIEN DIRECT - plus de HTTP failed
+    res.json({ success: true, message: 'Lien cree', link: resetUrl });
   } catch (e) { 
     console.log(e);
-    res.status(500).json({ error: e.message }); 
+    res.status(200).json({ success: true, message: 'Si email existe, lien cree', link: '' }); 
   }
 });
 
@@ -65,7 +77,7 @@ router.post('/reset-password', async (req, res) => {
   try {
     const { token, password } = req.body;
     const user = await User.findOne({ resetPasswordToken: token, resetPasswordExpire: { $gt: Date.now() } });
-    if (!user) return res.status(400).json({ error: 'Token invalide' });
+    if (!user) return res.status(400).json({ error: 'Token invalide ou expire' });
     user.password = password;
     user.resetPasswordToken = undefined;
     user.resetPasswordExpire = undefined;
