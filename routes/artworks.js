@@ -31,54 +31,78 @@ function requireAdmin(req, res, next) {
   next();
 }
 
-// GALERIE
+// GALERIE - AVEC NOM ARTISTE
 router.get('/', async (req, res) => {
   try {
     const Artwork = getArtworkModel();
+    const User = getUserModel();
     const { search, category, type } = req.query;
     let filter = { statut: { $nin: ['rejetee', 'supprime', 'refusee'] } };
     if (search) filter.$or = [{ titre: { $regex: search, $options: 'i' } }, { description: { $regex: search, $options: 'i' } }];
     if (category && category !== 'Toutes') filter.categorie = category;
     if (type === 'nft' || type === 'NFT') filter.isNFT = true;
-    const oeuvres = await Artwork.find(filter).sort({ createdAt: -1 }).limit(200).lean();
+
+    let oeuvres = await Artwork.find(filter)
+      .populate('artiste', 'nom nom_artiste')
+      .sort({ createdAt: -1 })
+      .limit(200)
+      .lean()
+      .catch(async () => await Artwork.find(filter).sort({ createdAt: -1 }).limit(200).lean());
+
+    oeuvres = await Promise.all(oeuvres.map(async (o) => {
+      if (o.artisteNom) return o;
+      if (o.artiste && typeof o.artiste === 'object') {
+        o.artisteNom = o.artiste.nom_artiste || o.artiste.nom || 'Artiste';
+        return o;
+      }
+      if (o.artiste) {
+        try {
+          const u = await User.findById(o.artiste).select('nom nom_artiste').lean();
+          if (u) o.artisteNom = u.nom_artiste || u.nom;
+        } catch {}
+      }
+      if (!o.artisteNom) o.artisteNom = 'Artiste';
+      return o;
+    }));
+
     res.json({ success: true, data: oeuvres, artworks: oeuvres, oeuvres });
   } catch (e) {
+    console.error(e);
     res.json({ success: true, data: [], artworks: [], oeuvres: [] });
   }
 });
 
-// ADMIN ALL - METTRE AVANT /:id
 router.get('/admin/all', async (req, res) => {
   try {
     const Artwork = getArtworkModel();
-    const all = await Artwork.find().sort({ createdAt: -1 }).lean();
+    const all = await Artwork.find().populate('artiste', 'nom nom_artiste').sort({ createdAt: -1 }).lean()
+      .catch(async () => await Artwork.find().sort({ createdAt: -1 }).lean());
     res.json({ success: true, data: all, artworks: all });
   } catch (e) {
     res.json({ success: true, data: [], artworks: [] });
   }
 });
 
-// === DELETE - METTRE AVANT GET /:id C'EST LA CLÉ ===
+// DELETE AVANT /:id
 router.delete('/:id', authenticateOptional, requireAdmin, async (req, res) => {
   try {
-    console.log('DELETE OEUVRE DEMANDE:', req.params.id);
+    console.log('DELETE OEUVRE:', req.params.id);
     const Artwork = getArtworkModel();
     const deleted = await Artwork.findByIdAndDelete(req.params.id);
     if (!deleted) return res.status(404).json({ error: 'Oeuvre non trouvee' });
-    console.log('OEUVRE SUPPRIMEE OK:', req.params.id);
     res.json({ success: true, message: 'Oeuvre supprimee' });
   } catch (e) {
-    console.log('DELETE ERROR:', e.message);
     res.status(500).json({ error: e.message });
   }
 });
 
-// GET UNE OEUVRE - TOUJOURS APRES DELETE ET ADMIN/ALL
 router.get('/:id', async (req, res) => {
   try {
     const Artwork = getArtworkModel();
-    const art = await Artwork.findById(req.params.id).lean();
+    let art = await Artwork.findById(req.params.id).populate('artiste', 'nom nom_artiste ville').lean()
+      .catch(async () => await Artwork.findById(req.params.id).lean());
     if (!art) return res.status(404).json({ error: 'Introuvable' });
+    if (!art.artisteNom && art.artiste?.nom) art.artisteNom = art.artiste.nom_artiste || art.artiste.nom;
     res.json({ success: true, data: art, artwork: art });
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -92,7 +116,7 @@ router.post('/', authenticateOptional, async (req, res) => {
     if (!req.user?.id) return res.status(401).json({ error: 'Connecte-toi' });
     const user = await User.findById(req.user.id);
     if (!user) return res.status(404).json({ error: 'User introuvable' });
-    const data = { ...req.body, artiste: user._id, artisteNom: user.nom || user.nom_artiste, statut: 'valide', estVerifie: true };
+    const data = { ...req.body, artiste: user._id, artisteNom: user.nom_artiste || user.nom, statut: 'valide', estVerifie: true };
     const oeuvre = await Artwork.create(data);
     try { await User.updateOne({ _id: user._id }, { $inc: { totalOeuvres: 1, totalOeuvresPubliees: 1, totalNFTPublies: data.isNFT ? 1 : 0 } }); } catch {}
     res.status(201).json({ success: true, data: oeuvre, artwork: oeuvre });
