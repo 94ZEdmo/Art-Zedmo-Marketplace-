@@ -25,7 +25,6 @@ function authenticateOptional(req, res, next) {
   }
   next();
 }
-
 function requireAdmin(req, res, next) {
   if (!req.user?.id) return res.status(401).json({ error: 'Non connecte' });
   if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin requis' });
@@ -44,12 +43,37 @@ router.get('/', async (req, res) => {
     const oeuvres = await Artwork.find(filter).sort({ createdAt: -1 }).limit(200).lean();
     res.json({ success: true, data: oeuvres, artworks: oeuvres, oeuvres });
   } catch (e) {
-    console.error('ARTWORKS GET ERROR:', e.message);
     res.json({ success: true, data: [], artworks: [], oeuvres: [] });
   }
 });
 
-// Une oeuvre
+// ADMIN ALL - METTRE AVANT /:id
+router.get('/admin/all', async (req, res) => {
+  try {
+    const Artwork = getArtworkModel();
+    const all = await Artwork.find().sort({ createdAt: -1 }).lean();
+    res.json({ success: true, data: all, artworks: all });
+  } catch (e) {
+    res.json({ success: true, data: [], artworks: [] });
+  }
+});
+
+// === DELETE - METTRE AVANT GET /:id C'EST LA CLÉ ===
+router.delete('/:id', authenticateOptional, requireAdmin, async (req, res) => {
+  try {
+    console.log('DELETE OEUVRE DEMANDE:', req.params.id);
+    const Artwork = getArtworkModel();
+    const deleted = await Artwork.findByIdAndDelete(req.params.id);
+    if (!deleted) return res.status(404).json({ error: 'Oeuvre non trouvee' });
+    console.log('OEUVRE SUPPRIMEE OK:', req.params.id);
+    res.json({ success: true, message: 'Oeuvre supprimee' });
+  } catch (e) {
+    console.log('DELETE ERROR:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// GET UNE OEUVRE - TOUJOURS APRES DELETE ET ADMIN/ALL
 router.get('/:id', async (req, res) => {
   try {
     const Artwork = getArtworkModel();
@@ -61,7 +85,6 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// CREATION
 router.post('/', authenticateOptional, async (req, res) => {
   try {
     const Artwork = getArtworkModel();
@@ -71,37 +94,9 @@ router.post('/', authenticateOptional, async (req, res) => {
     if (!user) return res.status(404).json({ error: 'User introuvable' });
     const data = { ...req.body, artiste: user._id, artisteNom: user.nom || user.nom_artiste, statut: 'valide', estVerifie: true };
     const oeuvre = await Artwork.create(data);
-    try {
-      await User.updateOne({ _id: user._id }, { $inc: { totalOeuvres: 1, totalOeuvresPubliees: 1, totalNFTPublies: data.isNFT ? 1 : 0 } });
-    } catch {}
+    try { await User.updateOne({ _id: user._id }, { $inc: { totalOeuvres: 1, totalOeuvresPubliees: 1, totalNFTPublies: data.isNFT ? 1 : 0 } }); } catch {}
     res.status(201).json({ success: true, data: oeuvre, artwork: oeuvre });
   } catch (e) {
-    console.error('CREATE ART ERROR:', e);
-    res.status(500).json({ error: e.message });
-  }
-});
-
-// ADMIN - Toutes oeuvres
-router.get('/admin/all', async (req, res) => {
-  try {
-    const Artwork = getArtworkModel();
-    const all = await Artwork.find().sort({ createdAt: -1 }).lean();
-    res.json({ success: true, data: all, artworks: all });
-  } catch (e) {
-    res.json({ success: true, data: [], artworks: [] });
-  }
-});
-
-// === FIX SUPPRESSION OEUVRE - C'EST ÇA QUI MANQUAIT ===
-router.delete('/:id', authenticateOptional, requireAdmin, async (req, res) => {
-  try {
-    const Artwork = getArtworkModel();
-    const deleted = await Artwork.findByIdAndDelete(req.params.id);
-    if (!deleted) return res.status(404).json({ error: 'Oeuvre non trouvee' });
-    console.log('OEUVRE SUPPRIMEE:', req.params.id, 'par', req.user.id);
-    res.json({ success: true, message: 'Oeuvre supprimee' });
-  } catch (e) {
-    console.log('DELETE OEUVRE ERROR:', e.message);
     res.status(500).json({ error: e.message });
   }
 });
