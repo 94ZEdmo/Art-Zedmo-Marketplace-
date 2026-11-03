@@ -188,7 +188,7 @@ function afficherGalerieFiltre(){
   const cat=document.getElementById('filtreGalerie').value.toLowerCase();
   const filtres=artworks.filter(o=>{
     if(o.isGaleriePrivee) return false;
-    const txt=[o.titre,o.description,o.categorie,o.artiste?.nom,o.artiste?.nom_artiste].join(' ').toLowerCase();
+    const txt=[o.titre,o.description,o.categorie,o.artisteNom,o.artiste?.nom,o.artiste?.nom_artiste].join(' ').toLowerCase();
     const c=String(o.categorie||'').toLowerCase();
     return txt.includes(rech)&&(!cat||c===cat||(cat==='nft'&&o.isNFT))
   });
@@ -197,8 +197,8 @@ function afficherGalerieFiltre(){
     const id=String(o._id||'');
     const titre=escapeHTML(o.titre||'Sans titre');
     const desc=escapeHTML(o.description||'');
-    const artiste=escapeHTML(o.artiste?.nom_artiste||o.artiste?.nom||'Artiste');
-    const artisteRaw=o.artiste?.nom_artiste||o.artiste?.nom||'';
+    const artiste=escapeHTML(o.artisteNom||o.artiste?.nom_artiste||o.artiste?.nom||'Artiste');
+    const artisteRaw=o.artisteNom||o.artiste?.nom_artiste||o.artiste?.nom||'';
     const catT=escapeHTML(o.categorie||'Art');
     const prix=prixFCFA(o.prix);
     const img=obtenirImage(o);
