@@ -41,29 +41,20 @@ router.post('/forgot-password', async (req, res) => {
     user.resetPasswordExpire = Date.now() + 3600000;
     await user.save();
     const resetUrl = `${process.env.FRONTEND_URL || 'https://art-zedmo-marketplace.onrender.com'}/reset-password.html?token=${token}`;
-    console.log('RESET LINK FOR', email, ':', resetUrl);
     const brevoRes = await fetch('https://api.brevo.com/v3/smtp/email', {
       method: 'POST',
-      headers: {
-        'accept': 'application/json',
-        'content-type': 'application/json',
-        'api-key': process.env.BREVO_API_KEY
-      },
+      headers: { 'accept':'application/json','content-type':'application/json','api-key':process.env.BREVO_API_KEY },
       body: JSON.stringify({
         sender: { email: 'artzedmo@gmail.com', name: 'ART-ZEDMO' },
         to: [{ email: user.email }],
         subject: 'Reset mot de passe ART-ZEDMO',
-        htmlContent: `<html><body style="font-family:Arial;background:#111;color:#fff;padding:20px"><h2 style="color:#d4af37">ART-ZEDMO - Reset mot de passe</h2><p>Clique ici, valable 1h :</p><a href="${resetUrl}" style="background:#d4af37;color:#000;padding:14px 24px;text-decoration:none;font-weight:bold;border-radius:8px;display:inline-block">Changer mon mot de passe</a><p style="margin-top:20px;color:#888">${resetUrl}</p></body></html>`
+        htmlContent: `<html><body style="font-family:Arial;background:#111;color:#fff;padding:20px"><h2 style="color:#d4af37">ART-ZEDMO</h2><p><a href="${resetUrl}" style="background:#d4af37;color:#000;padding:14px 24px;text-decoration:none;font-weight:bold;border-radius:8px;display:inline-block">Changer mon mot de passe</a></p><p>${resetUrl}</p></body></html>`
       })
     });
     const brevoData = await brevoRes.text();
-    console.log('BREVO RESPONSE:', brevoRes.status, brevoData);
     if(!brevoRes.ok) throw new Error(brevoData);
-    res.json({ success: true, message: 'Email envoye a '+email });
-  } catch (e) { 
-    console.log('FORGOT ERROR:', e.message);
-    res.status(500).json({ error: 'Brevo error: '+e.message }); 
-  }
+    res.json({ success: true, message: 'Email envoye' });
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 router.post('/reset-password', async (req, res) => {
@@ -84,12 +75,18 @@ router.get('/me', authMiddleware, async (req, res) => {
   res.json({ user });
 });
 
-// --- FIX POUR TON ERREUR ADMIN "Route introuvable: /api/auth" ---
+// --- FIX ADMIN COMPTES - CORRIGÉ ICI : ON RENVOIE LE TABLEAU DIRECTEMENT ---
 router.get('/', authMiddleware, async (req, res) => {
   try {
-    const users = await User.find().sort({ createdAt: -1 });
-    res.json({ users });
-  } catch (e) { res.status(500).json({ error: e.message }); }
+    console.log('ADMIN REQUEST BY', req.user.id);
+    const users = await User.find().sort({ createdAt: -1 }).lean();
+    console.log('USERS COUNT', users.length);
+    // Important : on renvoie le tableau direct, pas {users}
+    res.json(users);
+  } catch (e) { 
+    console.log('ADMIN ERROR', e.message);
+    res.status(500).json({ error: e.message }); 
+  }
 });
 
 export default router;
