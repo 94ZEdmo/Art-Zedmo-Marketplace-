@@ -26,30 +26,22 @@ function authenticateOptional(req, res, next) {
   next();
 }
 
-// ✅ GALERIE PERMANENTE - NE PLANTE PLUS
+function requireAdmin(req, res, next) {
+  if (!req.user?.id) return res.status(401).json({ error: 'Non connecte' });
+  if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin requis' });
+  next();
+}
+
+// GALERIE
 router.get('/', async (req, res) => {
   try {
     const Artwork = getArtworkModel();
     const { search, category, type } = req.query;
-    let filter = {};
-    // On ne cache rien sauf rejetée/supprimée - comme tu voulais validation auto
-    filter.statut = { $nin: ['rejetee', 'supprime', 'refusee'] };
-    
-    if (search) {
-      filter.$or = [
-        { titre: { $regex: search, $options: 'i' } },
-        { description: { $regex: search, $options: 'i' } }
-      ];
-    }
+    let filter = { statut: { $nin: ['rejetee', 'supprime', 'refusee'] } };
+    if (search) filter.$or = [{ titre: { $regex: search, $options: 'i' } }, { description: { $regex: search, $options: 'i' } }];
     if (category && category !== 'Toutes') filter.categorie = category;
     if (type === 'nft' || type === 'NFT') filter.isNFT = true;
-
-    const oeuvres = await Artwork.find(filter)
-      .sort({ createdAt: -1 })
-      .limit(200)
-      .lean();
-
-    // On populate manuellement sans crasher si User manque
+    const oeuvres = await Artwork.find(filter).sort({ createdAt: -1 }).limit(200).lean();
     res.json({ success: true, data: oeuvres, artworks: oeuvres, oeuvres });
   } catch (e) {
     console.error('ARTWORKS GET ERROR:', e.message);
@@ -69,37 +61,19 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// ✅ CREATION - AUTO-VALIDÉE (ton travail gardé)
+// CREATION
 router.post('/', authenticateOptional, async (req, res) => {
   try {
     const Artwork = getArtworkModel();
     const User = getUserModel();
     if (!req.user?.id) return res.status(401).json({ error: 'Connecte-toi' });
-
     const user = await User.findById(req.user.id);
     if (!user) return res.status(404).json({ error: 'User introuvable' });
-
-    const data = {
-      ...req.body,
-      artiste: user._id,
-      artisteNom: user.nom || user.nom_artiste,
-      statut: 'valide', // ✅ AUTO-VALIDÉ comme tu voulais
-      estVerifie: true,
-    };
-
+    const data = { ...req.body, artiste: user._id, artisteNom: user.nom || user.nom_artiste, statut: 'valide', estVerifie: true };
     const oeuvre = await Artwork.create(data);
-
-    // Met à jour compteur sans crasher
     try {
-      await User.updateOne({ _id: user._id }, { 
-        $inc: { 
-          totalOeuvres: 1, 
-          totalOeuvresPubliees: 1,
-          totalNFTPublies: data.isNFT ? 1 : 0 
-        } 
-      });
+      await User.updateOne({ _id: user._id }, { $inc: { totalOeuvres: 1, totalOeuvresPubliees: 1, totalNFTPublies: data.isNFT ? 1 : 0 } });
     } catch {}
-
     res.status(201).json({ success: true, data: oeuvre, artwork: oeuvre });
   } catch (e) {
     console.error('CREATE ART ERROR:', e);
@@ -115,6 +89,20 @@ router.get('/admin/all', async (req, res) => {
     res.json({ success: true, data: all, artworks: all });
   } catch (e) {
     res.json({ success: true, data: [], artworks: [] });
+  }
+});
+
+// === FIX SUPPRESSION OEUVRE - C'EST ÇA QUI MANQUAIT ===
+router.delete('/:id', authenticateOptional, requireAdmin, async (req, res) => {
+  try {
+    const Artwork = getArtworkModel();
+    const deleted = await Artwork.findByIdAndDelete(req.params.id);
+    if (!deleted) return res.status(404).json({ error: 'Oeuvre non trouvee' });
+    console.log('OEUVRE SUPPRIMEE:', req.params.id, 'par', req.user.id);
+    res.json({ success: true, message: 'Oeuvre supprimee' });
+  } catch (e) {
+    console.log('DELETE OEUVRE ERROR:', e.message);
+    res.status(500).json({ error: e.message });
   }
 });
 
