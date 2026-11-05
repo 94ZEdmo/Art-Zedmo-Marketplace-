@@ -37,28 +37,30 @@ const JWT_SECRET = process.env.JWT_SECRET;
 if (!MONGO_URL) { console.error('MONGO_URI manquant'); process.exit(1); }
 if (!JWT_SECRET || JWT_SECRET.length < 32) { console.error('JWT_SECRET manquant'); process.exit(1); }
 
-// ===== SEUL AJOUT POUR LE PROBLEME - EMAIL ART-ZEDMO =====
-const EMAIL_USER = process.env.EMAIL_USER || '';
-const EMAIL_PASS = process.env.EMAIL_PASS || '';
+// ===== SEUL AJOUT POUR LE PROBLEME - EMAIL BREVO =====
+const EMAIL_USER = process.env.EMAIL_USER || process.env.BREVO_SMTP_USER || '';
+const EMAIL_PASS = process.env.EMAIL_PASS || process.env.BREVO_SMTP_KEY || process.env.BREVO_API_KEY || '';
 const EMAIL_FROM = process.env.EMAIL_FROM || `ART-ZEDMO <${EMAIL_USER || 'noreply@art-zedmo.com'}>`;
 let transporterEmail = null;
 if (EMAIL_USER && EMAIL_PASS) {
   transporterEmail = nodemailer.createTransport({
-    service: 'gmail',
+    host: 'smtp-relay.brevo.com',
+    port: 587,
+    secure: false,
     auth: { user: EMAIL_USER, pass: EMAIL_PASS }
   });
-  console.log('📧 Email ART-ZEDMO activé:', EMAIL_USER);
+  console.log('📧 Email BREVO activé:', EMAIL_USER, 'From:', EMAIL_FROM);
 } else {
-  console.log('📧 Email non configuré - Ajoute EMAIL_USER + EMAIL_PASS sur Render');
+  console.log('📧 Email BREVO non configuré - Ajoute EMAIL_USER + EMAIL_PASS (Clé SMTP Brevo) sur Render');
 }
 async function envoyerEmail(destinataire, sujet, texte) {
   if (!destinataire) return false;
-  if (!transporterEmail) { console.log('📧 Email ignoré (non configuré) vers:', destinataire, '-', sujet); return false; }
+  if (!transporterEmail) { console.log('📧 Email ignoré (Brevo non configuré) vers:', destinataire, '-', sujet); return false; }
   try {
     await transporterEmail.sendMail({ from: EMAIL_FROM, to: destinataire, subject: sujet, text: texte, html: `<div style="font-family:Arial;padding:20px;background:#111;color:#fff;border-radius:12px"><h2 style="color:#d4af37">ART-ZEDMO MARKETPLACE</h2><p style="font-size:15px;line-height:1.6">${texte.replace(/\n/g,'<br>')}</p><hr><p style="font-size:12px;color:#aaa">ART-ZEDMO - Galerie permanente + Expositions + Enchères<br>WhatsApp: 0194655238</p></div>` });
-    console.log('📧 Email envoyé à', destinataire, '-', sujet);
+    console.log('📧 Email BREVO envoyé à', destinataire, '-', sujet);
     return true;
-  } catch (e) { console.error('📧 Erreur email:', e.message); return false; }
+  } catch (e) { console.error('📧 Erreur email BREVO:', e.message); return false; }
 }
 app.locals.envoyerEmail = envoyerEmail;
 // Middleware qui détecte inscription + publication réussies et envoie l'email sans toucher aux routes
@@ -76,8 +78,6 @@ app.use((req, res, next) => {
       }
       // 2) PUBLICATION OEUVRE REUSSIE
       if (req.method === 'POST' && req.path === '/api/artworks' && res.statusCode < 300) {
-        // On récupère l'email de l'utilisateur connecté via le token déjà vérifié dans la route
-        // Si la route a renvoyé l'utilisateur, on l'utilise, sinon on cherche en DB via req.user
         (async () => {
           try {
             let email = body?.artwork?.artiste?.email || body?.user?.email || '';
@@ -99,7 +99,7 @@ app.use((req, res, next) => {
   };
   next();
 });
-// ===== FIN AJOUT EMAIL =====
+// ===== FIN AJOUT EMAIL BREVO =====
 
 app.disable('x-powered-by');
 app.use(cors({ origin: true, credentials: true }));
