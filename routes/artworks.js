@@ -119,14 +119,28 @@ router.post('/', authenticateOptional, async (req, res) => {
     const data = { ...req.body, artiste: user._id, artisteNom: user.nom_artiste || user.nom, statut: 'valide', estVerifie: true };
     const oeuvre = await Artwork.create(data);
     try { await User.updateOne({ _id: user._id }, { $inc: { totalOeuvres: 1, totalOeuvresPubliees: 1, totalNFTPublies: data.isNFT ? 1 : 0 } }); } catch {}
-    // ===== SEUL AJOUT - EMAIL BREVO APRES PUBLICATION (même méthode que forgot-password) =====
+
+    // ===== EMAIL BREVO APRES PUBLICATION - CORRIGE =====
     if (user.email && process.env.BREVO_API_KEY) {
       try {
-        await fetch('https://api.brevo.com/v3/smtp/email', { method: 'POST', headers: { 'accept':'application/json','content-type':'application/json','api-key':process.env.BREVO_API_KEY }, body: JSON.stringify({ sender:{email:'artzedmo@gmail.com',name:'ART-ZEDMO'}, to:[{email:user.email, name: user.nom_artiste || user.nom}], subject:'Œuvre publiée - ART-ZEDMO', htmlContent:`<div style="font-family:Arial;padding:20px;background:#111;color:#fff;border-radius:12px"><h2 style="color:#d4af37">ART-ZEDMO MARKETPLACE</h2><p>Bonjour ${user.nom_artiste || user.nom},</p><p>Votre œuvre "<strong>${oeuvre.titre || ''}</strong>" a été publiée avec succès dans la galerie ART-ZEDMO. ✅</p><p>Elle est maintenant visible dans votre compte.<br>Partagez votre lien pour recevoir des votes !</p><hr><p style="font-size:12px;color:#aaa">ART-ZEDMO - Galerie permanente + Expositions + Enchères<br>WhatsApp: 0194655238</p></div>` }) });
-        console.log('📧 Brevo publication envoyée à', user.email);
+        const rBrevo = await fetch('https://api.brevo.com/v3/smtp/email', {
+          method: 'POST',
+          headers: { 'accept': 'application/json', 'content-type': 'application/json', 'api-key': process.env.BREVO_API_KEY },
+          body: JSON.stringify({
+            sender: { email: 'artzedmo@gmail.com', name: 'ART-ZEDMO' },
+            to: [{ email: user.email, name: user.nom_artiste || user.nom }],
+            subject: 'Œuvre publiée - ART-ZEDMO',
+            htmlContent: `<div style="font-family:Arial;padding:20px;background:#111;color:#fff;border-radius:12px"><h2 style="color:#d4af37">ART-ZEDMO MARKETPLACE</h2><p>Bonjour ${user.nom_artiste || user.nom},</p><p>Votre œuvre "<strong>${oeuvre.titre || ''}</strong>" a été publiée avec succès dans la galerie ART-ZEDMO. ✅</p><p>Elle est maintenant visible dans votre compte.<br>Partagez votre lien pour recevoir des votes !</p><hr><p style="font-size:12px;color:#aaa">ART-ZEDMO - Galerie permanente + Expositions + Enchères<br>WhatsApp: 0194655238</p></div>`
+          })
+        });
+        const txtBrevo = await rBrevo.text();
+        console.log('📧 Brevo publication status:', rBrevo.status, 'reponse:', txtBrevo);
       } catch (e) { console.log('📧 Erreur Brevo publication:', e.message); }
+    } else {
+      console.log('📧 Brevo publication SKIP - email:', user.email, 'KEY present:', !!process.env.BREVO_API_KEY);
     }
     // ===== FIN AJOUT =====
+
     res.status(201).json({ success: true, data: oeuvre, artwork: oeuvre });
   } catch (e) {
     res.status(500).json({ error: e.message });
