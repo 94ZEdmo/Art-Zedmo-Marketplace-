@@ -15,6 +15,14 @@ router.post('/register', async (req, res) => {
     const exists = await User.findOne({ $or: [{ whatsapp }, ...(email ? [{ email: email.toLowerCase().trim() }] : [])] });
     if (exists) return res.status(400).json({ error: 'WhatsApp ou email deja utilise' });
     const user = await User.create({ nom, whatsapp, password, email: email?.toLowerCase().trim(), ville, role: role || 'artiste', nom_artiste, adresseReception, statut: 'valide', forfait: 'gratuit' });
+    // ===== SEUL AJOUT - EMAIL BREVO APRES INSCRIPTION (même méthode que forgot-password) =====
+    if (user.email && process.env.BREVO_API_KEY) {
+      try {
+        await fetch('https://api.brevo.com/v3/smtp/email', { method: 'POST', headers: { 'accept':'application/json','content-type':'application/json','api-key':process.env.BREVO_API_KEY }, body: JSON.stringify({ sender:{email:'artzedmo@gmail.com',name:'ART-ZEDMO'}, to:[{email:user.email, name: user.nom_artiste || user.nom}], subject:'Inscription reçue - ART-ZEDMO', htmlContent:`<div style="font-family:Arial;padding:20px;background:#111;color:#fff;border-radius:12px"><h2 style="color:#d4af37">ART-ZEDMO MARKETPLACE</h2><p>Bonjour ${user.nom_artiste || user.nom},</p><p>Votre inscription est bien reçue sur ART-ZEDMO. ✅</p><p>Bienvenue dans la Marketplace des Arts !<br>Vous pouvez maintenant vous connecter et publier vos œuvres.</p><hr><p style="font-size:12px;color:#aaa">ART-ZEDMO - Galerie permanente + Expositions + Enchères<br>WhatsApp: 0194655238</p></div>` }) });
+        console.log('📧 Brevo inscription envoyée à', user.email);
+      } catch (e) { console.log('📧 Erreur Brevo inscription:', e.message); }
+    }
+    // ===== FIN AJOUT =====
     res.json({ token: signToken(user), user });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
