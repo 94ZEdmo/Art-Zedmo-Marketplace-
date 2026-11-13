@@ -86,9 +86,6 @@
 <div class="modal" id="soumissionModal"><div class="modal-content"><div class="modal-header"><h2>Soumettre à l'expo</h2><button class="close-btn" onclick="fermerModal('soumissionModal')">&times;</button></div><div id="soumissionList" class="grid" style="grid-template-columns:1fr"></div></div></div>
 <div class="modal" id="certModal"><div class="modal-content" style="max-width:420px;background:#0a0a0a"><div class="modal-header"><h2 style="color:#fff">Certificat</h2><button class="close-btn" onclick="fermerModal('certModal')">&times;</button></div><div id="certBox" class="cert-zedmo">ART-ZEDMO CERTIFICAT Œuvre : <span id="cOeuvre"></span> Artiste : <span id="cArtiste"></span> ID : <span id="cId"></span></div><div id="cQR" style="width:120px;height:120px;background:#fff;margin:15px auto;padding:5px"></div><div id="certInfo" class="muted" style="text-align:center;font-size:12px;margin-bottom:10px"></div><div style="display:flex;gap:8px"><button id="btnDownloadCert" class="btn" style="flex:1" onclick="downloadCert()"><i class="fas fa-download"></i> Télécharger PNG</button><button class="btn btn-outline" style="flex:1" onclick="fermerModal('certModal')">Fermer</button></div></div></div>
 
-<!-- MODAL CONNECT WALLET - AJOUT SEULEMENT -->
-<div class="modal" id="walletModal"><div class="modal-content" style="max-width:420px;text-align:center"><div class="modal-header"><h2><i class="fas fa-wallet"></i> Connecter ton Wallet</h2><button class="close-btn" onclick="fermerModal('walletModal')">&times;</button></div><p class="muted">Pour mint ton NFT, connecte ton MetaMask sur Polygon.</p><div style="background:#1a1a1a;border:1px solid #444;border-radius:12px;padding:16px;margin:15px 0;text-align:left"><strong style="color:var(--gold)">🦊 MetaMask</strong><br><span class="muted" style="font-size:13px">Réseau : Polygon (MATIC) - Contrat : 0xf6A7...dcE80E</span></div><button class="btn" style="width:100%;padding:15px;font-size:16px" onclick="connecterWalletEtMint()"><i class="fas fa-plug"></i> Connecter MetaMask</button><button class="btn btn-outline" style="width:100%;margin-top:10px" onclick="ouvrirDansMetaMask()">Ouvrir dans l'app MetaMask (Téléphone)</button><p class="muted" style="font-size:11px;margin-top:12px">Sur téléphone, utilise le navigateur intégré de l'app MetaMask.</p></div></div>
-
 <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
@@ -96,8 +93,6 @@
 'use strict';
 const API_BASE='/api';
 let currentUser=lireJSON('AZ_USER',null);let artworks=[];let expositions=[];let encheres=[];let annonces=[];
-let pendingIpfsHash = '';
-let walletConnecte = '';
 const ADRESSES_PAIEMENT = {
   usdt_trc20: 'TFXZSyJaC6mdCva8kAJBMMvKYhyhpzpHn2',
   pi: 'GAF62KXAV7IUM3H5HQ3T16EFMIDSGII2EVEZFXTXGMH5D2EDPA6RVAM',
@@ -107,61 +102,42 @@ const ADRESSES_PAIEMENT = {
 };
 const NFT_CONTRACT_ADDRESS = "0xf6A7dc32c4140f884A4abd703673A7c2E5dcE80E";
 const NFT_ABI = ["function safeMint(address to, string memory uri) public"];
-function mintNFTAZO(ipfsHash){
+// ===== MINT 100% AUTOMATIQUE - 1 CLIC = CONNECT + POLYGON + MINT =====
+async function mintNFTAZO(ipfsHash){
   if(!ipfsHash){ alert("Pas de IPFS pour cette oeuvre - Republie avec une image"); return; }
-  pendingIpfsHash = ipfsHash;
-  if(window.ethereum && walletConnecte){
-    faireMint(ipfsHash);
-    return;
-  }
-  ouvrirModal('walletModal');
-}
-function ouvrirDansMetaMask(){
-  const dappUrl = window.location.host + window.location.pathname;
-  window.location.href = "https://metamask.app.link/dapp/" + dappUrl;
-}
-async function connecterWalletEtMint(){
-  fermerModal('walletModal');
+  // Si pas dans MetaMask sur téléphone, on ouvre l'app MetaMask automatiquement
   if(!window.ethereum){
     const isMobile = /Android|iPhone|iPad/i.test(navigator.userAgent);
     if(isMobile){
-      if(confirm("Tu n'es pas dans MetaMask. Ouvre AZO dans l'app MetaMask pour connecter ton wallet. Clique OK pour ouvrir MetaMask.")){
-        ouvrirDansMetaMask();
-      }
+      const dappUrl = window.location.host + window.location.pathname;
+      window.location.href = "https://metamask.app.link/dapp/" + dappUrl;
       return;
     }
-    alert("Installe MetaMask sur ton navigateur pour connecter ton wallet, puis re-clique sur Mint NFT.");
+    alert("Ouvre AZO dans l'app MetaMask pour mint. Sur ordinateur, installe MetaMask.");
     return;
   }
   try{
-    afficherToastZedmo("🦊 Connexion à MetaMask...");
+    afficherToastZedmo("🦊 Connexion automatique à ton MetaMask...");
+    // 1 - CONNECTE AUTOMATIQUEMENT
     const accounts = await window.ethereum.request({method:'eth_requestAccounts'});
-    walletConnecte = accounts[0] || '';
-    afficherToastZedmo("✅ Wallet connecté : " + walletConnecte.slice(0,6) + "..." + walletConnecte.slice(-4));
-    if(pendingIpfsHash){
-      await faireMint(pendingIpfsHash);
-    }
-  }catch(e){
-    alert("Connexion refusée : " + e.message);
-  }
-}
-async function faireMint(ipfsHash){
-  try{
-    afficherToastZedmo("Connexion Polygon...");
+    const userAddress = accounts[0];
+    // 2 - PASSE SUR POLYGON AUTOMATIQUEMENT
     try{ await window.ethereum.request({method:'wallet_switchEthereumChain', params:[{chainId:'0x89'}]}); }catch(eSwitch){ if(eSwitch.code===4902){ await window.ethereum.request({method:'wallet_addEthereumChain', params:[{chainId:'0x89', chainName:'Polygon Mainnet', nativeCurrency:{name:'MATIC', symbol:'MATIC', decimals:18}, rpcUrls:['https://polygon-rpc.com/'], blockExplorerUrls:['https://polygonscan.com/'] }]}); } else { throw eSwitch; } }
+    // 3 - RECUPERE IMAGE IPFS + GENERE NFT AUTOMATIQUEMENT
     const provider = new ethers.providers.Web3Provider(window.ethereum);
     const signer = provider.getSigner();
-    const userAddress = await signer.getAddress();
-    walletConnecte = userAddress;
     const contract = new ethers.Contract(NFT_CONTRACT_ADDRESS, NFT_ABI, signer);
     const uri = "ipfs://" + ipfsHash;
-    afficherToastZedmo("🦊 Confirme le Mint dans MetaMask...");
+    afficherToastZedmo("🦊 Confirme juste 1 fois dans MetaMask, le reste est automatique...");
     const tx = await contract.safeMint(userAddress, uri);
-    alert("Mint en cours... TX: " + tx.hash + "\n\nAttends la confirmation Polygon.");
+    afficherToastZedmo("⏳ Mint en cours... Attends quelques secondes...");
     await tx.wait();
-    alert("✅ NFT Minté avec succès ! Va voir sur OpenSea.");
+    alert("✅ NFT Minté avec succès ! Va voir sur OpenSea. TX: " + tx.hash);
     afficherToastZedmo("✅ NFT Minté !");
-  }catch(e){ alert("Erreur Mint: " + e.message); }
+  }catch(e){
+    if(e.code===4001){ alert("Tu as refusé la confirmation dans MetaMask."); }
+    else { alert("Erreur Mint: " + e.message); }
+  }
 }
 function lireJSON(c,e){try{const c1=localStorage.getItem(c);return c1?JSON.parse(c1):e}catch{return e}}
 function getToken(){return localStorage.getItem('AZ_TOKEN')||''}
