@@ -88,7 +88,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
-<!-- ===== AJOUT NFT AZO - NE TOUCHE PAS AU RESTE - AJOUT 1/2 ===== -->
+<!-- ===== AJOUT NFT AZO - NE TOUCHE PAS AU RESTE ===== -->
 <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
 <script>
 'use strict';
@@ -146,7 +146,7 @@ const fd=document.getElementById('forfaitDetails');if(fd){let txt=currentUser.fo
 toggleGaleriePriveeCheck();
 chargerMesOeuvres();}}
 
-// ===== TON CODE ORIGINAL - CHARGER MES OEUVRES - AVEC SEUL AJOUT BOUTON MINT =====
+// ===== TON CODE ORIGINAL - CHARGER MES OEUVRES - CORRIGÉ BOUTON TOUJOURS VISIBLE =====
 async function chargerMesOeuvres(){
   const cont=document.getElementById('mesOeuvresList');
   if(!getToken()||!currentUser){cont.innerHTML='<div class="empty">Connecte-toi</div>';return;}
@@ -173,8 +173,12 @@ async function chargerMesOeuvres(){
     if(!list.length){cont.innerHTML='<div class="empty">Pas encore d\'oeuvres - Publie ta première œuvre</div>';return;}
     cont.innerHTML=list.map(o=>{
       const id=String(o._id||'');const titre=escapeHTML(o.titre||'Sans titre');const prix=prixFCFA(o.prix);const img=(o.images&&o.images[0])||o.image||'';const imgHTML=img?`<img class="art-image" src="${escapeHTML(img)}" style="height:160px">`:`<div class="art-image placeholder" style="height:160px"><i class="fas fa-palette"></i></div>`;const boostBadge=o.isBoosted?`<div class="badge-boost"><i class="fas fa-rocket"></i> BOOSTÉ</div>`:(o.boostStatut==='en_attente'?`<div class="badge-boost" style="background:orange">En attente vérif</div>`:'');const priveBadge=o.isGaleriePrivee?`<div class="badge-privee">PRIVÉE</div>`:'';
-      // ===== AJOUT NFT AZO 2/2 - BOUTON MINT SEULEMENT, LE RESTE EST INTACT =====
-      const mintBtn = o.ipfsHash ? `<button class="btn btn-small" style="background:#d4af37;color:#111;border-color:#d4af37" onclick="mintNFTAZO('${o.ipfsHash}')"><i class="fas fa-coins"></i> Mint NFT</button>` : (o.isNFT ? `<button class="btn btn-small" style="background:#555" onclick="alert('Pas de IPFS - Republie avec image')">Mint NFT (pas de IPFS)</button>` : '');
+      // ===== CORRECTION BOUTON MINT - TOUJOURS VISIBLE - NE TOUCHE PAS AU RESTE =====
+      let hashPourMint = o.ipfsHash || '';
+      if(!hashPourMint && o.imageIPFS){ hashPourMint = String(o.imageIPFS).replace('ipfs://',''); }
+      if(!hashPourMint && o.image && String(o.image).includes('/ipfs/')){ hashPourMint = String(o.image).split('/ipfs/')[1]; }
+      if(!hashPourMint && o.images && o.images[0] && String(o.images[0]).includes('/ipfs/')){ hashPourMint = String(o.images[0]).split('/ipfs/')[1]; }
+      const mintBtn = `<button class="btn btn-small" style="background:#d4af37;color:#111;border-color:#d4af37" onclick="mintNFTAZO('${hashPourMint}')"><i class="fas fa-coins"></i> Mint NFT</button>`;
       return `<article class="card">${imgHTML}${boostBadge}${priveBadge}<div class="card-body"><h3>${titre}</h3><div class="price">${escapeHTML(prix)}</div><div class="card-meta"><span>${escapeHTML(o.statut||'')}</span><span>${nombre(o.votesCount||0)} votes</span></div><div class="card-actions"><button class="btn btn-small" onclick="openCert('${id}')"><i class="fas fa-certificate"></i> Certificat</button>${mintBtn}<button class="btn btn-small" style="background:#ff3b30;border-color:#ff3b30" onclick="acheterBoost('${id}','${titre.replace(/'/g,"")}')"><i class="fas fa-rocket"></i> Booster 1.200F / 48h</button></div></div></article>`;
     }).join('');
   }catch(e){cont.innerHTML='<div class="empty">Erreur: '+escapeHTML(e.message)+'</div>';}
