@@ -34,7 +34,6 @@
    .badge-privee{position:absolute;top:40px;left:10px;z-index:2;background:#fff;color:#111;padding:4px 8px;border-radius:20px;font-size:10px;font-weight:900}
    .galerie-privee-header{padding:30px;border:2px solid var(--gold);border-radius:18px;background:radial-gradient(circle at 20% 10%, #5c491b55, #111);margin-bottom:20px;text-align:center}
    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}}
-   /* NOTIFICATION - AJOUT SEULEMENT POUR LE PROBLEME */
    #toastZedmo{position:fixed;top:80px;left:50%;transform:translate(-50%,-20px);z-index:9999;background:#10251d;border:2px solid var(--gold);color:#fff;padding:16px 22px;border-radius:14px;font-weight:800;font-size:15px;text-align:center;box-shadow:0 10px 30px rgba(0,0,0,.6);opacity:0;pointer-events:none;transition:.3s;max-width:90%}
    #toastZedmo.show{opacity:1;transform:translate(-50%,0)}
   </style>
@@ -89,6 +88,8 @@
 
 <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<!-- ===== AJOUT NFT AZO - NE TOUCHE PAS AU RESTE - AJOUT 1/2 ===== -->
+<script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
 <script>
 'use strict';
 const API_BASE='/api';
@@ -100,13 +101,32 @@ const ADRESSES_PAIEMENT = {
   moov: '+2290194655238',
   whatsapp: '2290194655238'
 };
+// ===== AJOUT NFT AZO - CONTRAT AVEC ADRESSE =====
+const NFT_CONTRACT_ADDRESS = "0xf6A7dc32c4140f884A4abd703673A7c2E5dcE80E";
+const NFT_ABI = ["function safeMint(address to, string memory uri) public"];
+async function mintNFTAZO(ipfsHash){
+  if(!ipfsHash){ alert("Pas de IPFS pour cette oeuvre - Republie avec une image"); return; }
+  if(!window.ethereum){ alert("Installe MetaMask pour mint"); return; }
+  try{
+    await window.ethereum.request({method:'eth_requestAccounts'});
+    const provider = new ethers.providers.Web3Provider(window.ethereum);
+    const signer = provider.getSigner();
+    const userAddress = await signer.getAddress();
+    await window.ethereum.request({method:'wallet_switchEthereumChain', params:[{chainId:'0x89'}]});
+    const contract = new ethers.Contract(NFT_CONTRACT_ADDRESS, NFT_ABI, signer);
+    const uri = "ipfs://" + ipfsHash;
+    const tx = await contract.safeMint(userAddress, uri);
+    alert("Mint en cours... TX: " + tx.hash);
+    await tx.wait();
+    alert("✅ NFT Minté avec succès ! Va voir sur OpenSea.");
+  }catch(e){ alert("Erreur Mint: " + e.message); }
+}
 function lireJSON(c,e){try{const c1=localStorage.getItem(c);return c1?JSON.parse(c1):e}catch{return e}}
 function getToken(){return localStorage.getItem('AZ_TOKEN')||''}
 function escapeHTML(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c])}
 function nombre(v){const n=Number(v);return Number.isFinite(n)?n.toLocaleString('fr-FR'):'0'}
 function prixFCFA(v){const n=Number(v);if(!Number.isFinite(n)||n<=0)return'Prix à convenir';return nombre(n)+' FCFA'}
 function afficherMessage(id,m){const e=document.getElementById(id);if(e)e.textContent=m}
-// SEUL AJOUT POUR LE PROBLEME - NOTIFICATION
 function afficherToastZedmo(msg){const t=document.getElementById('toastZedmo');if(!t)return; t.textContent=msg; t.classList.add('show'); clearTimeout(window._toastTimer); window._toastTimer=setTimeout(()=>{t.classList.remove('show')},4000);}
 async function apiFetch(p,o={}){const h=new Headers(o.headers||{});const t=getToken();if(t)h.set('Authorization','Bearer '+t);const r=await fetch(API_BASE+p,{...o,headers:h});let d={};try{d=await r.json()}catch{d={}}if(r.status===401){localStorage.removeItem('AZ_TOKEN');localStorage.removeItem('AZ_USER');currentUser=null;mettreAJourCompte()}if(!r.ok){const err=new Error(d.error||d.message||`Erreur ${r.status}`);err.status=r.status;throw err}return d}
 function ouvrirModal(id){document.getElementById(id)?.classList.add('open')}function fermerModal(id){document.getElementById(id)?.classList.remove('open')}
@@ -126,7 +146,7 @@ const fd=document.getElementById('forfaitDetails');if(fd){let txt=currentUser.fo
 toggleGaleriePriveeCheck();
 chargerMesOeuvres();}}
 
-// ===== CORRIGÉ : Mon Compte affiche seulement MES oeuvres =====
+// ===== TON CODE ORIGINAL - CHARGER MES OEUVRES - AVEC SEUL AJOUT BOUTON MINT =====
 async function chargerMesOeuvres(){
   const cont=document.getElementById('mesOeuvresList');
   if(!getToken()||!currentUser){cont.innerHTML='<div class="empty">Connecte-toi</div>';return;}
@@ -135,19 +155,14 @@ async function chargerMesOeuvres(){
     let list=[];
     try{const r=await apiFetch('/artworks/mine');list=r.artworks||r||[];}
     catch(e1){try{const r2=await apiFetch('/artworks?mine=1');list=r2.artworks||r2||[];}catch(e2){list=[];}}
-    
-    // FILTRE CLIENT SÉCURISÉ : garde seulement mes oeuvres même si backend renvoie tout
     const myId = String(currentUser._id||'');
     if(myId && list.length){
       const filtered = list.filter(o=>{
         const aid = o.artiste?._id || o.artiste || o.user || o.owner || '';
         return String(aid)===myId || String(aid).includes(myId);
       });
-      // Si on trouve des oeuvres à moi, on affiche seulement celles-là
-      // Sinon si backend filtre déjà, on garde list
       if(filtered.length>0){ list = filtered; }
       else {
-        // Double sécurité : si backend renvoie tout ( >5 et contient d'autres IDs ), on force le filtre
         const hasOthers = list.some(o=>{
           const aid = String(o.artiste?._id||o.artiste||'');
           return aid && aid!==myId;
@@ -155,11 +170,12 @@ async function chargerMesOeuvres(){
         if(hasOthers){ list = filtered; }
       }
     }
-
     if(!list.length){cont.innerHTML='<div class="empty">Pas encore d\'oeuvres - Publie ta première œuvre</div>';return;}
     cont.innerHTML=list.map(o=>{
       const id=String(o._id||'');const titre=escapeHTML(o.titre||'Sans titre');const prix=prixFCFA(o.prix);const img=(o.images&&o.images[0])||o.image||'';const imgHTML=img?`<img class="art-image" src="${escapeHTML(img)}" style="height:160px">`:`<div class="art-image placeholder" style="height:160px"><i class="fas fa-palette"></i></div>`;const boostBadge=o.isBoosted?`<div class="badge-boost"><i class="fas fa-rocket"></i> BOOSTÉ</div>`:(o.boostStatut==='en_attente'?`<div class="badge-boost" style="background:orange">En attente vérif</div>`:'');const priveBadge=o.isGaleriePrivee?`<div class="badge-privee">PRIVÉE</div>`:'';
-      return `<article class="card">${imgHTML}${boostBadge}${priveBadge}<div class="card-body"><h3>${titre}</h3><div class="price">${escapeHTML(prix)}</div><div class="card-meta"><span>${escapeHTML(o.statut||'')}</span><span>${nombre(o.votesCount||0)} votes</span></div><div class="card-actions"><button class="btn btn-small" onclick="openCert('${id}')"><i class="fas fa-certificate"></i> Certificat</button><button class="btn btn-small" style="background:#ff3b30;border-color:#ff3b30" onclick="acheterBoost('${id}','${titre.replace(/'/g,"")}')"><i class="fas fa-rocket"></i> Booster 1.200F / 48h</button></div></div></article>`;
+      // ===== AJOUT NFT AZO 2/2 - BOUTON MINT SEULEMENT, LE RESTE EST INTACT =====
+      const mintBtn = o.ipfsHash ? `<button class="btn btn-small" style="background:#d4af37;color:#111;border-color:#d4af37" onclick="mintNFTAZO('${o.ipfsHash}')"><i class="fas fa-coins"></i> Mint NFT</button>` : (o.isNFT ? `<button class="btn btn-small" style="background:#555" onclick="alert('Pas de IPFS - Republie avec image')">Mint NFT (pas de IPFS)</button>` : '');
+      return `<article class="card">${imgHTML}${boostBadge}${priveBadge}<div class="card-body"><h3>${titre}</h3><div class="price">${escapeHTML(prix)}</div><div class="card-meta"><span>${escapeHTML(o.statut||'')}</span><span>${nombre(o.votesCount||0)} votes</span></div><div class="card-actions"><button class="btn btn-small" onclick="openCert('${id}')"><i class="fas fa-certificate"></i> Certificat</button>${mintBtn}<button class="btn btn-small" style="background:#ff3b30;border-color:#ff3b30" onclick="acheterBoost('${id}','${titre.replace(/'/g,"")}')"><i class="fas fa-rocket"></i> Booster 1.200F / 48h</button></div></div></article>`;
     }).join('');
   }catch(e){cont.innerHTML='<div class="empty">Erreur: '+escapeHTML(e.message)+'</div>';}
 }
@@ -339,7 +355,6 @@ document.getElementById('formOeuvre').addEventListener('submit',async e=>{
   const b=f.querySelector('button[type="submit"]');b.disabled=true;afficherMessage('oeuvreMessage','Envoi IPFS...');try{const file=f.image.files[0];let url='';let ipfsHash='';if(file){const fd=new FormData();fd.append('image',file);try{const up=await apiFetch('/upload/ipfs',{method:'POST',body:fd});url=up.gateway||up.ipfsUrl||up.url||'';ipfsHash=up.IpfsHash||'';}catch{const fd2=new FormData();fd2.append('image',file);const up2=await apiFetch('/upload',{method:'POST',body:fd2});url=up2.url||up2.image||'';}if(!url)throw new Error('Upload échoué');}const isNFT=document.getElementById('isNFT').checked||f.categorie.value==='nft';const isPrivee=document.getElementById('isPriveeCheck')?.checked||false;const d={titre:f.titre.value.trim(),categorie:f.categorie.value,prix:Number(f.prix.value||0),description:f.description.value.trim(),isNFT,isGaleriePrivee:isPrivee,ipfsHash,imageIPFS:ipfsHash?`ipfs://${ipfsHash}`:undefined};if(url){d.image=url;d.images=[url]}const res=await apiFetch('/artworks',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)});afficherMessage('oeuvreMessage',res.message||'Envoyée en attente validation');afficherToastZedmo('✅ Publié avec succès dans la galerie !');fermerModal('oeuvreModal');f.reset();const chk=document.getElementById('isPriveeCheck');if(chk)chk.checked=false;await chargerGalerie();allerA('galerie');}catch(err){afficherMessage('oeuvreMessage',err.message)}finally{b.disabled=false}
 });
 
-// ===== CORRIGÉ : Mot de passe oublié avec barre email =====
 function setupForgot(){
   const link=document.getElementById('linkForgot');
   const box=document.getElementById('forgotBox');
