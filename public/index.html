@@ -86,14 +86,18 @@
 <div class="modal" id="soumissionModal"><div class="modal-content"><div class="modal-header"><h2>Soumettre à l'expo</h2><button class="close-btn" onclick="fermerModal('soumissionModal')">&times;</button></div><div id="soumissionList" class="grid" style="grid-template-columns:1fr"></div></div></div>
 <div class="modal" id="certModal"><div class="modal-content" style="max-width:420px;background:#0a0a0a"><div class="modal-header"><h2 style="color:#fff">Certificat</h2><button class="close-btn" onclick="fermerModal('certModal')">&times;</button></div><div id="certBox" class="cert-zedmo">ART-ZEDMO CERTIFICAT Œuvre : <span id="cOeuvre"></span> Artiste : <span id="cArtiste"></span> ID : <span id="cId"></span></div><div id="cQR" style="width:120px;height:120px;background:#fff;margin:15px auto;padding:5px"></div><div id="certInfo" class="muted" style="text-align:center;font-size:12px;margin-bottom:10px"></div><div style="display:flex;gap:8px"><button id="btnDownloadCert" class="btn" style="flex:1" onclick="downloadCert()"><i class="fas fa-download"></i> Télécharger PNG</button><button class="btn btn-outline" style="flex:1" onclick="fermerModal('certModal')">Fermer</button></div></div></div>
 
+<!-- MODAL CONNECT WALLET - AJOUT SEULEMENT -->
+<div class="modal" id="walletModal"><div class="modal-content" style="max-width:420px;text-align:center"><div class="modal-header"><h2><i class="fas fa-wallet"></i> Connecter ton Wallet</h2><button class="close-btn" onclick="fermerModal('walletModal')">&times;</button></div><p class="muted">Pour mint ton NFT, connecte ton MetaMask sur Polygon.</p><div style="background:#1a1a1a;border:1px solid #444;border-radius:12px;padding:16px;margin:15px 0;text-align:left"><strong style="color:var(--gold)">🦊 MetaMask</strong><br><span class="muted" style="font-size:13px">Réseau : Polygon (MATIC) - Contrat : 0xf6A7...dcE80E</span></div><button class="btn" style="width:100%;padding:15px;font-size:16px" onclick="connecterWalletEtMint()"><i class="fas fa-plug"></i> Connecter MetaMask</button><button class="btn btn-outline" style="width:100%;margin-top:10px" onclick="ouvrirDansMetaMask()">Ouvrir dans l'app MetaMask (Téléphone)</button><p class="muted" style="font-size:11px;margin-top:12px">Sur téléphone, utilise le navigateur intégré de l'app MetaMask.</p></div></div>
+
 <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
-<!-- ===== AJOUT NFT AZO - NE TOUCHE PAS AU RESTE ===== -->
 <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
 <script>
 'use strict';
 const API_BASE='/api';
 let currentUser=lireJSON('AZ_USER',null);let artworks=[];let expositions=[];let encheres=[];let annonces=[];
+let pendingIpfsHash = '';
+let walletConnecte = '';
 const ADRESSES_PAIEMENT = {
   usdt_trc20: 'TFXZSyJaC6mdCva8kAJBMMvKYhyhpzpHn2',
   pi: 'GAF62KXAV7IUM3H5HQ3T16EFMIDSGII2EVEZFXTXGMH5D2EDPA6RVAM',
@@ -101,24 +105,62 @@ const ADRESSES_PAIEMENT = {
   moov: '+2290194655238',
   whatsapp: '2290194655238'
 };
-// ===== AJOUT NFT AZO - CONTRAT AVEC ADRESSE =====
 const NFT_CONTRACT_ADDRESS = "0xf6A7dc32c4140f884A4abd703673A7c2E5dcE80E";
 const NFT_ABI = ["function safeMint(address to, string memory uri) public"];
-async function mintNFTAZO(ipfsHash){
+function mintNFTAZO(ipfsHash){
   if(!ipfsHash){ alert("Pas de IPFS pour cette oeuvre - Republie avec une image"); return; }
-  if(!window.ethereum){ alert("Installe MetaMask pour mint"); return; }
+  pendingIpfsHash = ipfsHash;
+  if(window.ethereum && walletConnecte){
+    faireMint(ipfsHash);
+    return;
+  }
+  ouvrirModal('walletModal');
+}
+function ouvrirDansMetaMask(){
+  const dappUrl = window.location.host + window.location.pathname;
+  window.location.href = "https://metamask.app.link/dapp/" + dappUrl;
+}
+async function connecterWalletEtMint(){
+  fermerModal('walletModal');
+  if(!window.ethereum){
+    const isMobile = /Android|iPhone|iPad/i.test(navigator.userAgent);
+    if(isMobile){
+      if(confirm("Tu n'es pas dans MetaMask. Ouvre AZO dans l'app MetaMask pour connecter ton wallet. Clique OK pour ouvrir MetaMask.")){
+        ouvrirDansMetaMask();
+      }
+      return;
+    }
+    alert("Installe MetaMask sur ton navigateur pour connecter ton wallet, puis re-clique sur Mint NFT.");
+    return;
+  }
   try{
-    await window.ethereum.request({method:'eth_requestAccounts'});
+    afficherToastZedmo("🦊 Connexion à MetaMask...");
+    const accounts = await window.ethereum.request({method:'eth_requestAccounts'});
+    walletConnecte = accounts[0] || '';
+    afficherToastZedmo("✅ Wallet connecté : " + walletConnecte.slice(0,6) + "..." + walletConnecte.slice(-4));
+    if(pendingIpfsHash){
+      await faireMint(pendingIpfsHash);
+    }
+  }catch(e){
+    alert("Connexion refusée : " + e.message);
+  }
+}
+async function faireMint(ipfsHash){
+  try{
+    afficherToastZedmo("Connexion Polygon...");
+    try{ await window.ethereum.request({method:'wallet_switchEthereumChain', params:[{chainId:'0x89'}]}); }catch(eSwitch){ if(eSwitch.code===4902){ await window.ethereum.request({method:'wallet_addEthereumChain', params:[{chainId:'0x89', chainName:'Polygon Mainnet', nativeCurrency:{name:'MATIC', symbol:'MATIC', decimals:18}, rpcUrls:['https://polygon-rpc.com/'], blockExplorerUrls:['https://polygonscan.com/'] }]}); } else { throw eSwitch; } }
     const provider = new ethers.providers.Web3Provider(window.ethereum);
     const signer = provider.getSigner();
     const userAddress = await signer.getAddress();
-    await window.ethereum.request({method:'wallet_switchEthereumChain', params:[{chainId:'0x89'}]});
+    walletConnecte = userAddress;
     const contract = new ethers.Contract(NFT_CONTRACT_ADDRESS, NFT_ABI, signer);
     const uri = "ipfs://" + ipfsHash;
+    afficherToastZedmo("🦊 Confirme le Mint dans MetaMask...");
     const tx = await contract.safeMint(userAddress, uri);
-    alert("Mint en cours... TX: " + tx.hash);
+    alert("Mint en cours... TX: " + tx.hash + "\n\nAttends la confirmation Polygon.");
     await tx.wait();
     alert("✅ NFT Minté avec succès ! Va voir sur OpenSea.");
+    afficherToastZedmo("✅ NFT Minté !");
   }catch(e){ alert("Erreur Mint: " + e.message); }
 }
 function lireJSON(c,e){try{const c1=localStorage.getItem(c);return c1?JSON.parse(c1):e}catch{return e}}
@@ -145,8 +187,6 @@ function mettreAJourCompte(){const co=Boolean(getToken()&&currentUser);document.
 const fd=document.getElementById('forfaitDetails');if(fd){let txt=currentUser.forfait||'Gratuit (5 oeuvres + 3 NFT max)';if(currentUser.forfaitStatut==='en_attente' || currentUser.forfaitProStatut==='en_attente' || currentUser.forfaitPriveeStatut==='en_attente')txt+=' - ⏳ En attente de vérification admin';if(currentUser.forfaitStatut==='valide' || currentUser.forfaitProStatut==='valide' || currentUser.forfaitPriveeStatut==='valide')txt+=' - ✅ Validé';fd.innerHTML=`Actuel: <strong style="color:var(--gold)">${escapeHTML(txt)} - ${currentUser.limiteOeuvres||5} oeuvres max</strong>`;}
 toggleGaleriePriveeCheck();
 chargerMesOeuvres();}}
-
-// ===== TON CODE ORIGINAL - CHARGER MES OEUVRES - CORRIGÉ BOUTON TOUJOURS VISIBLE =====
 async function chargerMesOeuvres(){
   const cont=document.getElementById('mesOeuvresList');
   if(!getToken()||!currentUser){cont.innerHTML='<div class="empty">Connecte-toi</div>';return;}
@@ -173,7 +213,6 @@ async function chargerMesOeuvres(){
     if(!list.length){cont.innerHTML='<div class="empty">Pas encore d\'oeuvres - Publie ta première œuvre</div>';return;}
     cont.innerHTML=list.map(o=>{
       const id=String(o._id||'');const titre=escapeHTML(o.titre||'Sans titre');const prix=prixFCFA(o.prix);const img=(o.images&&o.images[0])||o.image||'';const imgHTML=img?`<img class="art-image" src="${escapeHTML(img)}" style="height:160px">`:`<div class="art-image placeholder" style="height:160px"><i class="fas fa-palette"></i></div>`;const boostBadge=o.isBoosted?`<div class="badge-boost"><i class="fas fa-rocket"></i> BOOSTÉ</div>`:(o.boostStatut==='en_attente'?`<div class="badge-boost" style="background:orange">En attente vérif</div>`:'');const priveBadge=o.isGaleriePrivee?`<div class="badge-privee">PRIVÉE</div>`:'';
-      // ===== CORRECTION BOUTON MINT - TOUJOURS VISIBLE - NE TOUCHE PAS AU RESTE =====
       let hashPourMint = o.ipfsHash || '';
       if(!hashPourMint && o.imageIPFS){ hashPourMint = String(o.imageIPFS).replace('ipfs://',''); }
       if(!hashPourMint && o.image && String(o.image).includes('/ipfs/')){ hashPourMint = String(o.image).split('/ipfs/')[1]; }
@@ -183,7 +222,6 @@ async function chargerMesOeuvres(){
     }).join('');
   }catch(e){cont.innerHTML='<div class="empty">Erreur: '+escapeHTML(e.message)+'</div>';}
 }
-
 document.getElementById('formInscription').addEventListener('submit',async e=>{e.preventDefault();const f=e.currentTarget;const b=f.querySelector('button[type="submit"]');b.disabled=true;afficherMessage('inscriptionMessage','Création...');const roleVal=f.role.value;const d={nom:f.nom.value.trim(),nom_artiste:f.nom_artiste.value.trim(),whatsapp:f.whatsapp.value.trim(),email:f.email.value.trim(),ville:f.ville.value.trim(),role:roleVal,adresseReception:f.adresseReception?.value.trim()||'',password:f.password.value};if(roleVal==='artiste'&&!d.adresseReception){afficherMessage('inscriptionMessage','Adresse de réception obligatoire pour artiste');b.disabled=false;return;}try{const r=await apiFetch('/auth/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)});afficherMessage('inscriptionMessage',r.message||'Créé - en attente validation');afficherToastZedmo('✅ Inscription réussie - Bienvenue sur ART-ZEDMO !');fermerModal('inscriptionModal');f.reset();toggleAdresseReception();}catch(err){afficherMessage('inscriptionMessage',err.message)}finally{b.disabled=false}});
 document.getElementById('formConnexion').addEventListener('submit',async e=>{e.preventDefault();const f=e.currentTarget;const b=f.querySelector('button[type="submit"]');b.disabled=true;try{const r=await apiFetch('/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({identifiant:f.identifiant.value.trim(),password:f.password.value})});localStorage.setItem('AZ_TOKEN',r.token);localStorage.setItem('AZ_USER',JSON.stringify(r.user));currentUser=r.user;mettreAJourCompte();fermerModal('connexionModal');allerA('compte')}catch(err){afficherMessage('connexionMessage',err.message)}finally{b.disabled=false}});
 function seDeconnecter(){localStorage.removeItem('AZ_TOKEN');localStorage.removeItem('AZ_USER');currentUser=null;mettreAJourCompte()}
@@ -322,7 +360,6 @@ async function ouvrirSoumission(expoId){if(!getToken()){ouvrirModal('connexionMo
 async function soumettreExpo(expoId,artId){try{await apiFetch(`/expositions/${expoId}/soumettre`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({artworkId:artId})});alert('Soumise!');fermerModal('soumissionModal');await chargerGalerie();await afficherExpositionActive()}catch(e){alert(e.message)}}
 async function chargerEncheres(){const c=document.getElementById('listeEncheres');c.innerHTML='<div class="empty"><span class="spinner"></span> Chargement...</div>';try{const r=await apiFetch('/encheres');encheres=Array.isArray(r)?r:r.encheres||[];document.getElementById('statEncheres').textContent=nombre(encheres.length);if(!encheres.length){c.innerHTML='<div class="empty">Aucune enchère</div>';return;}c.innerHTML=encheres.map(e=>{const id=e._id;const o=e.artwork||{};const img=obtenirImage(o)||o.image||e.image||'';const imgHTML=img?`<img class="art-image" src="${escapeHTML(img)}" alt="${escapeHTML(o.titre||'Œuvre')}" loading="lazy">`:`<div class="art-image placeholder"><i class="fas fa-palette"></i></div>`;const artiste=escapeHTML(o.artiste?.nom_artiste||o.artiste?.nom||e.artiste||'Artiste');const azm=escapeHTML(o.azmId||'');return `<article class="card">${imgHTML}<div class="card-body"><h3>${escapeHTML(o.titre||'Œuvre')}</h3><p class="muted"><i class="fas fa-user"></i> ${artiste} · <i class="fas fa-certificate"></i> ${azm}</p><div class="price">Actuelle: ${prixFCFA(e.enchereActuelle||e.prixDepart)}</div><div class="price" style="font-size:13px;margin-top:4px;color:var(--muted)">Départ: ${prixFCFA(e.prixDepart)} · Fin: ${e.dateFin?new Date(e.dateFin).toLocaleString('fr-FR'):'—'}</div><div style="margin-top:12px"><input id="nom_${id}" class="field" placeholder="Nom acheteur"><input id="mont_${id}" class="field" type="number" placeholder="Montant" style="margin-top:6px"><button class="btn" style="width:100%;margin-top:8px" onclick="encherir('${id}')"><i class="fas fa-gavel"></i> Enchérir</button></div></div></article>`}).join('');}catch(e){c.innerHTML=`<div class="notice error">${escapeHTML(e.message)}</div>`;}}
 async function encherir(enchereId){const nom=document.getElementById('nom_'+enchereId)?.value.trim();const mont=Number(document.getElementById('mont_'+enchereId)?.value);if(!nom||!mont)return alert('Nom et montant requis');try{await apiFetch(`/encheres/${enchereId}/encherir`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({nomAcheteur:nom,montant:mont})});alert(`Enchère: ${nom} - ${mont}`);await chargerEncheres();}catch(err){alert(err.message)}}
-
 document.getElementById('formOeuvre').addEventListener('submit',async e=>{
   e.preventDefault();
   if(!getToken()){afficherMessage('oeuvreMessage','Connecte-toi');return}
@@ -358,7 +395,6 @@ document.getElementById('formOeuvre').addEventListener('submit',async e=>{
   }
   const b=f.querySelector('button[type="submit"]');b.disabled=true;afficherMessage('oeuvreMessage','Envoi IPFS...');try{const file=f.image.files[0];let url='';let ipfsHash='';if(file){const fd=new FormData();fd.append('image',file);try{const up=await apiFetch('/upload/ipfs',{method:'POST',body:fd});url=up.gateway||up.ipfsUrl||up.url||'';ipfsHash=up.IpfsHash||'';}catch{const fd2=new FormData();fd2.append('image',file);const up2=await apiFetch('/upload',{method:'POST',body:fd2});url=up2.url||up2.image||'';}if(!url)throw new Error('Upload échoué');}const isNFT=document.getElementById('isNFT').checked||f.categorie.value==='nft';const isPrivee=document.getElementById('isPriveeCheck')?.checked||false;const d={titre:f.titre.value.trim(),categorie:f.categorie.value,prix:Number(f.prix.value||0),description:f.description.value.trim(),isNFT,isGaleriePrivee:isPrivee,ipfsHash,imageIPFS:ipfsHash?`ipfs://${ipfsHash}`:undefined};if(url){d.image=url;d.images=[url]}const res=await apiFetch('/artworks',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)});afficherMessage('oeuvreMessage',res.message||'Envoyée en attente validation');afficherToastZedmo('✅ Publié avec succès dans la galerie !');fermerModal('oeuvreModal');f.reset();const chk=document.getElementById('isPriveeCheck');if(chk)chk.checked=false;await chargerGalerie();allerA('galerie');}catch(err){afficherMessage('oeuvreMessage',err.message)}finally{b.disabled=false}
 });
-
 function setupForgot(){
   const link=document.getElementById('linkForgot');
   const box=document.getElementById('forgotBox');
@@ -380,7 +416,6 @@ function setupForgot(){
     }catch(err){ msg.style.color='var(--danger)'; msg.textContent=err.message; btn.disabled=false; btn.innerHTML='<i class="fas fa-envelope"></i> Envoyer le lien';}
   });
 }
-
 async function verifierOeuvre(){const id=document.getElementById('verificationArtworkId').value.trim();const z=document.getElementById('verificationResultat');if(!id){z.textContent='ID AZM requis';return}z.innerHTML='<p class="muted"><span class="spinner"></span> Vérification...</p>';try{let r;try{r=await apiFetch('/artworks/verifier/'+encodeURIComponent(id));}catch(e1){r=await apiFetch('/artworks/verifier',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({azmId:id})});}const art=r.artwork||r;z.innerHTML=`<div class="notice success"><h3>✓ Authentique</h3><p><strong>${escapeHTML(art.titre||'Œuvre')}</strong><br>AZM: ${escapeHTML(art.azmId||id)}<br>Artiste: ${escapeHTML(art.artiste?.nom_artiste||'')}<br>Prix: ${prixFCFA(art.prix)}</p></div>`;}catch(e){z.innerHTML=`<div class="notice error">Identifiant invalide: ${escapeHTML(id)}<br>${escapeHTML(e.message)}</div>`;}}
 async function chargerAnnonces(){try{const r=await apiFetch('/annonces');const ann=Array.isArray(r)?r:r.annonces||[];if(ann.length)document.getElementById('annoncePrincipale').innerHTML=`<div class="notice"><strong>${escapeHTML(ann[0].titre)}</strong><p>${escapeHTML(ann[0].message)}</p></div>`}catch{}}
 async function actualiserTout(){await Promise.allSettled([chargerGalerie(),chargerExpositions(),chargerEncheres(),chargerAnnonces()])}
