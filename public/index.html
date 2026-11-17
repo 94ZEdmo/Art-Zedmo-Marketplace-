@@ -100,12 +100,11 @@ const ADRESSES_PAIEMENT = {
   moov: '+2290194655238',
   whatsapp: '2290194655238'
 };
-const NFT_CONTRACT_ADDRESS = "0xf6A7dc32c4140f884A4abd703673A7c2E5dcE80E";
+const NFT_CONTRACT_ADDRESS = "0xbd663d5000a9d6141D73c0E60995E22B4f811Cc1";
 const NFT_ABI = ["function safeMint(address to, string memory uri) public"];
 // ===== MINT 100% AUTOMATIQUE - 1 CLIC = CONNECT + POLYGON + MINT =====
 async function mintNFTAZO(ipfsHash){
   if(!ipfsHash){ alert("Pas de IPFS pour cette oeuvre - Republie avec une image"); return; }
-  // Si pas dans MetaMask sur téléphone, on ouvre l'app MetaMask automatiquement
   if(!window.ethereum){
     const isMobile = /Android|iPhone|iPad/i.test(navigator.userAgent);
     if(isMobile){
@@ -118,12 +117,9 @@ async function mintNFTAZO(ipfsHash){
   }
   try{
     afficherToastZedmo("🦊 Connexion automatique à ton MetaMask...");
-    // 1 - CONNECTE AUTOMATIQUEMENT
     const accounts = await window.ethereum.request({method:'eth_requestAccounts'});
     const userAddress = accounts[0];
-    // 2 - PASSE SUR POLYGON AUTOMATIQUEMENT
     try{ await window.ethereum.request({method:'wallet_switchEthereumChain', params:[{chainId:'0x89'}]}); }catch(eSwitch){ if(eSwitch.code===4902){ await window.ethereum.request({method:'wallet_addEthereumChain', params:[{chainId:'0x89', chainName:'Polygon Mainnet', nativeCurrency:{name:'MATIC', symbol:'MATIC', decimals:18}, rpcUrls:['https://polygon-rpc.com/'], blockExplorerUrls:['https://polygonscan.com/'] }]}); } else { throw eSwitch; } }
-    // 3 - RECUPERE IMAGE IPFS + GENERE NFT AUTOMATIQUEMENT
     const provider = new ethers.providers.Web3Provider(window.ethereum);
     const signer = provider.getSigner();
     const contract = new ethers.Contract(NFT_CONTRACT_ADDRESS, NFT_ABI, signer);
@@ -221,8 +217,7 @@ async function chargerGalerie(){
     if(currentUser)chargerMesOeuvres();
   }catch(e){c.textContent=e.message}
 }
-function obtenirImage(o){if(typeof o.image==='string'&&o.image.trim())return o.image;if(Array.isArray(o.images)&&o.images[0])return typeof o.images[0]==='string'?o.images[0]:o.images[0].url||'';return''}
-function afficherGalerieFiltre(){
+function obtenirImage(o){if(typeof o.image==='string'&&o.image.trim())return o.image;if(Array.isArray(o.images)&&o.images[0])return typeof o.images[0]==='string'?o.images[0]:o.images[0].url||'';return''}function afficherGalerieFiltre(){
   const cont=document.getElementById('galerieOeuvres');
   const rech=document.getElementById('rechercheGalerie').value.toLowerCase();
   const cat=document.getElementById('filtreGalerie').value.toLowerCase();
