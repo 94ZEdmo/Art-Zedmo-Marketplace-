@@ -24,6 +24,11 @@ const userSchema = new mongoose.Schema(
     totalVotesRecus: { type: Number, default: 0 },
     solde: { type: Number, default: 0 },
 
+    // ===== PI NETWORK : LIAISON DU COMPTE =====
+    piUid: { type: String, default: undefined, trim: true },
+    piUsername: { type: String, default: '', trim: true, maxlength: 100 },
+    piLinkedAt: { type: Date, default: null },
+
     resetPasswordToken: { type: String, default: null },
     resetPasswordExpire: { type: Date, default: null },
 
@@ -49,6 +54,7 @@ const userSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+// ===== INDEX =====
 userSchema.index({ email: 1 }, { unique: true, sparse: true });
 userSchema.index({ forfait: 1 });
 userSchema.index({ forfaitStatut: 1 });
@@ -56,6 +62,10 @@ userSchema.index({ forfaitProStatut: 1 });
 userSchema.index({ forfaitPriveeStatut: 1 });
 userSchema.index({ forfaitExpireAt: 1 });
 
+// Index unique pour empêcher qu'un compte Pi soit lié à plusieurs comptes AZO
+userSchema.index({ piUid: 1 }, { unique: true, sparse: true });
+
+// ===== PROTECTION DES DONNÉES =====
 userSchema.set('toJSON', {
   transform: function (doc, ret) {
     delete ret.password;
@@ -64,60 +74,106 @@ userSchema.set('toJSON', {
   }
 });
 
+// ===== GESTION DES FORFAITS ET DU MOT DE PASSE =====
 userSchema.pre('save', async function () {
   if (!this.isModified('password')) {
     const now = new Date();
+
     if (this.forfaitProExpire && this.forfaitProExpire < now) {
       this.forfaitProStatut = 'gratuit';
       this.forfaitProExpire = null;
     }
+
     if (this.forfaitPriveeExpire && this.forfaitPriveeExpire < now) {
       this.forfaitPriveeStatut = 'gratuit';
       this.forfaitPriveeExpire = null;
     }
-    if (this.forfaitExpireAt && this.forfaitExpireAt < now && this.forfait !== 'gratuit' && this.forfaitProStatut !== 'valide' && this.forfaitPriveeStatut !== 'valide') {
-      this.forfait = 'gratuit'; this.limiteOeuvres = 5; this.limiteNFT = 3; this.forfaitStatut = null;
+
+    if (
+      this.forfaitExpireAt &&
+      this.forfaitExpireAt < now &&
+      this.forfait !== 'gratuit' &&
+      this.forfaitProStatut !== 'valide' &&
+      this.forfaitPriveeStatut !== 'valide'
+    ) {
+      this.forfait = 'gratuit';
+      this.limiteOeuvres = 5;
+      this.limiteNFT = 3;
+      this.forfaitStatut = null;
     }
-    const proValide = this.forfaitProStatut === 'valide' && (!this.forfaitProExpire || this.forfaitProExpire > now);
-    const priveeValide = this.forfaitPriveeStatut === 'valide' && (!this.forfaitPriveeExpire || this.forfaitPriveeExpire > now);
+
+    const proValide =
+      this.forfaitProStatut === 'valide' &&
+      (!this.forfaitProExpire || this.forfaitProExpire > now);
+
+    const priveeValide =
+      this.forfaitPriveeStatut === 'valide' &&
+      (!this.forfaitPriveeExpire || this.forfaitPriveeExpire > now);
+
     if (priveeValide) {
       this.forfait = 'galerie_privee';
-      this.limiteOeuvres = 50; this.limiteNFT = 50;
-      this.forfaitPrixUSD = 50; this.forfaitPrixFCFA = 30000;
+      this.limiteOeuvres = 50;
+      this.limiteNFT = 50;
+      this.forfaitPrixUSD = 50;
+      this.forfaitPrixFCFA = 30000;
+
       if (this.forfaitProStatut === 'valide') {
         this.forfaitStatut = 'valide';
       }
     } else if (proValide) {
       this.forfait = 'pro';
-      this.limiteOeuvres = 10; this.limiteNFT = 10;
-      this.forfaitPrixUSD = 7; this.forfaitPrixFCFA = 4200;
+      this.limiteOeuvres = 10;
+      this.limiteNFT = 10;
+      this.forfaitPrixUSD = 7;
+      this.forfaitPrixFCFA = 4200;
       this.forfaitStatut = 'valide';
     } else {
       if (this.forfait === 'gratuit') {
-        if (this.forfaitStatut !== 'en_attente' && this.forfaitProStatut !== 'en_attente' && this.forfaitPriveeStatut !== 'en_attente') { 
-          this.limiteOeuvres = 5; this.limiteNFT = 3; 
+        if (
+          this.forfaitStatut !== 'en_attente' &&
+          this.forfaitProStatut !== 'en_attente' &&
+          this.forfaitPriveeStatut !== 'en_attente'
+        ) {
+          this.limiteOeuvres = 5;
+          this.limiteNFT = 3;
         }
-        this.forfaitPrixUSD = 0; this.forfaitPrixFCFA = 0;
+
+        this.forfaitPrixUSD = 0;
+        this.forfaitPrixFCFA = 0;
+
       } else if (this.forfait === 'pro') {
-        if (this.forfaitStatut === 'valide') { this.limiteOeuvres = 10; this.limiteNFT = 10; }
+        if (this.forfaitStatut === 'valide') {
+          this.limiteOeuvres = 10;
+          this.limiteNFT = 10;
+        }
+
       } else if (this.forfait === 'galerie_privee') {
-        if (this.forfaitStatut === 'valide') { this.limiteOeuvres = 50; this.limiteNFT = 50; }
+        if (this.forfaitStatut === 'valide') {
+          this.limiteOeuvres = 50;
+          this.limiteNFT = 50;
+        }
       }
     }
+
     return;
   }
+
+  // Hachage sécurisé du mot de passe
   this.password = await bcrypt.hash(this.password, 12);
 });
 
+// ===== COMPARAISON DU MOT DE PASSE =====
 userSchema.methods.comparePassword = async function (pwd) {
   if (typeof pwd !== 'string' || !this.password) return false;
   return bcrypt.compare(pwd, this.password);
 };
 
-userSchema.methods.peutPublier = function(isNFT = false) {
+// ===== VÉRIFICATION DES DROITS DE PUBLICATION =====
+userSchema.methods.peutPublier = function (isNFT = false) {
   if (isNFT) return this.totalNFTPublies < this.limiteNFT;
   return this.totalOeuvresPubliees < this.limiteOeuvres;
 };
 
 const User = mongoose.models.User || mongoose.model('User', userSchema);
+
 export default User;
