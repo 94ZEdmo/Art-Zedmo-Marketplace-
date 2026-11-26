@@ -22,10 +22,7 @@ async function callGroq(messages, modelToTry = MODEL) {
       max_tokens: 1200
     })
   });
-
   const data = await res.json().catch(() => ({}));
-
-  // Si le 120b échoue, on essaie le 20b automatiquement
   if (!res.ok) {
     if (modelToTry === MODEL) {
       console.log('⚠️ gpt-oss-120b échoué, essai gpt-oss-20b:', data?.error?.message);
@@ -33,7 +30,5 @@ async function callGroq(messages, modelToTry = MODEL) {
     }
     throw new Error(data?.error?.message || `Groq erreur ${res.status}`);
   }
-
   let text = data?.choices?.[0]?.message?.content || '';
-  // gpt-oss renvoie parfois son raisonnement, on nettoie
   text = text.replace(/
