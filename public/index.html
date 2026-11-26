@@ -105,12 +105,19 @@ const NFT_ABI = ["function safeMint(address to, string memory uri) public"];
 const PI_SANDBOX = false;
 try { if (window.Pi) Pi.init({ version: '2.0', sandbox: PI_SANDBOX }); } catch (e) { console.warn('Pi.init', e); }
 function onIncompletePaymentFound(payment) { console.log('Paiement Pi incomplet detecte:', payment); }
+
+// ===== CORRIGÉ - CONNEXION PI POUR TOUT LE MONDE =====
 async function connecterPi() {
-  if (!window.Pi) { afficherToastZedmo('⚠️ Ouvre AZO dans Pi Browser pour te connecter avec Pi'); return false; }
+  if (!window.Pi) { afficherToastZedmo('⚠️ Ouvre ART-ZEDMO dans Pi Browser pour te connecter avec Pi'); return false; }
   try {
     afficherToastZedmo('🔐 Connexion à ton compte Pi...');
+    localStorage.removeItem('AZ_TOKEN');
+    localStorage.removeItem('AZ_USER');
+    currentUser = null;
     const auth = await Pi.authenticate(['username', 'payments'], onIncompletePaymentFound);
-    const r = await apiFetch('/pi/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ accessToken: auth.accessToken }) });
+    const res = await fetch(API_BASE + '/pi/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ accessToken: auth.accessToken }) });
+    const r = await res.json();
+    if (!res.ok) throw new Error(r.error || 'Erreur serveur Pi');
     localStorage.setItem('AZ_TOKEN', r.token);
     localStorage.setItem('AZ_USER', JSON.stringify(r.user));
     currentUser = r.user;
@@ -292,6 +299,7 @@ function acheterBoost(id, titre){
   if(!getToken()){ ouvrirModal('connexionModal'); return; }
   ouvrirPaiementZedmo('boost', 'Boost 48h — ' + (titre || 'Œuvre'), 1200, { artworkId: String(id) });
 }
+// ===== CORRIGÉ - PAIEMENT PI OUVRE LE WALLET =====
 async function payerAvecPi(){
   if(!PAIEMENT_EN_COURS) return alert('Aucun paiement en cours');
   if(!window.Pi){ afficherToastZedmo('⚠️ Ouvre ART-ZEDMO dans Pi Browser pour payer avec Pi.'); return; }
@@ -300,13 +308,18 @@ async function payerAvecPi(){
   const typePi = PAIEMENT_EN_COURS.type === 'achat' ? 'artwork' : PAIEMENT_EN_COURS.type === 'offre' ? 'forfait' : 'boost';
   const refId = PAIEMENT_EN_COURS.artworkId || PAIEMENT_EN_COURS.offreType || '';
   try{
+    await Pi.authenticate(['username','payments'], onIncompletePaymentFound);
     afficherToastZedmo('💜 Ouverture du wallet... ' + montantPi + ' Pi');
     await window.Pi.createPayment({
       amount: montantPi,
       memo: 'ART-ZEDMO ' + PAIEMENT_EN_COURS.titre + ' Ref ' + PAIEMENT_EN_COURS.ref,
       metadata: { type: typePi, refId: refId, ref: PAIEMENT_EN_COURS.ref, montantFCFA: PAIEMENT_EN_COURS.montant }
     }, {
-      onReadyForServerApproval: async (paymentId) => { try{ await apiFetch('/pi/approve', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ paymentId }) }); }catch(e){ console.log('approve', e); } },
+      onReadyForServerApproval: async (paymentId) => {
+        const res = await fetch(API_BASE + '/pi/approve', { method:'POST', headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer '+getToken() }, body: JSON.stringify({ paymentId }) });
+        const d = await res.json().catch(()=>({}));
+        if(!res.ok) throw new Error(d.error || 'Approve échoué');
+      },
       onReadyForServerCompletion: async (paymentId, txid) => {
         try{
           await apiFetch('/pi/complete', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ paymentId, txid }) });
