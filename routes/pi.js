@@ -1,4 +1,3 @@
-
 import express from 'express';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
@@ -11,19 +10,6 @@ function signToken(user) {
   return jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '30d' });
 }
 
-// Lit le JWT AZO s'il existe (pour LIER un compte Pi a un compte deja connecte)
-function userIdFromRequest(req) {
-  const auth = req.headers.authorization;
-  if (!auth || !auth.startsWith('Bearer ')) return null;
-  try {
-    const decoded = jwt.verify(auth.slice(7), process.env.JWT_SECRET, { algorithms: ['HS256'] });
-    return String(decoded.id || decoded._id || '');
-  } catch {
-    return null;
-  }
-}
-
-// Verifie le jeton d'acces Pi directement aupres de Pi (on ne fait JAMAIS confiance au front)
 async function verifierJetonPi(accessToken) {
   const r = await fetch(`${PI_API}/me`, {
     headers: { Authorization: `Bearer ${accessToken}` }
@@ -34,35 +20,18 @@ async function verifierJetonPi(accessToken) {
   return { uid: String(me.uid), username: String(me.username || '') };
 }
 
-// POST /api/pi/login   body: { accessToken }
+// POST /api/pi/login - CONNEXION, pas liaison. On ignore l'ancien token AZO.
 router.post('/login', async (req, res) => {
   try {
     const { accessToken } = req.body || {};
     if (!accessToken || typeof accessToken !== 'string' || accessToken.length > 4000) {
       return res.status(400).json({ error: 'Jeton Pi manquant.' });
     }
-
     const pi = await verifierJetonPi(accessToken);
     if (!pi) return res.status(401).json({ error: 'Jeton Pi invalide. Ouvre AZO dans Pi Browser.' });
 
+    // 1. Pi déjà connu -> on le connecte, peu importe qui était connecté avant
     const dejaLie = await User.findOne({ piUid: pi.uid });
-    const currentId = userIdFromRequest(req);
-
-    // CAS 1 : utilisateur deja connecte a AZO -> on lie son compte Pi
-    if (currentId) {
-      const me = await User.findById(currentId);
-      if (!me) return res.status(404).json({ error: 'Compte introuvable.' });
-      if (dejaLie && String(dejaLie._id) !== String(me._id)) {
-        return res.status(409).json({ error: 'Ce compte Pi est deja lie a un autre compte AZO.' });
-      }
-      me.piUid = pi.uid;
-      me.piUsername = pi.username;
-      me.piLinkedAt = me.piLinkedAt || new Date();
-      await me.save();
-      return res.json({ token: signToken(me), user: me, linked: true });
-    }
-
-    // CAS 2 : compte Pi deja lie -> connexion directe
     if (dejaLie) {
       if (pi.username && dejaLie.piUsername !== pi.username) {
         dejaLie.piUsername = pi.username;
@@ -71,16 +40,20 @@ router.post('/login', async (req, res) => {
       return res.json({ token: signToken(dejaLie), user: dejaLie });
     }
 
-    // CAS 3 : premiere connexion -> creation automatique d'un compte ACHETEUR
+    // 2. Premier Pi -> on crée le compte en ARTISTE pour qu'il puisse publier
     const suffix = pi.uid.replace(/-/g, '').slice(0, 20);
     const nom = (pi.username || 'pi_' + suffix.slice(0, 8)).padEnd(2, '_').slice(0, 100);
     const user = await User.create({
       nom,
-      whatsapp: 'pi_' + suffix,                       // identifiant technique unique (modifiable plus tard)
-      password: crypto.randomBytes(24).toString('hex'), // mot de passe aleatoire, jamais utilise
-      role: 'acheteur',
+      nom_artiste: pi.username || nom,
+      whatsapp: 'pi_' + suffix,
+      email: 'pi_' + suffix + '@pi.network',
+      password: crypto.randomBytes(24).toString('hex'),
+      role: 'artiste',
       statut: 'valide',
       forfait: 'gratuit',
+      limiteOeuvres: 5,
+      limiteNFT: 3,
       piUid: pi.uid,
       piUsername: pi.username,
       piLinkedAt: new Date()
@@ -88,11 +61,47 @@ router.post('/login', async (req, res) => {
     return res.status(201).json({ token: signToken(user), user, created: true });
   } catch (e) {
     if (e && e.code === 11000) {
+      // Si doublon sur whatsapp/email, on essaie de retrouver par piUid
+      const u = await User.findOne({ piUid: req.body?.accessToken ? undefined : undefined }).catch(()=>null);
       return res.status(409).json({ error: 'Compte deja existant, reessaie.' });
     }
     console.error('Pi login error:', e.message);
     return res.status(500).json({ error: 'Erreur serveur Pi.' });
   }
+});
+
+// POST /api/pi/approve - OBLIGATOIRE pour que le wallet reste ouvert
+router.post('/approve', async (req, res) => {
+  try {
+    const { paymentId } = req.body || {};
+    if (!paymentId) return res.status(400).json({ error: 'paymentId manquant' });
+    if (!process.env.PI_API_KEY) return res.status(500).json({ error: 'PI_API_KEY manquant sur Render' });
+    const r = await fetch(`${PI_API}/payments/${paymentId}/approve`, {
+      method: 'POST',
+      headers: { Authorization: `Key ${process.env.PI_API_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({})
+    });
+    const d = await r.json().catch(()=>({}));
+    if (!r.ok) return res.status(r.status).json({ error: d.error?.message || 'Approve Pi échoué' });
+    return res.json({ ok: true, payment: d });
+  } catch (e) { return res.status(500).json({ error: e.message }); }
+});
+
+// POST /api/pi/complete - OBLIGATOIRE pour valider le paiement
+router.post('/complete', async (req, res) => {
+  try {
+    const { paymentId, txid } = req.body || {};
+    if (!paymentId || !txid) return res.status(400).json({ error: 'paymentId / txid manquant' });
+    if (!process.env.PI_API_KEY) return res.status(500).json({ error: 'PI_API_KEY manquant sur Render' });
+    const r = await fetch(`${PI_API}/payments/${paymentId}/complete`, {
+      method: 'POST',
+      headers: { Authorization: `Key ${process.env.PI_API_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ txid })
+    });
+    const d = await r.json().catch(()=>({}));
+    if (!r.ok) return res.status(r.status).json({ error: d.error?.message || 'Complete Pi échoué' });
+    return res.json({ ok: true, payment: d });
+  } catch (e) { return res.status(500).json({ error: e.message }); }
 });
 
 export default router;
