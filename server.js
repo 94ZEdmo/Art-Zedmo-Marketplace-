@@ -667,6 +667,15 @@ async function fixAllCompteursGlobal() {
   }
 }
 
+// ===== PRIVACY POLICY POUR PI HACKATHON =====
+app.get('/privacy.html', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'privacy.html'));
+});
+
+app.get('/privacy', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'privacy.html'));
+});
+
 // ===== ROUTE 404 =====
 // IMPORTANT : elle reste après toutes les routes API.
 app.get('*', (req, res) => {
