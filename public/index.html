@@ -37,6 +37,16 @@
    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}}
    #toastZedmo{position:fixed;top:80px;left:50%;transform:translate(-50%,-20px);z-index:9999;background:#10251d;border:2px solid var(--gold);color:#fff;padding:16px 22px;border-radius:14px;font-weight:800;font-size:15px;text-align:center;box-shadow:0 10px 30px rgba(0,0,0,.6);opacity:0;pointer-events:none;transition:.3s;max-width:90%}
    #toastZedmo.show{opacity:1;transform:translate(-50%,0)}
+   /* ===== IA ART-ZEDMO ===== */
+   .ai-btn{width:100%;padding:11px;border-radius:9px;font-weight:800;cursor:pointer;margin-top:6px;border:1px solid var(--gold);background:#d4af37;color:#111}
+   .ai-btn-2{width:100%;padding:11px;border-radius:9px;font-weight:800;cursor:pointer;margin-top:6px;border:1px solid var(--gold);background:#111;color:var(--gold)}
+   #chatIaBtn{position:fixed;right:16px;bottom:92px;z-index:999;width:56px;height:56px;border-radius:50%;background:var(--gold);color:#111;border:none;font-size:24px;box-shadow:0 8px 20px rgba(0,0,0,.5)}
+   #chatIaBox{position:fixed;right:12px;bottom:155px;z-index:999;width:min(360px,92vw);background:#111;border:1px solid var(--gold);border-radius:16px;overflow:hidden;display:none}
+   #chatIaBox.open{display:block}
+   #chatIaMessages{height:280px;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:8px}
+   .msg-ia{padding:9px 11px;border-radius:10px;max-width:85%;font-size:14px;line-height:1.45}
+   .msg-ia.user{align-self:flex-end;background:var(--gold);color:#111}
+   .msg-ia.bot{align-self:flex-start;background:#222;border:1px solid #333}
   </style>
 </head>
 <body>
@@ -79,14 +89,19 @@
 </div>
 <div id="connexionMessage" class="form-message"></div></form></div></div>
 
-<div class="modal" id="oeuvreModal"><div class="modal-content"><div class="modal-header"><h2>Publier œuvre / NFT</h2><button class="close-btn" onclick="fermerModal('oeuvreModal')">&times;</button></div><form id="formOeuvre"><div class="form-grid"><div class="form-group full-width"><label>Titre *</label><input class="field" name="titre" required></div><div class="form-group"><label>Catégorie *</label><select class="field" name="categorie" required><option value="peinture">Peinture</option><option value="sculpture">Sculpture</option><option value="dessin">Dessin</option><option value="photographie">Photographie</option><option value="artisanat">Artisanat</option><option value="nft">NFT</option><option value="autre">Autre</option></select></div><div class="form-group"><label>Prix FCFA</label><input class="field" name="prix" type="number" min="0" value="0"></div><div class="form-group full-width"><label>Description *</label><textarea class="field" name="description" required></textarea></div><div class="form-group full-width"><label><input type="checkbox" id="isNFT"> C'est un NFT</label></div>
+<div class="modal" id="oeuvreModal"><div class="modal-content"><div class="modal-header"><h2>Publier œuvre / NFT</h2><button class="close-btn" onclick="fermerModal('oeuvreModal')">&times;</button></div><form id="formOeuvre"><div class="form-grid"><div class="form-group full-width"><label>Titre *</label><input class="field" name="titre" required></div><div class="form-group"><label>Catégorie *</label><select class="field" name="categorie" required><option value="peinture">Peinture</option><option value="sculpture">Sculpture</option><option value="dessin">Dessin</option><option value="photographie">Photographie</option><option value="artisanat">Artisanat</option><option value="nft">NFT</option><option value="autre">Autre</option></select></div><div class="form-group"><label>Prix FCFA</label><input class="field" name="prix" type="number" min="0" value="0"></div><div class="form-group full-width"><label>Description *</label><textarea class="field" name="description" required></textarea></div>
+<!-- ===== IA ART-ZEDMO - BOUTONS ===== -->
+<div class="form-group full-width"><button type="button" class="ai-btn" id="btnIaDescription" onclick="genererDescriptionIA()">✨ Générer description avec IA</button><button type="button" class="ai-btn-2" id="btnIaPrix" onclick="suggererPrixIA()">💰 Suggérer un prix avec IA</button><button type="button" class="ai-btn-2" id="btnIaTraduire" onclick="traduireDescriptionIA()">🌍 Traduire description en Anglais</button></div>
+<div class="form-group full-width"><label><input type="checkbox" id="isNFT"> C'est un NFT</label></div>
 <div class="form-group full-width" id="groupPrivee" style="display:none;background:#2a220f;border:1px solid var(--gold);padding:10px;border-radius:8px"><label><input type="checkbox" id="isPriveeCheck"> <i class="fas fa-store"></i> Publier dans ma galerie privée (50$ / 1 mois) - N'apparaîtra PAS dans galerie permanente</label><small class="muted">Visible uniquement sur ta page privée /galerie-privee/TonNom</small></div>
 <div class="form-group full-width"><label>Image (IPFS Pinata)</label><input class="field" name="image" type="file" accept="image/*"></div></div><button class="btn" type="submit" style="width:100%;margin-top:18px">Envoyer en galerie</button><div id="oeuvreMessage" class="form-message"></div></form></div></div>
 <div class="modal" id="paiementModal"><div class="modal-content"><div class="modal-header"><h2 id="paiementTitre">Paiement</h2><button class="close-btn" onclick="fermerModal('paiementModal')">&times;</button></div><div id="paiementContenu"></div></div></div>
 <div class="modal" id="soumissionModal"><div class="modal-content"><div class="modal-header"><h2>Soumettre à l'expo</h2><button class="close-btn" onclick="fermerModal('soumissionModal')">&times;</button></div><div id="soumissionList" class="grid" style="grid-template-columns:1fr"></div></div></div>
 <div class="modal" id="certModal"><div class="modal-content" style="max-width:420px;background:#0a0a0a"><div class="modal-header"><h2 style="color:#fff">Certificat</h2><button class="close-btn" onclick="fermerModal('certModal')">&times;</button></div><div id="certBox" class="cert-zedmo">ART-ZEDMO CERTIFICAT Œuvre : <span id="cOeuvre"></span> Artiste : <span id="cArtiste"></span> ID : <span id="cId"></span></div><div id="cQR" style="width:120px;height:120px;background:#fff;margin:15px auto;padding:5px"></div><div id="certInfo" class="muted" style="text-align:center;font-size:12px;margin-bottom:10px"></div><div style="display:flex;gap:8px"><button id="btnDownloadCert" class="btn" style="flex:1" onclick="downloadCert()"><i class="fas fa-download"></i> Télécharger PNG</button><button class="btn btn-outline" style="flex:1" onclick="fermerModal('certModal')">Fermer</button></div></div></div>
 
-<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+<!-- ===== CHATBOT IA ART-ZEDMO ===== -->
+<button id="chatIaBtn" onclick="toggleChatIa()">💬</button>
+<div id="chatIaBox"><div style="padding:12px;background:#d4af37;color:#111;font-weight:900;display:flex;justify-content:space-between">🤖 Assistant ART-ZEDMO <span onclick="toggleChatIa()" style="cursor:pointer">✕</span></div><div id="chatIaMessages"><div class="msg-ia bot">Bonjour ! Je suis l'assistant ART-ZEDMO. Demande-moi une oeuvre pour ton salon, un cadeau, ou un prix. 😊</div></div><div style="display:flex;gap:6px;padding:10px;border-top:1px solid #333"><input id="chatIaInput" class="field" placeholder="Écris ici..." onkeydown="if(event.key==='Enter')envoyerChatIa()"><button class="btn btn-small" onclick="envoyerChatIa()">Envoyer</button></div></div><script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
 <script>
@@ -466,6 +481,38 @@ async function chargerAnnonces(){try{const r=await apiFetch('/annonces');const a
 async function actualiserTout(){await Promise.allSettled([chargerGalerie(),chargerExpositions(),chargerEncheres(),chargerAnnonces()])}
 async function initialiser(){mettreAJourCompte();allerA('accueil');setupForgot();await actualiserTout();if(getToken()){try{const r=await apiFetch('/auth/me');currentUser=r.user||r;localStorage.setItem('AZ_USER',JSON.stringify(currentUser));mettreAJourCompte()}catch{}}toggleAdresseReception();}
 document.addEventListener('DOMContentLoaded',initialiser);
+
+// ===== IA ART-ZEDMO - 4 FONCTIONS =====
+let chatIaHistory=[];
+function getOeuvreForm(){const f=document.getElementById('formOeuvre');if(!f)return{};return{titre:f.titre?.value?.trim()||'',categorie:f.categorie?.value||'',description:f.description?.value?.trim()||'',prix:f.prix?.value||''};}
+async function genererDescriptionIA(){
+  const {titre,categorie}=getOeuvreForm();const form=document.getElementById('formOeuvre');const btn=document.getElementById('btnIaDescription');
+  if(!titre){alert('Mets d’abord le titre de l’oeuvre');return;}
+  const old=btn.textContent;btn.textContent='⏳ IA écrit...';btn.disabled=true;
+  try{const r=await fetch('/api/ai/description',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({titre,categorie})});const d=await r.json();if(d.error)throw new Error(d.error);if(form&&form.description)form.description.value=d.description||'';afficherToastZedmo('✅ Description générée ! Hashtags: '+(d.hashtags||[]).join(' '));}
+  catch(e){alert('Erreur IA: '+e.message);}btn.textContent=old;btn.disabled=false;
+}
+async function suggererPrixIA(){
+  const {titre,categorie}=getOeuvreForm();const form=document.getElementById('formOeuvre');const btn=document.getElementById('btnIaPrix');
+  if(!titre){alert('Mets d’abord le titre');return;}
+  const old=btn.textContent;btn.textContent='⏳ IA calcule...';btn.disabled=true;
+  try{const r=await fetch('/api/ai/prix',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({titre,categorie})});const d=await r.json();if(d.error)throw new Error(d.error);if(form&&form.prix)form.prix.value=d.prixFCFA||'';alert('Prix suggéré: '+d.prixFCFA+' FCFA (~ '+d.prixPi+' Pi)\n'+(d.explication||''));}
+  catch(e){alert('Erreur IA: '+e.message);}btn.textContent=old;btn.disabled=false;
+}
+async function traduireDescriptionIA(){
+  const form=document.getElementById('formOeuvre');const btn=document.getElementById('btnIaTraduire');const texte=form?.description?.value?.trim()||'';
+  if(!texte){alert('Mets d’abord une description en français, ou génère-la avec IA');return;}
+  const old=btn.textContent;btn.textContent='⏳ Traduction...';btn.disabled=true;
+  try{const r=await fetch('/api/ai/traduire',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({texte,langue:'en'})});const d=await r.json();if(d.error)throw new Error(d.error);alert('Traduction Anglais:\n\n'+d.traduction);}
+  catch(e){alert('Erreur IA: '+e.message);}btn.textContent=old;btn.disabled=false;
+}
+function toggleChatIa(){document.getElementById('chatIaBox')?.classList.toggle('open');}
+function ajouterMsgIa(texte,qui){const box=document.getElementById('chatIaMessages');if(!box)return;const d=document.createElement('div');d.className='msg-ia '+(qui==='user'?'user':'bot');d.textContent=texte;box.appendChild(d);box.scrollTop=box.scrollHeight;}
+async function envoyerChatIa(){
+  const inp=document.getElementById('chatIaInput');const msg=(inp?.value||'').trim();if(!msg)return;inp.value='';ajouterMsgIa(msg,'user');ajouterMsgIa('⏳ ...','bot');
+  try{const r=await fetch('/api/ai/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:msg,history:chatIaHistory})});const d=await r.json();if(d.error)throw new Error(d.error);const bots=document.querySelectorAll('#chatIaMessages .msg-ia.bot');if(bots.length)bots[bots.length-1].remove();ajouterMsgIa(d.reponse||'Pas de réponse','bot');chatIaHistory.push({role:'user',content:msg},{role:'assistant',content:d.reponse||''});}
+  catch(e){const bots=document.querySelectorAll('#chatIaMessages .msg-ia.bot');if(bots.length)bots[bots.length-1].remove();ajouterMsgIa('Erreur: '+e.message,'bot');}
+}
 </script>
 </body>
 </html>
