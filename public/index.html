@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -103,7 +102,7 @@ const ADRESSES_PAIEMENT = {
 };
 const NFT_CONTRACT_ADDRESS = "0xbd663d5000a9d6141D73c0E60995E22B4f811Cc1";
 const NFT_ABI = ["function safeMint(address to, string memory uri) public"];
-const PI_SANDBOX = true;
+const PI_SANDBOX = false;
 try { if (window.Pi) Pi.init({ version: '2.0', sandbox: PI_SANDBOX }); } catch (e) { console.warn('Pi.init', e); }
 function onIncompletePaymentFound(payment) { console.log('Paiement Pi incomplet detecte:', payment); }
 async function connecterPi() {
@@ -257,13 +256,9 @@ function estProprietaireOeuvre(art){if(!currentUser || !art) return false;const 
 function openCert(id){const art=artworks.find(a=>String(a._id)===String(id))||[];let target=art;if(!target || !target._id){fetch(API_BASE+'/artworks/'+id).then(r=>r.json()).then(a=>{target=a;}).catch(()=>{});}if(!target || !target._id) return;document.getElementById('cOeuvre').textContent=target.titre||'';document.getElementById('cArtiste').textContent=target.artiste?.nom_artiste||target.artiste?.nom||'';document.getElementById('cId').textContent=target.azmId||target._id||'';const qr=document.getElementById('cQR'); qr.innerHTML='';new QRCode(qr,{text:`https://art-zedmo.com/verify/${target.azmId||target._id}`,width:110,height:110});const btnDL=document.getElementById('btnDownloadCert');const info=document.getElementById('certInfo');if(estProprietaireOeuvre(target)){btnDL.style.display='flex';btnDL.disabled=false;info.textContent='Vous êtes propriétaire - téléchargement autorisé';info.style.color='var(--success)';} else {btnDL.style.display='none';info.textContent='Aperçu seul - téléchargement réservé au propriétaire';info.style.color='var(--muted)';}ouvrirModal('certModal');}
 function downloadCert(){const idText=document.getElementById('cId').textContent;const art=artworks.find(a=>String(a.azmId)===String(idText)||String(a._id)===String(idText));if(!art){ alert('Œuvre introuvable'); return; }if(!estProprietaireOeuvre(art)){alert('⛔ Téléchargement réservé au propriétaire de cette œuvre. Connecte-toi avec le compte propriétaire.');return;}if(!getToken()){alert('Connecte-toi avec le compte propriétaire pour télécharger');ouvrirModal('connexionModal');return;}html2canvas(document.getElementById('certBox'),{backgroundColor:'#0a0a0a',scale:2}).then(c=>{const a=document.createElement('a');a.download=(document.getElementById('cId').textContent||'cert')+'.png';a.href=c.toDataURL();a.click();})}
 
-// ============================================================
-// ✅ PAIEMENT CORRIGÉ - SYSTEME UNIFIÉ B
-// Achat + PRO + Galerie Privée + Boost
-// Connexion Pi déjà faite avant, ici on fait QUE le paiement
-// ============================================================
+// ===== PAIEMENT CORRIGE - SEULE PARTIE TOUCHEE =====
 let PAIEMENT_EN_COURS = null;
-const TAUX_PI_FCFA = 600; // 1 Pi = 600 FCFA - change ici si ton taux change
+const TAUX_PI_FCFA = 600;
 function copierTexte(txt){ try{ navigator.clipboard.writeText(txt); afficherToastZedmo('Copié !'); }catch(e){ prompt('Copie :', txt); } }
 function ouvrirPaiementZedmo(type, titre, montantFCFA, dataExtra){
   PAIEMENT_EN_COURS = { type, titre, montant: Number(montantFCFA)||0, ...(dataExtra||{}) };
@@ -305,7 +300,7 @@ async function payerAvecPi(){
   const typePi = PAIEMENT_EN_COURS.type === 'achat' ? 'artwork' : PAIEMENT_EN_COURS.type === 'offre' ? 'forfait' : 'boost';
   const refId = PAIEMENT_EN_COURS.artworkId || PAIEMENT_EN_COURS.offreType || '';
   try{
-    afficherToastZedmo('💜 Confirme le paiement dans Pi Browser...');
+    afficherToastZedmo('💜 Ouverture du wallet... ' + montantPi + ' Pi');
     await window.Pi.createPayment({
       amount: montantPi,
       memo: 'ART-ZEDMO ' + PAIEMENT_EN_COURS.titre + ' Ref ' + PAIEMENT_EN_COURS.ref,
@@ -315,7 +310,7 @@ async function payerAvecPi(){
       onReadyForServerCompletion: async (paymentId, txid) => {
         try{
           await apiFetch('/pi/complete', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ paymentId, txid }) });
-          alert('✅ Paiement Pi réussi ! En attente de validation.');
+          alert('✅ Paiement Pi réussi !');
           fermerModal('paiementModal');
           if(PAIEMENT_EN_COURS.type !== 'achat') chargerMesInfos(); else chargerGalerie();
         }catch(e){ alert('Paiement Pi : ' + e.message); }
