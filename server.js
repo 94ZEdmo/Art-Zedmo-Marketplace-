@@ -30,6 +30,9 @@ import galeriesPriveesRoutes from './routes/galeriesPrivees.js';
 // ===== NOUVELLE ROUTE PI NETWORK =====
 import piRoutes from './routes/pi.js';
 
+// ===== NOUVELLE ROUTE IA (GROQ) =====
+import aiRoutes from './routes/ai.js';
+
 dotenv.config();
 
 const app = express();
@@ -372,6 +375,9 @@ app.use('/api/auth', authRoutes);
 
 // ===== NOUVELLE INTEGRATION PI NETWORK =====
 app.use('/api/pi', piRoutes);
+
+// ===== NOUVELLE INTEGRATION IA (GROQ) =====
+app.use('/api/ai', aiRoutes);
 
 // ==================================================
 // ===== FIN DES ROUTES API ==========================
